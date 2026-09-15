@@ -37,9 +37,12 @@ func example(t *testing.T, name string) *behavior.Model {
 	return m
 }
 func TestExamplesAndSnapshots(t *testing.T) {
+	sizes := map[string]behavior.Statistics{}
 	for _, name := range []string{"unbuffered", "buffered", "deadlock", "select", "mutex", "waitgroup", "sequential", "unknown"} {
 		t.Run(name, func(t *testing.T) {
 			m := example(t, name)
+			sizes[name] = m.Statistics()
+			t.Logf("IR size: %+v", sizes[name])
 			if m.HasErrors() {
 				t.Fatalf("unsupported: %+v", m.Diagnostics)
 			}
@@ -65,6 +68,11 @@ func TestExamplesAndSnapshots(t *testing.T) {
 			}
 		})
 	}
+	data, err := json.MarshalIndent(sizes, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot(t, "model-sizes.json", append(data, '\n'))
 }
 func snapshot(t *testing.T, name string, data []byte) {
 	t.Helper()
@@ -135,14 +143,28 @@ func TestTrustedResultAndStaticClosure(t *testing.T) {
 	}
 }
 func TestDiagnosticsAndIRDeterministic(t *testing.T) {
-	a := example(t, "unbuffered")
-	b := example(t, "unbuffered")
-	if !reflect.DeepEqual(a, b) {
-		t.Fatal("nondeterministic IR")
+	for _, name := range []string{"unbuffered", "buffered", "deadlock", "select", "mutex", "waitgroup", "sequential", "unknown"} {
+		t.Run(name, func(t *testing.T) {
+			a, b := example(t, name), example(t, name)
+			if !reflect.DeepEqual(a, b) {
+				t.Fatal("nondeterministic IR or diagnostics")
+			}
+			specA, cfgA, err := tla.Generate(a)
+			if err != nil {
+				t.Fatal(err)
+			}
+			specB, cfgB, err := tla.Generate(b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if specA != specB || cfgA != cfgB {
+				t.Fatal("nondeterministic TLA or configuration")
+			}
+		})
 	}
 	var out strings.Builder
-	analysis.Inspect(&out, a)
-	for _, s := range []string{"Processes:", "Channels:", "Transitions:", "Assumptions:"} {
+	analysis.Inspect(&out, example(t, "unbuffered"))
+	for _, s := range []string{"Model size (IR): processes=2 channels=1", "Processes:", "Channels:", "Transitions:", "Assumptions:"} {
 		if !strings.Contains(out.String(), s) {
 			t.Errorf("missing %s", s)
 		}

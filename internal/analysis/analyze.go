@@ -3,10 +3,11 @@ package analysis
 
 import (
 	"fmt"
+	"io"
+
 	"github.com/fanmi/go-tla/internal/behavior"
 	"github.com/fanmi/go-tla/internal/frontend"
 	"github.com/fanmi/go-tla/internal/lowering"
-	"io"
 )
 
 func Analyze(dir string, patterns []string, opts lowering.Options) (*behavior.Model, error) {
@@ -18,8 +19,22 @@ func Analyze(dir string, patterns []string, opts lowering.Options) (*behavior.Mo
 	frontend.BuildCallGraph(p)
 	return lowering.Lower(p, opts)
 }
+
+// PrintStatistics reports IR size separately from checker state-space statistics.
+func PrintStatistics(w io.Writer, m *behavior.Model) {
+	s := m.Statistics()
+	label := "Model size (IR)"
+	if m.HasErrors() {
+		label = "Partial model size (IR)"
+	}
+	fmt.Fprintf(w, "%s: processes=%d channels=%d mutexes=%d waitgroups=%d locations=%d transitions=%d predicates=%d\n",
+		label, s.Processes, s.Channels, s.Mutexes, s.WaitGroups, s.Locations, s.Transitions, s.AbstractedPredicates)
+}
+
 func Inspect(w io.Writer, m *behavior.Model) {
-	fmt.Fprintf(w, "Outcome: %s\nProcesses:\n", m.Outcome)
+	fmt.Fprintf(w, "Outcome: %s\n", m.Outcome)
+	PrintStatistics(w, m)
+	fmt.Fprintln(w, "Processes:")
 	for _, p := range m.Processes {
 		fmt.Fprintf(w, "  %s (%s)\n", p.ID, p.Kind)
 	}

@@ -85,6 +85,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	fmt.Fprintf(stdout, "wrote %s/{model.tla,model.cfg,model.json} (%s)\n", *out, m.Outcome)
+	analysis.PrintStatistics(stdout, m)
 	printTLCHint(stdout, *out)
 	return 0
 }

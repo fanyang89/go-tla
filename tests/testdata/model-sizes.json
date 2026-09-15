@@ -1,0 +1,74 @@
+{
+  "buffered": {
+    "processes": 2,
+    "channels": 1,
+    "mutexes": 0,
+    "waitGroups": 0,
+    "locations": 10,
+    "transitions": 8,
+    "abstractedPredicates": 0
+  },
+  "deadlock": {
+    "processes": 1,
+    "channels": 1,
+    "mutexes": 0,
+    "waitGroups": 0,
+    "locations": 3,
+    "transitions": 2,
+    "abstractedPredicates": 0
+  },
+  "mutex": {
+    "processes": 3,
+    "channels": 1,
+    "mutexes": 1,
+    "waitGroups": 0,
+    "locations": 16,
+    "transitions": 13,
+    "abstractedPredicates": 0
+  },
+  "select": {
+    "processes": 3,
+    "channels": 2,
+    "mutexes": 0,
+    "waitGroups": 0,
+    "locations": 11,
+    "transitions": 11,
+    "abstractedPredicates": 0
+  },
+  "sequential": {
+    "processes": 2,
+    "channels": 1,
+    "mutexes": 0,
+    "waitGroups": 0,
+    "locations": 7,
+    "transitions": 5,
+    "abstractedPredicates": 0
+  },
+  "unbuffered": {
+    "processes": 2,
+    "channels": 1,
+    "mutexes": 0,
+    "waitGroups": 0,
+    "locations": 7,
+    "transitions": 5,
+    "abstractedPredicates": 0
+  },
+  "unknown": {
+    "processes": 2,
+    "channels": 1,
+    "mutexes": 0,
+    "waitGroups": 0,
+    "locations": 9,
+    "transitions": 8,
+    "abstractedPredicates": 1
+  },
+  "waitgroup": {
+    "processes": 3,
+    "channels": 0,
+    "mutexes": 0,
+    "waitGroups": 1,
+    "locations": 12,
+    "transitions": 9,
+    "abstractedPredicates": 0
+  }
+}

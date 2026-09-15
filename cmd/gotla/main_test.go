@@ -19,6 +19,9 @@ func TestCLIAnalyzeInspectAndStaleArtifacts(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	if !strings.Contains(stdout.String(), "Model size (IR): processes=2 channels=1") {
+		t.Fatal("successful analyze did not print model statistics")
+	}
 	if !strings.Contains(stdout.String(), "Run TLC:") {
 		t.Fatal("successful analyze did not print TLC command")
 	}

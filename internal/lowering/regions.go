@@ -31,9 +31,9 @@ func (b *builder) regions() {
 				if n == nil {
 					return
 				}
-				if cur == p.ID+"_Done" {
+				if cur == p.Terminal {
 					if src != cur {
-						b.m.Transitions = append(b.m.Transitions, behavior.Transition{ID: fmt.Sprintf("%s_Finish_%d", p.ID, len(b.m.Transitions)), Process: p.ID, Source: src, Guard: combine(guards), Destination: cur, SourcePosition: p.Source})
+						b.m.Transitions = append(b.m.Transitions, behavior.Transition{ID: b.fresh(p.ID + "_Finish"), Process: p.ID, Source: src, Guard: combine(guards), Destination: cur, SourcePosition: p.Source})
 						todo = append(todo, cur)
 					}
 					return
@@ -48,13 +48,17 @@ func (b *builder) regions() {
 					if len(e.effects) > 0 {
 						name = string(e.effects[0].Kind)
 					}
-					b.m.Transitions = append(b.m.Transitions, behavior.Transition{ID: fmt.Sprintf("%s_%s_L%d_%d", p.ID, name, e.pos.Line, len(b.m.Transitions)), Process: p.ID, Source: src, Guard: combine(gs), Effects: e.effects, Destination: e.to, SourcePosition: e.pos, ChoiceGroup: e.group})
+					b.m.Transitions = append(b.m.Transitions, behavior.Transition{ID: b.fresh(fmt.Sprintf("%s_%s_L%d_C%d", p.ID, name, e.pos.Line, e.pos.Column)), Process: p.ID, Source: src, Guard: combine(gs), Effects: e.effects, Destination: e.to, SourcePosition: e.pos, ChoiceGroup: e.group})
 					todo = append(todo, e.to)
 				}
 			}
 			walk(src, nil, map[string]bool{})
 		}
+		if !seen[p.Terminal] {
+			p.Locations = append(p.Locations, p.Terminal)
+		}
 	}
+	b.canonicalLocations()
 }
 func combine(gs []behavior.Guard) behavior.Guard {
 	out := []behavior.Guard{}

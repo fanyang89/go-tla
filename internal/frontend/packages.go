@@ -18,6 +18,7 @@ type Program struct {
 	Roots    []*ssa.Package
 	Fset     *token.FileSet
 	Calls    *callgraph.Graph
+	Sources  map[string]SourceFile
 }
 
 // Load is pass 1a. Dir permits callers/tests to analyze an independent module.
@@ -26,7 +27,7 @@ func Load(dir string, patterns ...string) ([]*packages.Package, error) {
 }
 
 func LoadContext(ctx context.Context, dir string, patterns ...string) ([]*packages.Package, error) {
-	ps, err := packages.Load(&packages.Config{Mode: packages.LoadAllSyntax, Dir: dir, Context: ctx}, patterns...)
+	ps, err := packages.Load(&packages.Config{Mode: packages.LoadAllSyntax | packages.NeedModule, Dir: dir, Context: ctx}, patterns...)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +50,7 @@ func LoadContext(ctx context.Context, dir string, patterns ...string) ([]*packag
 func BuildSSA(ps []*packages.Package) *Program {
 	prog, roots := ssautil.AllPackages(ps, ssa.InstantiateGenerics)
 	prog.Build()
-	return &Program{Packages: ps, SSA: prog, Roots: roots, Fset: prog.Fset}
+	return &Program{Packages: ps, SSA: prog, Roots: roots, Fset: prog.Fset, Sources: sourceIndex(ps)}
 }
 
 // BuildCallGraph is pass 2. Unresolved dynamic sites are rejected during reachable lowering.

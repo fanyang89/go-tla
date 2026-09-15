@@ -75,15 +75,7 @@ func IsRoot(i ssa.Instruction) bool {
 
 // Entries is pass 4: statically named goroutine sites (not an unbounded runtime pool).
 func Entries(f *ssa.Function) []*ssa.Go {
-	var out []*ssa.Go
-	for _, b := range f.Blocks {
-		for _, i := range b.Instrs {
-			if g, ok := i.(*ssa.Go); ok {
-				out = append(out, g)
-			}
-		}
-	}
-	return out
+	return Scan(f).Goroutines
 }
 
 func SyncTypeReceiver(f *ssa.Function) string {

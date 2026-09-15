@@ -15,24 +15,30 @@ The passes are explicit functions/packages:
 
 1. `frontend.Load` loads real packages, dependencies, syntax and type information.
 2. `frontend.BuildSSA` constructs Go SSA; `BuildCallGraph` builds the static call graph.
-3. `discovery.Recognize` / `IsRoot` identify typed concurrency primitives.
-4. `discovery.Entries` identifies static goroutine sites; lowering instantiates one
-   process per reachable call-context/spawn site. Synchronous calls are inlined
-   into the calling process, not mistaken for new processes.
-5. `slice.Compute` marks concurrency roots, all CFG predecessors controlling their
-   reachability, and backwards SSA operand dependencies. This intentionally keeps
-   more control than a precise postdominator slice would. Direct-call body checks
-   recursively account for callee effects; unresolved dynamic calls are not omitted.
-6. `abstract.Predicate` retains constant booleans and exact select-index dispatch;
-   other conditions become independent nondeterministic choices. Lowering checks
-   calls, resource identities, initializer assumptions and unsupported constructs.
+3. `effects.Analyzer` caches call-effect summaries using graph-checked SSA call
+   targets. Unknown/dynamic/unsafe/recursive effects never receive pure summaries.
+   Explicit trusted contracts remain visible; purity guides slicing, not permission
+   to bypass reachable-body validation.
+4. `discovery.Scan` returns typed primitives, roots and goroutine sites. Cached
+   `lowering.functionPlan` consumes these facts and call summaries; contexts bind
+   concrete resources and instantiate each discovered process entry.
+5. `slice.FromRoots` consumes these roots and retains predecessor control and SSA
+   operand dependencies. Its roots/control determine branch commits; retained data
+   gates capacity, synchronization-resource and control extraction. This is still
+   conservative predecessor slicing, not precise postdominator analysis.
+6. `lowering/identity.go` separates static allocation/binding and dominating-store
+   identity checks; `initializers.go` checks initialization and summary assumptions.
+   `abstract.Predicate` preserves constants/select dispatch and abstracts other
+   conditions. Unknown effects are still inspected or rejected.
 7. `lowering.regions` epsilon-closes sequential instruction paths, combining guards
    until the next behavioral effect. The temporary SSA-linked instruction graph is
    not the output IR. Local arithmetic/straight-line helpers do not become actions.
 8. `lowering.Lower` emits processes, locations, guards, effects, source metadata,
    assumptions and precision diagnostics. WaitGroup phase validation rejects uses
    requiring a more elaborate waiter-generation model.
-9. `tla.Validate` checks supported IR features; `Generate` emits runtime state,
+9. `behavior.Validate` checks the versioned generic contract; `behavior.Decode`
+   validates saved JSON independently of Go. `tla.Validate` adds backend capability
+   restrictions; `Generate` emits runtime state,
    transition actions, rendezvous actions, `Init`, `Next`, `Spec`, and configuration.
 10. The CLI writes diagnostics and artifacts, or displays the inspection summary.
     `check` additionally invokes `internal/checker` to run explicitly provisioned
@@ -48,8 +54,9 @@ not just syntax; they are optional locally but mandatory in the pinned verificat
 gate. See the [semantic test matrix](docs/SEMANTIC_TEST_MATRIX.md) and
 [verification guide](docs/VERIFICATION.md).
 
-The checker result has its own versioned JSON envelope; this does not version or
-change the behavioral IR. Source summaries map simple trace `pc` locations to
+The checker result and behavioral IR have independent version-1 contracts. The
+result records the model contract identifiers and fingerprints the saved artifacts;
+both share analyzer-binary provenance. Source summaries map simple trace `pc` locations to
 candidate IR transitions, not a complete counterexample decoder. Timeout applies
 to checker execution; package loading is cancellable, while SSA/lowering currently
 check cancellation only at pass boundaries. See the
@@ -82,10 +89,12 @@ an explicit source panic.
 
 `internal/behavior` defines a guarded transition system: processes, finite local
 variables, channels, mutexes, WaitGroups, initial active processes, transitions,
-assertions and source positions (`package`, `function`, file basename, line,
-column). Transition IDs use function/process and source-line names plus stable
-collision-disambiguating suffixes. File basenames plus package/function avoid
-machine-specific absolute paths; full counterexample decoding is not implemented.
+assertions and source positions (`package`, `function`, module-relative or
+import-qualified file, line, column). Explicit terminals remove magic-name semantics.
+Per-prefix IDs and post-region location naming avoid global SSA-instruction offsets.
+Process sources identify declarations; spawn sources identify callers. See the
+[versioned IR contract](docs/BEHAVIOR_IR.md) for semantics, decoder rules, backend
+capabilities, provenance and naming guarantees. Full trace decoding is not implemented.
 
 Guards are structured `true`, `choice`, `equal`, conjunction, and select-default
 predicates, not expression strings in TLA syntax. Effects include `Spawn`, `Send`,

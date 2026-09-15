@@ -24,8 +24,19 @@ optional in a plain local test run but mandatory in the
 | Missing required checker | `tests/main_test.go`: `TestTLCPrerequisites` and `TestMain` | Optional absent JAR permits local skips; required absent/invalid path fails |
 
 The backward slice is intentionally conservative; its tests do not claim precise
-postdominator analysis or general pointer analysis. Backend validation is currently
-partial; generic schema validation/versioning remains M3 work.
+postdominator analysis or general pointer analysis. M3 adds the following contracts:
+
+| Contract | Evidence | Expected result |
+|---|---|---|
+| Consumed graph/effect/data facts | `internal/effects/summary_test.go`, `internal/lowering/plan_test.go` | Missing graph or retained data fails closed; unsafe/dynamic calls cannot become pure |
+| Generic versioned IR validation | `internal/behavior/validate_test.go` | Malformed references, domains, effects, guards, versions, duplicate/case-aliased JSON keys and excessive nesting rejected |
+| Separate backend capabilities | `internal/tla/generator_test.go` | Generic-valid unsupported features rejected by TLA; explicit terminals/activation consumed; ambiguous blocking choices refused |
+| Saved IR completeness | `tests/ir_contract_test.go`: `TestVersionedExamplesRoundTrip` | All eight models round-trip into identical TLA/config without SSA |
+| Stable names and source paths | Same file | Sequential edits do not rename behavior; other-process changes do not renumber actions; same-basename files remain distinct; process/spawn positions are accurate |
+| Provenance integration | `internal/toolinfo/info_test.go`, `cmd/gotla/check_test.go` | IR and checker envelope agree on model contract and binary provenance |
+
+See [the IR contract](BEHAVIOR_IR.md). These structural checks are not a proof of
+frontend alias correctness or equivalence with arbitrary Go.
 
 ## Actual TLC outcomes: 33 checks
 
@@ -112,8 +123,8 @@ They assert unsupported extraction and failure to emit executable TLA+.
   logged, not frozen across platforms/versions or enforced as performance guarantees.
 - A completed host CI run and branch-protection configuration are external evidence;
   workflow presence alone proves neither.
-- Normal source decoding, third-party effect-summary coverage, generic malformed-IR
-  validation, and source-path collisions need dedicated follow-up in their milestones.
+- Complete trace/source replay and broader third-party effect-summary coverage
+  remain follow-up work. M3's malformed-IR/source-path tests do not replace these.
 - M4 must add semantics-specific positive, deadlocking/error, and rejection cases
   before admitting synchronization fields, defers, or proved finite loops. Existing
   rejection tests must not simply be deleted without replacement evidence.

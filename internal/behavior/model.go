@@ -11,7 +11,26 @@ type Position struct {
 	Column   int    `json:"column,omitzero"`
 }
 
+const SchemaVersion = 1
+const CommunicationSemantics = "communication-v1"
+const MainReturn = "main-return"
+
+// Metadata is descriptive provenance, never executable backend syntax.
+type Metadata struct {
+	Producer  string              `json:"producer,omitempty"`
+	Version   string              `json:"version,omitempty"`
+	Revision  string              `json:"revision,omitempty"`
+	Modified  string              `json:"modified,omitempty"`
+	Language  string              `json:"language,omitempty"`
+	Toolchain string              `json:"toolchain,omitempty"`
+	Options   map[string][]string `json:"options,omitempty"`
+}
+
 type Model struct {
+	SchemaVersion        int                     `json:"schemaVersion"`
+	Semantics            string                  `json:"semantics"`
+	Termination          string                  `json:"termination"`
+	Metadata             Metadata                `json:"metadata"`
 	Name                 string                  `json:"name"`
 	Outcome              diagnostic.Outcome      `json:"outcome"`
 	Processes            []Process               `json:"processes"`
@@ -31,6 +50,7 @@ type Process struct {
 	ID        string     `json:"id"`
 	Kind      string     `json:"kind"`
 	Entry     string     `json:"entry"`
+	Terminal  string     `json:"terminal"`
 	Locations []string   `json:"locations"`
 	Locals    []Variable `json:"locals"`
 	Source    Position   `json:"source"`
@@ -59,8 +79,9 @@ type Assertion struct {
 	Description string `json:"description"`
 }
 
-// Guards contain no backend expression text. Choice means an unconstrained boolean;
-// Default means none of the communication alternatives at this location is ready.
+// Guards contain no backend expression text. Choice is a positive nondeterministic
+// alternative marker, not a stored or negatable boolean. Default means none of the
+// communication alternatives in its process/location/group is ready.
 type Guard struct {
 	Kind     string  `json:"kind"`
 	Variable string  `json:"variable,omitempty"`
@@ -111,4 +132,14 @@ type Transition struct {
 	SourcePosition Position `json:"sourcePosition"`
 }
 
-func (m *Model) HasErrors() bool { return m.Outcome == diagnostic.Unsupported }
+func (m *Model) HasErrors() bool {
+	if m == nil || m.Outcome == diagnostic.Unsupported {
+		return true
+	}
+	for _, d := range m.Diagnostics {
+		if d.Severity == "error" {
+			return true
+		}
+	}
+	return false
+}

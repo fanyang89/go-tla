@@ -80,9 +80,9 @@ func (b *builder) initializers() {
 						b.diag("error", "initializer", "synchronization object copying in initializer unsupported", i.Pos())
 					}
 				case *ssa.Call:
-					if callee := x.Common().StaticCallee(); callee != nil && callee.Name() == "init" {
+					if callee := b.effects.Call(x).Callee; callee != nil && callee.Name() == "init" {
 						check(callee)
-					} else if !b.pureCall(x.Common(), map[*ssa.Function]bool{}) {
+					} else if !b.effects.Call(x).IsPure() {
 						b.diag("error", "initializer", "effectful or unknown package initialization unsupported", i.Pos())
 					}
 				}

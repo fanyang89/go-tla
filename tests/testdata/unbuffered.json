@@ -1,53 +1,72 @@
 {
+  "schemaVersion": 1,
+  "semantics": "communication-v1",
+  "termination": "main-return",
+  "metadata": {
+    "producer": "gotla",
+    "version": "\u003ctool-version\u003e",
+    "revision": "\u003cvcs-revision\u003e",
+    "modified": "\u003cvcs-modified\u003e",
+    "language": "Go",
+    "toolchain": "\u003cgo-version\u003e",
+    "options": {
+      "profile": [
+        "acyclic-static-identity"
+      ],
+      "trustedCalls": null
+    }
+  },
   "name": "model",
   "outcome": "precisely-modeled",
   "processes": [
     {
       "id": "main",
       "kind": "main",
-      "entry": "main_entry_1",
+      "entry": "main_entry",
+      "terminal": "main_Done",
       "locations": [
-        "main_entry_1",
-        "main_L7_5",
-        "main_L0_6",
+        "main_entry",
+        "main_step_1",
+        "main_step_2",
         "main_Done"
       ],
       "locals": null,
       "source": {
         "package": "github.com/fanmi/go-tla/examples/unbuffered",
         "function": "main",
-        "file": "main.go",
+        "file": "examples/unbuffered/main.go",
         "line": 4,
         "column": 6
       }
     },
     {
-      "id": "worker_goroutine_8",
+      "id": "worker_goroutine_1",
       "kind": "worker",
-      "entry": "worker_goroutine_8_entry_9",
+      "entry": "worker_goroutine_1_entry",
+      "terminal": "worker_goroutine_1_Done",
       "locations": [
-        "worker_goroutine_8_entry_9",
-        "worker_L0_12",
-        "worker_goroutine_8_Done"
+        "worker_goroutine_1_entry",
+        "worker_goroutine_1_step_1",
+        "worker_goroutine_1_Done"
       ],
       "locals": null,
       "source": {
         "package": "github.com/fanmi/go-tla/examples/unbuffered",
         "function": "worker",
-        "file": "main.go",
-        "line": 6,
-        "column": 2
+        "file": "examples/unbuffered/main.go",
+        "line": 3,
+        "column": 6
       }
     }
   ],
   "channels": [
     {
-      "id": "main_channel_7",
+      "id": "main_channel_1",
       "capacity": 0,
       "source": {
         "package": "github.com/fanmi/go-tla/examples/unbuffered",
         "function": "main",
-        "file": "main.go",
+        "file": "examples/unbuffered/main.go",
         "line": 5,
         "column": 12
       }
@@ -64,53 +83,53 @@
   },
   "transitions": [
     {
-      "id": "main_Spawn_L6_0",
+      "id": "main_Spawn_L6_C2_1",
       "process": "main",
-      "source": "main_entry_1",
+      "source": "main_entry",
       "guard": {
         "kind": "true"
       },
       "effects": [
         {
           "kind": "Spawn",
-          "process": "worker_goroutine_8"
+          "process": "worker_goroutine_1"
         }
       ],
-      "destination": "main_L7_5",
+      "destination": "main_step_1",
       "sourcePosition": {
         "package": "github.com/fanmi/go-tla/examples/unbuffered",
         "function": "main",
-        "file": "main.go",
+        "file": "examples/unbuffered/main.go",
         "line": 6,
         "column": 2
       }
     },
     {
-      "id": "main_Receive_L7_1",
+      "id": "main_Receive_L7_C2_1",
       "process": "main",
-      "source": "main_L7_5",
+      "source": "main_step_1",
       "guard": {
         "kind": "true"
       },
       "effects": [
         {
           "kind": "Receive",
-          "resource": "main_channel_7"
+          "resource": "main_channel_1"
         }
       ],
-      "destination": "main_L0_6",
+      "destination": "main_step_2",
       "sourcePosition": {
         "package": "github.com/fanmi/go-tla/examples/unbuffered",
         "function": "main",
-        "file": "main.go",
+        "file": "examples/unbuffered/main.go",
         "line": 7,
         "column": 2
       }
     },
     {
-      "id": "main_Finish_2",
+      "id": "main_Finish_1",
       "process": "main",
-      "source": "main_L0_6",
+      "source": "main_step_2",
       "guard": {
         "kind": "true"
       },
@@ -119,48 +138,48 @@
       "sourcePosition": {
         "package": "github.com/fanmi/go-tla/examples/unbuffered",
         "function": "main",
-        "file": "main.go",
+        "file": "examples/unbuffered/main.go",
         "line": 4,
         "column": 6
       }
     },
     {
-      "id": "worker_goroutine_8_Send_L3_3",
-      "process": "worker_goroutine_8",
-      "source": "worker_goroutine_8_entry_9",
+      "id": "worker_goroutine_1_Send_L3_C31_1",
+      "process": "worker_goroutine_1",
+      "source": "worker_goroutine_1_entry",
       "guard": {
         "kind": "true"
       },
       "effects": [
         {
           "kind": "Send",
-          "resource": "main_channel_7"
+          "resource": "main_channel_1"
         }
       ],
-      "destination": "worker_L0_12",
+      "destination": "worker_goroutine_1_step_1",
       "sourcePosition": {
         "package": "github.com/fanmi/go-tla/examples/unbuffered",
         "function": "worker",
-        "file": "main.go",
+        "file": "examples/unbuffered/main.go",
         "line": 3,
         "column": 31
       }
     },
     {
-      "id": "worker_goroutine_8_Finish_4",
-      "process": "worker_goroutine_8",
-      "source": "worker_L0_12",
+      "id": "worker_goroutine_1_Finish_1",
+      "process": "worker_goroutine_1",
+      "source": "worker_goroutine_1_step_1",
       "guard": {
         "kind": "true"
       },
       "effects": null,
-      "destination": "worker_goroutine_8_Done",
+      "destination": "worker_goroutine_1_Done",
       "sourcePosition": {
         "package": "github.com/fanmi/go-tla/examples/unbuffered",
         "function": "worker",
-        "file": "main.go",
-        "line": 6,
-        "column": 2
+        "file": "examples/unbuffered/main.go",
+        "line": 3,
+        "column": 6
       }
     }
   ],
@@ -176,7 +195,7 @@
       "severity": "info",
       "code": "supported-domain",
       "message": "Communication-only analysis assumes no implicit sequential runtime panics or resource exhaustion; synchronization failures remain modeled.",
-      "file": "main.go",
+      "file": "examples/unbuffered/main.go",
       "line": 4
     }
   ],

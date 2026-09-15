@@ -16,7 +16,10 @@ type output struct {
 	actions []string
 }
 
-func quote(s string) string { return strconv.Quote(s) }
+func quote(s string) string                          { return strconv.Quote(s) }
+func stepName(t behavior.Transition) string          { return "Step_" + t.ID }
+func rendezvousName(a, b behavior.Transition) string { return "Rendezvous_" + a.ID + "_" + b.ID }
+func comment(s string) string                        { return strings.NewReplacer("\r", " ", "\n", " ").Replace(s) }
 func set(ss []string) string {
 	a := []string{}
 	for _, s := range ss {
@@ -48,9 +51,6 @@ func communication(t behavior.Transition) (behavior.Effect, bool) {
 
 // Generate is pass 9. Unsupported frontend results are rejected rather than emitted.
 func Generate(m *behavior.Model) (string, string, error) {
-	if m.HasErrors() {
-		return "", "", fmt.Errorf("refusing TLA+ generation for unsupported analysis")
-	}
 	if err := Validate(m); err != nil {
 		return "", "", err
 	}
@@ -72,7 +72,7 @@ func Generate(m *behavior.Model) (string, string, error) {
 	o.line("EXTENDS Naturals, Integers, Sequences, TLC")
 	o.line("\\* Generated from a backend-independent Concurrent Behavioral IR.")
 	for _, a := range m.Assumptions {
-		o.line("\\* Assumption: %s", strings.ReplaceAll(a, "\n", " "))
+		o.line("\\* Assumption: %s", comment(a))
 	}
 	o.line("ProcSet == %s", set(procs))
 	o.line("ChannelSet == %s", set(channels))
@@ -82,10 +82,18 @@ func Generate(m *behavior.Model) (string, string, error) {
 	o.line("VARIABLES pc, queues, closed, locks, wg, local, fault, waiting")
 	o.line("vars == <<pc, queues, closed, locks, wg, local, fault, waiting>>")
 	pcs := []string{}
+	active := map[string]bool{}
+	for _, id := range m.InitialState.Active {
+		active[id] = true
+	}
+	mainTerminal := ""
 	for _, p := range m.Processes {
 		loc := "Dormant"
-		if p.ID == m.InitialState.Main {
+		if active[p.ID] {
 			loc = p.Entry
+		}
+		if p.ID == m.InitialState.Main {
+			mainTerminal = p.Terminal
 		}
 		pcs = append(pcs, fmt.Sprintf("p = %s -> %s", quote(p.ID), quote(loc)))
 	}
@@ -108,14 +116,14 @@ func Generate(m *behavior.Model) (string, string, error) {
 	}
 	o.line("    /\\ fault = FALSE")
 	o.line("    /\\ waiting = [p \\in ProcSet |-> FALSE]")
-	o.line("Running == ~fault /\\ pc[%s] # %s", quote(m.InitialState.Main), quote(m.InitialState.Main+"_Done"))
+	o.line("Running == ~fault /\\ pc[%s] # %s", quote(m.InitialState.Main), quote(mainTerminal))
 	o.line("NoSynchronizationErrors == ~fault")
 	for _, t := range m.Transitions {
 		if hasDefault(t.Guard) {
 			continue
 		}
 		pos := t.SourcePosition
-		o.line("\n\\* %s.%s %s:%d:%d", pos.Package, pos.Function, pos.File, pos.Line, pos.Column)
+		o.line("\n\\* %s.%s %s:%d:%d", comment(pos.Package), comment(pos.Function), comment(pos.File), pos.Line, pos.Column)
 		o.line("Pre_%s == Running /\\ pc[%s] = %s /\\ %s", t.ID, quote(t.Process), quote(t.Source), o.guard(t.Guard, t))
 	}
 	for _, t := range m.Transitions {
@@ -132,17 +140,17 @@ func Generate(m *behavior.Model) (string, string, error) {
 		o.register(t)
 		o.single(t)
 	}
-	for i, a := range m.Transitions {
+	for _, a := range m.Transitions {
 		ae, ok := communication(a)
 		if !ok || ae.Kind != behavior.Send || ae.Resource == "nil" || o.caps[ae.Resource] != 0 {
 			continue
 		}
-		for j, c := range m.Transitions {
+		for _, c := range m.Transitions {
 			ce, ok := communication(c)
 			if !ok || ce.Kind != behavior.Receive || ce.Resource != ae.Resource || a.Process == c.Process {
 				continue
 			}
-			name := fmt.Sprintf("Rendezvous_%s_%s_%d_%d", a.ID, c.ID, i, j)
+			name := rendezvousName(a, c)
 			o.line("\n%s ==", name)
 			o.line("    /\\ Pre_%s /\\ Pre_%s /\\ ~closed[%s]", a.ID, c.ID, quote(ae.Resource))
 			o.line("    /\\ (waiting[%s] \\/ waiting[%s])", quote(a.Process), quote(c.Process))
@@ -150,7 +158,7 @@ func Generate(m *behavior.Model) (string, string, error) {
 			o.actions = append(o.actions, name)
 		}
 	}
-	o.line("\nTerminated == pc[%s] = %s /\\ UNCHANGED vars", quote(m.InitialState.Main), quote(m.InitialState.Main+"_Done"))
+	o.line("\nTerminated == pc[%s] = %s /\\ UNCHANGED vars", quote(m.InitialState.Main), quote(mainTerminal))
 	o.actions = append(o.actions, "Terminated")
 	o.line("Next ==\n    \\/ %s", strings.Join(o.actions, "\n    \\/ "))
 	o.line("Spec == Init /\\ [][Next]_vars")
@@ -269,10 +277,10 @@ func (o *output) single(t behavior.Transition) {
 		}
 	}
 	changes["fault"] = fault
-	o.line("\n%s ==", t.ID)
+	o.line("\n%s ==", stepName(t))
 	o.line("    /\\ %s", conj(guards))
 	o.updates([]behavior.Transition{t}, changes)
-	o.actions = append(o.actions, t.ID)
+	o.actions = append(o.actions, stepName(t))
 }
 func (o *output) updates(ts []behavior.Transition, changes map[string]string) {
 	pc := []string{}

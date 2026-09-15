@@ -166,7 +166,7 @@ do not invent performance guarantees before measuring the target examples.
 | Scope definition | Done (documentation) | Target users/workflow, supported-domain boundary, non-goals, definition of done | This roadmap separates current capabilities from planned ones |
 | M1: Quality baseline | Implemented; local gate passed | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; strict gate cannot silently skip TLC; hosted run pending |
 | M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run pending |
-| M3: Analysis and IR contract | Planned | Focused pass separation; consumed analysis results; versioned IR metadata; generic IR validation; stable source naming | Independently testable passes and explicit malformed-IR rejection without model-size regression |
+| M3: Analysis and IR contract | Implemented; local gate passed | Consumed graph/effect/discovery/slice plans; separated identity checks; versioned IR and common validation; explicit terminals and stable source naming | Malformed-IR/pass/round-trip/naming tests pass; eight size baselines unchanged; pinned TLC gate passed |
 | M4: Common Go patterns | Planned | Static fields/direct receivers, restricted defers, then proved finite loops | Semantics and rejection boundaries documented and tested for each addition |
 | M5: Component acceptance | Planned | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
 
@@ -256,6 +256,31 @@ writing its plan or skipping its checker tests does not count as implementation.
 - Full trace decoding/replay, automatic source-build provenance capture, and handling
   abandoned output locks without operator inspection remain outside this milestone.
 
-**Next action:** M3 — consolidate the consumed analysis passes and backend-independent
-IR validation/version contract. Preserve the established semantic regression gates;
-do not broaden frontend support as a side effect of that refactoring.
+### M3 validation record — [DONE:5]
+
+- Call summaries consume the static graph; cached function plans consume discovery,
+  process-entry and backward-slice results. Capacity/resource/control extraction
+  checks retained data. Identity/dominance and initialization checks are separated
+  from effect summaries and atomic-region lowering, not bypassed by purity claims.
+- Behavioral IR schema 1 has explicit communication/termination policies, terminal
+  locations and analyzer/configuration provenance. Strict saved-IR decoding and
+  generic validation are independent of TLA capability restrictions. The checker
+  envelope records the model contract and shares binary provenance.
+- New tests cover malformed/version-mismatched IR, duplicate/case-aliased JSON keys,
+  bounded nesting, broken pass contracts, backend-only restrictions, and saved-IR
+  round trips for all eight examples. Source tests distinguish same-basename files
+  and declarations from spawn sites; unrelated SSA/process edits preserve names.
+- Both full IR snapshots were checked for equivalent behavior modulo renamed
+  identities, source metadata and explicit contract fields. All eight model-size
+  baselines are unchanged. Golden provenance alone uses tool/version placeholders;
+  real artifacts retain the actual values.
+- Go/vet tests and the strict checksum-pinned TLC gate passed locally, with the
+  original 33 semantic checks plus four CLI cases and zero skips. Internal/CLI
+  race tests passed. Hosted CI has not been run or claimed.
+- No fields, defers, loops or other frontend syntax were admitted by this refactor.
+  See [the IR contract](docs/BEHAVIOR_IR.md) for backend limits, source-path policy,
+  version compatibility and remaining provenance/trace limitations.
+
+**Next action:** M4 — static synchronization fields and direct receivers first,
+then restricted synchronization defers and proved finite loops. Each addition must
+retain initialization/copy rejection rules and pass actual semantic regressions.

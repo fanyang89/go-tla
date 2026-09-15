@@ -59,7 +59,14 @@ func TestExamplesAndSnapshots(t *testing.T) {
 				}
 			}
 			if name == "unbuffered" || name == "select" {
-				data, err := json.MarshalIndent(m, "", "  ")
+				// Keep actual provenance in artifacts/round-trip tests, not toolchain-
+				// specific golden bytes. Only these descriptive fields are normalized.
+				golden := *m
+				golden.Metadata.Version = "<tool-version>"
+				golden.Metadata.Toolchain = "<go-version>"
+				golden.Metadata.Revision = "<vcs-revision>"
+				golden.Metadata.Modified = "<vcs-modified>"
+				data, err := json.MarshalIndent(&golden, "", "  ")
 				if err != nil {
 					t.Fatal(err)
 				}

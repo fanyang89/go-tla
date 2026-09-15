@@ -15,6 +15,19 @@ type Result struct {
 // Compute deliberately retains all predecessor control on a path to a behavioral
 // root, rather than relying on optimistic postdominator or alias assumptions.
 func Compute(f *ssa.Function, relevantCall func(*ssa.Call) bool) Result {
+	roots := discovery.Scan(f).Roots
+	for _, bb := range f.Blocks {
+		for _, i := range bb.Instrs {
+			if c, ok := i.(*ssa.Call); ok && relevantCall(c) {
+				roots[i] = true
+			}
+		}
+	}
+	return FromRoots(f, roots)
+}
+
+// FromRoots consumes discovery and call-effect roots instead of rediscovering them.
+func FromRoots(f *ssa.Function, roots map[ssa.Instruction]bool) Result {
 	r := Result{map[ssa.Instruction]bool{}, map[*ssa.If]bool{}, map[ssa.Value]bool{}}
 	blocks := map[*ssa.BasicBlock]bool{}
 	var markBlock func(*ssa.BasicBlock)
@@ -43,11 +56,7 @@ func Compute(f *ssa.Function, relevantCall func(*ssa.Call) bool) Result {
 	}
 	for _, b := range f.Blocks {
 		for _, i := range b.Instrs {
-			root := discovery.IsRoot(i)
-			if c, ok := i.(*ssa.Call); ok && relevantCall(c) {
-				root = true
-			}
-			if root {
+			if roots[i] {
 				r.Roots[i] = true
 				markBlock(b)
 				for _, p := range i.Operands(nil) {

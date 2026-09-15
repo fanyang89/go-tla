@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fanmi/go-tla/internal/behavior"
 	"github.com/fanmi/go-tla/internal/checker"
 )
 
@@ -30,6 +31,20 @@ func readResult(t *testing.T, out string) checkResult {
 		sum, err := hashArtifact(file.Path)
 		if err != nil || sum != file.SHA256 {
 			t.Fatalf("artifact evidence does not match: %+v; %v", file, err)
+		}
+	}
+	if file, ok := r.Artifacts["model.json"]; ok {
+		data, err := os.ReadFile(file.Path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var m behavior.Model
+		if err := json.Unmarshal(data, &m); err != nil {
+			t.Fatal(err)
+		}
+		if r.ModelSchemaVersion != m.SchemaVersion || r.ModelSemantics != m.Semantics || r.TerminationPolicy != m.Termination ||
+			r.ToolVersion != m.Metadata.Version || r.GoVersion != m.Metadata.Toolchain || r.ToolRevision != m.Metadata.Revision || r.ToolModified != m.Metadata.Modified {
+			t.Fatal("checker envelope and IR contract/provenance disagree")
 		}
 	}
 	return r

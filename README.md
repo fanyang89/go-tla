@@ -20,6 +20,7 @@ are not supported features until implemented and tested.
 - [Supported Go patterns](docs/SUPPORTED_GO.md)
 - [Verification workflow and result interpretation](docs/VERIFICATION.md)
 - [Semantic test coverage and gaps](docs/SEMANTIC_TEST_MATRIX.md)
+- [Versioned behavioral IR contract](docs/BEHAVIOR_IR.md)
 
 ## Quick start
 
@@ -35,7 +36,8 @@ go build -o gotla ./cmd/gotla
 
 The output directory contains:
 
-* `model.json`: behavioral IR, source positions, precision outcome, assumptions, diagnostics.
+* `model.json`: version-1 behavioral IR, tool/configuration metadata, source positions,
+  precision outcome, assumptions and diagnostics. Unversioned artifacts must be regenerated.
 * `model.tla`: readable named actions and synchronization runtime.
 * `model.cfg`: specification, synchronization-error invariant, deadlock checking.
 

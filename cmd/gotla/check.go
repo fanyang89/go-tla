@@ -9,8 +9,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"runtime"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -20,6 +18,7 @@ import (
 	"github.com/fanmi/go-tla/internal/checker"
 	"github.com/fanmi/go-tla/internal/diagnostic"
 	"github.com/fanmi/go-tla/internal/lowering"
+	"github.com/fanmi/go-tla/internal/toolinfo"
 )
 
 type fileEvidence struct {
@@ -37,25 +36,28 @@ type sourceCandidate struct {
 
 type checkResult struct {
 	checker.Report
-	CLIExitCode      *int                    `json:"exitCode,omitempty"`
-	SchemaVersion    int                     `json:"schemaVersion"`
-	RunID            string                  `json:"runId"`
-	StartedAt        time.Time               `json:"startedAt"`
-	FinishedAt       time.Time               `json:"finishedAt,omitzero"`
-	SourceDirectory  string                  `json:"sourceDirectory"`
-	Patterns         []string                `json:"patterns"`
-	TrustedCalls     []string                `json:"trustedCalls,omitempty"`
-	Config           checker.Config          `json:"config"`
-	GoVersion        string                  `json:"goVersion"`
-	ToolVersion      string                  `json:"toolVersion"`
-	ToolRevision     string                  `json:"toolRevision,omitempty"`
-	ToolModified     string                  `json:"toolModified,omitempty"`
-	AnalysisOutcome  diagnostic.Outcome      `json:"analysisOutcome,omitempty"`
-	Assumptions      []string                `json:"assumptions,omitempty"`
-	Diagnostics      []diagnostic.Diagnostic `json:"diagnostics,omitempty"`
-	Statistics       *behavior.Statistics    `json:"modelStatistics,omitempty"`
-	Artifacts        map[string]fileEvidence `json:"artifacts,omitempty"`
-	SourceCandidates []sourceCandidate       `json:"sourceCandidates,omitempty"`
+	CLIExitCode        *int                    `json:"exitCode,omitempty"`
+	SchemaVersion      int                     `json:"schemaVersion"`
+	RunID              string                  `json:"runId"`
+	StartedAt          time.Time               `json:"startedAt"`
+	FinishedAt         time.Time               `json:"finishedAt,omitzero"`
+	SourceDirectory    string                  `json:"sourceDirectory"`
+	Patterns           []string                `json:"patterns"`
+	TrustedCalls       []string                `json:"trustedCalls,omitempty"`
+	Config             checker.Config          `json:"config"`
+	GoVersion          string                  `json:"goVersion"`
+	ToolVersion        string                  `json:"toolVersion"`
+	ToolRevision       string                  `json:"toolRevision,omitempty"`
+	ToolModified       string                  `json:"toolModified,omitempty"`
+	ModelSchemaVersion int                     `json:"modelSchemaVersion,omitzero"`
+	ModelSemantics     string                  `json:"modelSemantics,omitempty"`
+	TerminationPolicy  string                  `json:"terminationPolicy,omitempty"`
+	AnalysisOutcome    diagnostic.Outcome      `json:"analysisOutcome,omitempty"`
+	Assumptions        []string                `json:"assumptions,omitempty"`
+	Diagnostics        []diagnostic.Diagnostic `json:"diagnostics,omitempty"`
+	Statistics         *behavior.Statistics    `json:"modelStatistics,omitempty"`
+	Artifacts          map[string]fileEvidence `json:"artifacts,omitempty"`
+	SourceCandidates   []sourceCandidate       `json:"sourceCandidates,omitempty"`
 }
 
 func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int {
@@ -101,23 +103,12 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 		return 1
 	}
 	defer dir.Close()
+	info := toolinfo.Current()
 	result := checkResult{
 		Report:        checker.Report{Status: checker.Running, Reason: "Analysis/check in progress; this is not a verification result"},
 		SchemaVersion: 1, RunID: rand.Text(), StartedAt: time.Now().UTC(),
-		SourceDirectory: cwd, Patterns: fs.Args(), Config: cfg, GoVersion: runtime.Version(), ToolVersion: "development",
-	}
-	if info, ok := debug.ReadBuildInfo(); ok {
-		if info.Main.Version != "" {
-			result.ToolVersion = info.Main.Version
-		}
-		for _, setting := range info.Settings {
-			switch setting.Key {
-			case "vcs.revision":
-				result.ToolRevision = setting.Value
-			case "vcs.modified":
-				result.ToolModified = setting.Value
-			}
-		}
+		SourceDirectory: cwd, Patterns: fs.Args(), Config: cfg, GoVersion: info.GoVersion, ToolVersion: info.Version,
+		ToolRevision: info.Revision, ToolModified: info.Modified,
 	}
 	opts := lowering.Options{}
 	if *trust != "" {
@@ -176,6 +167,7 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 		return finish(checker.AnalysisError, err.Error())
 	}
 	printDiagnostics(stderr, m)
+	result.ModelSchemaVersion, result.ModelSemantics, result.TerminationPolicy = m.SchemaVersion, m.Semantics, m.Termination
 	result.AnalysisOutcome, result.Assumptions, result.Diagnostics = m.Outcome, m.Assumptions, m.Diagnostics
 	result.Statistics = new(m.Statistics())
 	analysis.PrintStatistics(stdout, m)

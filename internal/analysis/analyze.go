@@ -2,6 +2,7 @@
 package analysis
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -11,13 +12,35 @@ import (
 )
 
 func Analyze(dir string, patterns []string, opts lowering.Options) (*behavior.Model, error) {
-	ps, err := frontend.Load(dir, patterns...)
+	return AnalyzeContext(context.Background(), dir, patterns, opts)
+}
+
+// AnalyzeContext cancels package loading and checks cancellation between passes.
+// SSA construction/lowering do not yet support mid-pass interruption.
+func AnalyzeContext(ctx context.Context, dir string, patterns []string, opts lowering.Options) (*behavior.Model, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	ps, err := frontend.LoadContext(ctx, dir, patterns...)
 	if err != nil {
 		return nil, err
 	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	p := frontend.BuildSSA(ps)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	frontend.BuildCallGraph(p)
-	return lowering.Lower(p, opts)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	m, err := lowering.Lower(p, opts)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	return m, err
 }
 
 // PrintStatistics reports IR size separately from checker state-space statistics.

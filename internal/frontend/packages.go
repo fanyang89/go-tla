@@ -2,6 +2,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"go/token"
 	"golang.org/x/tools/go/callgraph"
@@ -21,7 +22,11 @@ type Program struct {
 
 // Load is pass 1a. Dir permits callers/tests to analyze an independent module.
 func Load(dir string, patterns ...string) ([]*packages.Package, error) {
-	ps, err := packages.Load(&packages.Config{Mode: packages.LoadAllSyntax, Dir: dir}, patterns...)
+	return LoadContext(context.Background(), dir, patterns...)
+}
+
+func LoadContext(ctx context.Context, dir string, patterns ...string) ([]*packages.Package, error) {
+	ps, err := packages.Load(&packages.Config{Mode: packages.LoadAllSyntax, Dir: dir, Context: ctx}, patterns...)
 	if err != nil {
 		return nil, err
 	}

@@ -2,22 +2,32 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/fanmi/go-tla/internal/analysis"
+	"github.com/fanmi/go-tla/internal/artifact"
+	"github.com/fanmi/go-tla/internal/checker"
 	"github.com/fanmi/go-tla/internal/lowering"
-	"github.com/fanmi/go-tla/internal/tla"
 )
 
 func run(args []string, stdout, stderr io.Writer) int {
+	return runContext(context.Background(), args, stdout, stderr)
+}
+
+func runContext(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "check" {
+		return runCheck(ctx, args[1:], stdout, stderr)
+	}
 	if len(args) == 0 || (args[0] != "analyze" && args[0] != "inspect") {
-		fmt.Fprintln(stderr, "usage: gotla {analyze|inspect} [-out DIR] [-trust-call package.Function,...] ./package")
+		fmt.Fprintln(stderr, "usage: gotla {analyze|inspect|check} [-out DIR] [-trust-call package.Function,...] ./package")
 		return 2
 	}
 	fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
@@ -35,14 +45,22 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if *trust != "" {
 		opts.TrustedCalls = strings.Split(*trust, ",")
 	}
-	m, err := analysis.Analyze("", fs.Args(), opts)
+	var dir *artifact.Directory
+	if args[0] == "analyze" {
+		var err error
+		dir, err = artifact.Begin(*out)
+		if err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			return 1
+		}
+		defer dir.Close()
+	}
+	m, err := analysis.AnalyzeContext(ctx, "", fs.Args(), opts)
 	if err != nil {
 		fmt.Fprintln(stderr, "error:", err)
 		return 1
 	}
-	for _, d := range m.Diagnostics {
-		fmt.Fprintf(stderr, "%s: %s:%d [%s] %s\n", d.Severity, d.File, d.Line, d.Code, d.Message)
-	}
+	printDiagnostics(stderr, m)
 	if args[0] == "inspect" {
 		analysis.Inspect(stdout, m)
 		if m.HasErrors() {
@@ -50,39 +68,13 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
-	if err = os.MkdirAll(*out, 0755); err != nil {
-		fmt.Fprintln(stderr, err)
-		return 1
-	}
-	// Remove stale executable artifacts before writing a new diagnostic/IR result.
-	for _, name := range []string{"model.tla", "model.cfg"} {
-		if err = os.Remove(filepath.Join(*out, name)); err != nil && !os.IsNotExist(err) {
-			fmt.Fprintln(stderr, err)
-			return 1
-		}
-	}
-	data, err := json.MarshalIndent(m, "", "  ")
-	if err == nil {
-		err = os.WriteFile(filepath.Join(*out, "model.json"), append(data, '\n'), 0644)
-	}
-	if err != nil {
+	if _, _, err := emitModel(dir, m); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
 	}
 	if m.HasErrors() {
 		fmt.Fprintln(stderr, "error: unsupported analysis; emitted diagnostic model.json only")
 		return 1
-	}
-	spec, cfg, err := tla.Generate(m)
-	if err != nil {
-		fmt.Fprintln(stderr, err)
-		return 1
-	}
-	for _, f := range []struct{ name, content string }{{"model.tla", spec}, {"model.cfg", cfg}} {
-		if err = os.WriteFile(filepath.Join(*out, f.name), []byte(f.content), 0644); err != nil {
-			fmt.Fprintln(stderr, err)
-			return 1
-		}
 	}
 	fmt.Fprintf(stdout, "wrote %s/{model.tla,model.cfg,model.json} (%s)\n", *out, m.Outcome)
 	analysis.PrintStatistics(stdout, m)
@@ -92,12 +84,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 // printTLCHint emits a POSIX-shell command without changing the caller's directory.
 func printTLCHint(w io.Writer, out string) {
-	jar := os.Getenv("TLC_JAR")
-	if jar == "" {
-		if info, err := os.Stat("tla2tools.jar"); err == nil && info.Mode().IsRegular() {
-			jar = "tla2tools.jar"
-		}
-	}
+	jar := checker.FindJAR("")
 	dir, err := filepath.Abs(out)
 	if err != nil {
 		fmt.Fprintln(w, "Run TLC from the output directory: java -cp /absolute/path/tla2tools.jar tlc2.TLC -workers 1 model.tla")
@@ -118,4 +105,9 @@ func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
-func main() { os.Exit(run(os.Args[1:], os.Stdout, os.Stderr)) }
+func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	code := runContext(ctx, os.Args[1:], os.Stdout, os.Stderr)
+	stop()
+	os.Exit(code)
+}

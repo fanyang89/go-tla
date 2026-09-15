@@ -5,4 +5,9 @@
 /model.tla
 /model.cfg
 /model.json
+/result.json
+/tlc.log
+/.gotla.lock/
+/.gotla-tlc-*/
+/.gotla-write-*
 /states/

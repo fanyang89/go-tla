@@ -39,7 +39,11 @@ The passes are explicit functions/packages:
 
 Unit tests exercise recognition, call-graph inclusion, slicing and abstraction;
 integration tests exercise the complete pipeline. Snapshots cover channel and
-select IR/TLA. Optional actual TLC tests validate semantic outcomes, not just syntax.
+select IR/TLA and the eight examples' model sizes. Repeated extraction checks IR,
+diagnostics, TLA, and config determinism. Actual TLC tests validate semantic outcomes,
+not just syntax; they are optional locally but mandatory in the pinned verification
+gate. See the [semantic test matrix](docs/SEMANTIC_TEST_MATRIX.md) and
+[verification guide](docs/VERIFICATION.md).
 
 ## What survives slicing
 

@@ -17,6 +17,10 @@ components with explicit finite analysis scope—not a general Go verifier.
 acceptance criteria, and staged implementation plan. Planned capabilities there
 are not supported features until implemented and tested.
 
+- [Supported Go patterns](docs/SUPPORTED_GO.md)
+- [Verification workflow and result interpretation](docs/VERIFICATION.md)
+- [Semantic test coverage and gaps](docs/SEMANTIC_TEST_MATRIX.md)
+
 ## Quick start
 
 Requires Go 1.26 or newer. Run from this repository:
@@ -32,6 +36,10 @@ The output directory contains:
 * `model.json`: behavioral IR, source positions, precision outcome, assumptions, diagnostics.
 * `model.tla`: readable named actions and synchronization runtime.
 * `model.cfg`: specification, synchronization-error invariant, deadlock checking.
+
+Both commands print model-size statistics (IR processes, channels, mutexes,
+WaitGroups, locations, transitions, and abstract predicates). These are not TLC
+state-space counts.
 
 Flags precede package patterns. Supply exactly one main package. The package can
 be ordinary code in the current Go module; the tool does not execute it. On an
@@ -98,7 +106,21 @@ TLC_JAR=/absolute/path/tla2tools.jar go test ./... -count=1
 ```
 
 Without `TLC_JAR`, only the actual TLC tests skip; frontend, IR, snapshot, backend,
-and CLI tests still run. Golden IR/TLA files are in `tests/testdata`; intentionally
+and CLI tests still run. This is not sufficient for the semantic verification gate.
+The CI workflow runs the following strict gate with Java 25 and the pinned official
+TLC release:
+
+```sh
+bash scripts/download-tlc.sh "$HOME/tmp/gotla-tools/tla2tools.jar"
+TLC_JAR="$HOME/tmp/gotla-tools/tla2tools.jar" bash scripts/test-ci.sh
+```
+
+Provisioning is explicit and checksum-verified. The gate fails for a missing or
+mismatched JAR and forbids snapshot regeneration. `GOTLA_REQUIRE_TLC=1` also makes
+Go integration tests fail rather than skip when `TLC_JAR` is missing. See the
+[verification guide](docs/VERIFICATION.md) for details and CI limitations.
+
+Golden IR/TLA and model-size files are in `tests/testdata`; intentionally
 regenerate with `UPDATE_SNAPSHOTS=1 go test ./tests -run TestExamplesAndSnapshots`.
 
 The implementation was checked with Go 1.26.2, Java 25, and the official v1.8.0

@@ -11,9 +11,11 @@ current supported language.
 - [ARCHITECTURE.md](ARCHITECTURE.md): current semantics, assumptions, and limitations.
 - This document: target scope, acceptance gates, priorities, and progress.
 
-Planned documentation includes `docs/SUPPORTED_GO.md` (supported, abstracted, and
-rejected Go patterns) and `docs/VERIFICATION.md` (results, assumptions, false
-positives, and incomplete checks). Those documents are not implemented yet.
+Current companion guides:
+
+- [docs/SUPPORTED_GO.md](docs/SUPPORTED_GO.md): supported, abstracted, and rejected Go patterns.
+- [docs/VERIFICATION.md](docs/VERIFICATION.md): results, assumptions, false positives, and incomplete checks.
+- [docs/SEMANTIC_TEST_MATRIX.md](docs/SEMANTIC_TEST_MATRIX.md): regression evidence and coverage gaps.
 
 ## 1. What “basically usable” means
 
@@ -87,7 +89,11 @@ Implemented:
   operations, and unresolved call effects; recorded trusted-call assumptions.
 - `inspect` summaries and `analyze` output (`model.json`, `model.tla`, `model.cfg`).
 - A copyable TLC command after successful analysis, using `TLC_JAR` or a local JAR.
-- Eight examples, unit/rejection/snapshot tests, and 33 optional actual TLC checks.
+- Eight examples, unit/rejection/snapshot tests, and 33 actual TLC checks (optional
+  in ordinary local tests, required in the strict CI gate).
+- IR-size summaries and eight-example size/determinism baselines.
+- An explicit checksum-pinned TLC provisioning script and required verification
+  workflow; missing/mismatched checker and snapshot regeneration fail the gate.
 
 Current restrictions include all reachable CFG cycles and recursion, synchronization
 fields/containers, general aliasing, defer/recover/explicit panic, and dynamic
@@ -153,7 +159,7 @@ do not invent performance guarantees before measuring the target examples.
 | Milestone | Status | Deliverables | Acceptance gate |
 |---|---|---|---|
 | Scope definition | Done (documentation) | Target users/workflow, supported-domain boundary, non-goals, definition of done | This roadmap separates current capabilities from planned ones |
-| M1: Quality baseline | Planned | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; CI cannot silently skip TLC |
+| M1: Quality baseline | Implemented; local gate passed | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; strict gate cannot silently skip TLC; hosted run pending |
 | M2: Check workflow | Planned | `gotla check`; JAR/timeout/memory/worker settings; raw log and structured result; source-oriented summary; stale-output handling | End-to-end use without composing Java commands; failure and incomplete runs never report pass |
 | M3: Analysis and IR contract | Planned | Focused pass separation; consumed analysis results; versioned IR metadata; generic IR validation; stable source naming | Independently testable passes and explicit malformed-IR rejection without model-size regression |
 | M4: Common Go patterns | Planned | Static fields/direct receivers, restricted defers, then proved finite loops | Semantics and rejection boundaries documented and tested for each addition |
@@ -214,6 +220,20 @@ its tests, documentation boundary, validation commands/results, and remaining
 limitations. Mark a milestone complete only after its acceptance gate is met;
 writing its plan or skipping its checker tests does not count as implementation.
 
-**Next action:** M1 — inventory the existing semantic tests into a coverage matrix,
-add the supported-pattern and verification guides, and establish a required TLC
-CI gate. No analysis semantics changed as part of the scope-definition step.
+### M1 validation record
+
+- The strict local gate (`TLC_JAR=/absolute/path/tla2tools.jar bash scripts/test-ci.sh`)
+  passed with Go 1.26.2, Java 25, and the official checksum-pinned TLC 1.8.0 JAR.
+- All 33 actual TLC checks ran; no tests skipped. Vet, IR/TLA snapshots, all eight
+  example size baselines, and repeated-extraction determinism checks passed.
+- Negative checks confirmed failure for a missing required JAR, nonexistent explicit
+  JAR path, wrong checksum, and enabled snapshot regeneration. Provisioning rejected
+  an existing corrupted artifact without overwriting it.
+- Shell syntax, workflow YAML structure, and local Markdown links were checked.
+  GitHub-hosted execution and branch protection have **not** been verified or changed;
+  maintainers must require the workflow job in repository policy separately.
+- No supported-language or synchronization semantics were expanded by M1.
+
+**Next action:** M2 — specify checker result/exit categories and implement
+`gotla check` with bounded execution, logs, and stale-output safety, without
+broadening frontend support. The CLI still only implements `inspect` and `analyze`.

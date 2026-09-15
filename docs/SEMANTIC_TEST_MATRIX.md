@@ -85,6 +85,19 @@ TLC must find a deadlock; an always-enabled skip must not hide the blocked branc
 | `two-default-selects-never-rendezvous` | No error; no invented rendezvous between two nonblocking polls |
 | `registered-select-closed` | No error; a registered receive can complete after close |
 
+## M4 increment: six inline-field TLC checks
+
+`tests/fields_test.go` adds `TestTLCStaticSyncFields`: shared-lock deadlock,
+distinct inline fields, cross-worker unlock, invalid unlock, WaitGroup completion,
+and missing completion. Together with the original suite these are 39 semantic
+TLC cases, separate from CLI integration tests.
+
+`TestStaticSyncFields` checks local/global/nested objects, fresh allocations,
+receiver/subobject calls, stable aliases and captures. `TestSyncFieldRefusalBoundaries`
+and `TestSyncAggregateInitializerCopyRejected` retain copy/reset, value receiver,
+ambiguous/nil/future identities, interface, channel/pointer field and container
+refusals. Channel-field initialization, defers and loops remain future increments.
+
 ## Check workflow regressions (M2)
 
 The original 33 checks above remain unchanged. Additional workflow tests cover:
@@ -126,5 +139,5 @@ They assert unsupported extraction and failure to emit executable TLA+.
 - Complete trace/source replay and broader third-party effect-summary coverage
   remain follow-up work. M3's malformed-IR/source-path tests do not replace these.
 - M4 must add semantics-specific positive, deadlocking/error, and rejection cases
-  before admitting synchronization fields, defers, or proved finite loops. Existing
+  before admitting more field forms, defers, or proved finite loops. Existing
   rejection tests must not simply be deleted without replacement evidence.

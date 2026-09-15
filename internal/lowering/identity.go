@@ -29,6 +29,10 @@ func (b *builder) allocateResources(fr *frame) {
 				fr.ids[x] = id
 				b.m.Channels = append(b.m.Channels, behavior.Channel{ID: id, Capacity: n, Source: b.position(x.Pos(), fr.f)})
 			case *ssa.Alloc:
+				if aggregatePointer(x.Type()) {
+					fr.ids[x] = b.fresh(fr.f.Name() + "_object")
+					continue
+				}
 				if typ := discovery.SyncType(x.Type()); typ != "" {
 					if typ != "Mutex" && typ != "WaitGroup" {
 						b.diag("error", "sync-type", "unsupported sync type "+typ, x.Pos())
@@ -58,7 +62,7 @@ func relevantType(t types.Type) bool {
 	if _, ok := t.Underlying().(*types.Chan); ok {
 		return true
 	}
-	return discovery.SyncType(t) != ""
+	return discovery.SyncType(t) != "" || inlineSync(t) || aggregatePointer(t)
 }
 
 // callee consumes the call summary's graph-checked target and binds only statically
@@ -74,7 +78,7 @@ func (b *builder) callee(fr *frame, c *ssa.CallCommon, f *ssa.Function, pos toke
 	}
 	bind := map[ssa.Value]string{}
 	for j, p := range f.Params {
-		if discovery.SyncType(p.Type()) != "" {
+		if discovery.SyncType(p.Type()) != "" || inlineSync(p.Type()) {
 			if _, ok := p.Type().(*types.Pointer); !ok {
 				b.diag("error", "sync-copy", "passing synchronization objects by value unsupported", pos)
 			}
@@ -116,14 +120,20 @@ func (b *builder) identity(fr *frame, v ssa.Value, seen map[ssa.Value]bool) stri
 		if relevantType(x.Type()) {
 			return b.identity(fr, x.X, seen)
 		}
+	case *ssa.FieldAddr:
+		if id := b.fieldIdentity(fr, x, seen); id != "" {
+			return id
+		}
 	case *ssa.Global:
 		typ := discovery.SyncType(x.Type())
-		if typ == "Mutex" || typ == "WaitGroup" {
+		if typ == "Mutex" || typ == "WaitGroup" || aggregatePointer(x.Type()) {
 			id := b.globals[x]
 			if id == "" {
 				id = b.fresh("global_" + x.Pkg.Pkg.Path() + "_" + x.Name())
 				b.globals[x] = id
-				b.addSync(id, typ)
+				if typ != "" {
+					b.addSync(id, typ)
+				}
 			}
 			return id
 		}

@@ -152,8 +152,13 @@ every load and closure capture, including instruction order inside a basic block
 A later or conditionally executed store cannot retroactively define a captured
 channel. Capturing before initialization is rejected even if a later invocation
 might make it safe; closure writes and multiple stores are also rejected. Mutex/WaitGroup allocations and direct global
-objects have stable identity. Struct fields, containers, changing captured channel
-cells, indirect shared identity stores, dynamic callbacks/interface dispatch,
+objects have stable identity. Inline Mutex/WaitGroup fields now use a static local
+allocation or direct global object plus nested value-field path. Direct pointer
+receivers/parameters and stable closure captures preserve that object identity.
+Synchronization state remains zero-initialized; whole-aggregate loads/copies,
+value receivers/arguments, resets and initializer copies are rejected. Channel and
+pointer fields, containers, changing captured channel cells, indirect shared identity
+stores, dynamic callbacks/interface dispatch,
 returned channel topology and different-identity phis are rejected when relevant.
 Synchronization objects cannot be passed by value or copied/reset. Reachable SSA
 operations consuming or producing `unsafe.Pointer` (including casts and indirect

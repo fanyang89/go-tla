@@ -34,6 +34,7 @@ type builder struct {
 	nodes     map[string]*node
 	names     map[string]int
 	globals   map[*ssa.Global]string
+	fields    map[string]string
 	stack     map[*ssa.Function]bool
 	resources map[string]bool
 	effects   *effects.Analyzer
@@ -58,7 +59,7 @@ func Lower(p *frontend.Program, opts Options) (*behavior.Model, error) {
 		return nil, err
 	}
 	m := &behavior.Model{SchemaVersion: behavior.SchemaVersion, Semantics: behavior.CommunicationSemantics, Termination: behavior.MainReturn, Metadata: modelMetadata(opts), Name: "model", Outcome: diagnostic.Precise, Assertions: []behavior.Assertion{{Kind: "NoSynchronizationErrors", Description: "No closed-channel send/close, invalid unlock, or negative WaitGroup counter"}}}
-	b := &builder{p: p, m: m, opts: opts, nodes: map[string]*node{}, stack: map[*ssa.Function]bool{}, resources: map[string]bool{}, effects: effects.New(p, opts.TrustedCalls), plans: map[*ssa.Function]*functionPlan{}, names: map[string]int{}, globals: map[*ssa.Global]string{}}
+	b := &builder{p: p, m: m, opts: opts, nodes: map[string]*node{}, stack: map[*ssa.Function]bool{}, resources: map[string]bool{}, effects: effects.New(p, opts.TrustedCalls), plans: map[*ssa.Function]*functionPlan{}, names: map[string]int{}, globals: map[*ssa.Global]string{}, fields: map[string]string{}}
 	m.Assumptions = append(m.Assumptions, "Communication-only analysis assumes no implicit sequential runtime panics or resource exhaustion; synchronization failures remain modeled.", "Go main return terminates the whole program, including blocked workers.", "Trusted-call contracts assert total, side-effect-free execution and no synchronization; return values are abstract.")
 	b.diag("info", "supported-domain", m.Assumptions[0], main.Pos())
 	b.initializers()
@@ -256,13 +257,17 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 				}
 			case *ssa.Defer, *ssa.RunDefers:
 				b.diag("error", "exception-control", "defer, panic and recover unsupported", i.Pos())
+			case *ssa.UnOp:
+				if x.Op == token.MUL && inlineSync(x.Type()) {
+					b.diag("error", "sync-copy", "loading synchronization aggregates by value unsupported", x.Pos())
+				}
 			case *ssa.Store:
 				if relevantType(x.Val.Type()) {
 					if _, ok := x.Addr.(*ssa.Alloc); !ok {
 						b.diag("error", "dynamic-topology", "storing synchronization identities through shared/indirect memory unsupported", x.Pos())
 					}
 				}
-				if discovery.SyncType(x.Val.Type()) != "" {
+				if discovery.SyncType(x.Val.Type()) != "" || inlineSync(x.Val.Type()) {
 					b.diag("error", "sync-copy", "copying or resetting synchronization objects unsupported", x.Pos())
 				}
 			}

@@ -27,6 +27,8 @@ program may deadlock. Successful extraction does not mean successful verificatio
 | Channel parameters / direction conversions | Supported when identity is statically resolved |
 | Captured single-assignment channel cell | Initialization must dominate every load and capture; no later mutation |
 | Local or direct global Mutex / WaitGroup | Stable identities; passing/copying these objects by value is rejected |
+| Inline Mutex / WaitGroup fields, including nested value structs | Static allocation/global object plus field path; zero initialization only for synchronization state |
+| Direct pointer-receiver methods on these objects | Supported with statically resolved receiver identities; closures can capture stable object pointers |
 | Mutex Lock / Unlock | Boolean lock availability, including unlock from another goroutine and invalid-unlock errors |
 | WaitGroup Add / Done / Wait | Single phase only; positive Add in main before any spawn or prior Wait; constant delta in -1024..1024 |
 | Local arithmetic / payload processing | Removed when irrelevant and otherwise within supported computation/call rules |
@@ -52,6 +54,35 @@ func main() {
 
 See the runnable [unbuffered example](../examples/unbuffered/main.go). Local
 computation between behavioral boundaries need not become separate model steps.
+
+### Static synchronization fields
+
+```go
+type component struct { mu sync.Mutex }
+
+func (c *component) work(done chan int) {
+    c.mu.Lock()
+    c.mu.Unlock()
+    done <- 1
+}
+
+func main() {
+    c := new(component)
+    done := make(chan int)
+    go c.work(done)
+    <-done
+}
+```
+
+With `import "sync"`, this is supported without replacing the component's locking.
+Distinct objects and distinct inline fields remain distinct resources; repeated
+access through a direct pointer parameter/receiver refers to the same resource.
+Nested value-struct fields and zero-initialized direct globals are supported too.
+Copying/loading whole synchronization-bearing aggregates, value receivers/arguments,
+whole-object resets and initializer copies are rejected, even for zero values.
+Pointer/channel fields, array/slice elements, returned object identities, nil receivers
+and ambiguous object sources are not supported by this first M4 increment. Existing
+captured-cell dominance checks are not relaxed. No deferred cleanup is supported yet.
 
 ### Unknown predicates require effect analysis
 
@@ -87,7 +118,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 |---|---|
 | Reachable loops, even constant-count loops; recursion | No implemented bound/termination proof pass |
 | Repeated/dynamic spawning or channel topology | No proved finite identity expansion |
-| Synchronization objects in struct fields or containers | No implemented static field/object identity analysis |
+| Channel/pointer fields and synchronization objects in containers | No immutable field-initialization or container identity analysis yet; only inline Mutex/WaitGroup value fields are supported |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |
 | Dynamic callbacks/interface dispatch | No safe resolved-call support for these sites |
 | `defer`, explicit panic/recover | No modeled deferred-execution/unwinding semantics |

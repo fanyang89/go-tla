@@ -108,3 +108,19 @@ func TestTLCAbstractBranchCommitsBeforeBlocking(t *testing.T) {
 	m := fromSource(t, `package main;func unknown()bool;func main(){ch:=make(chan int);if unknown(){ch<-1}}`, "fixture.unknown")
 	checkTLC(t, m, "Error: Deadlock reached")
 }
+
+func TestTLCRegisteredOffersAndSelectDefault(t *testing.T) {
+	if os.Getenv("TLC_JAR") == "" {
+		t.Skip("TLC_JAR not configured")
+	}
+	cases := []struct{ name, source, want string }{
+		{"default-before-poised-send", `package main;func main(){ch:=make(chan int);go func(){select{case <-ch:default:}}();ch<-1}`, "Error: Deadlock reached"},
+		{"default-before-blocking-select", `package main;func main(){a:=make(chan int);b:=make(chan int);go func(){select{case <-a:case <-b:default:}}();select{case a<-1:case b<-1:}}`, "Error: Deadlock reached"},
+		{"blocking-select-pair", `package main;func main(){a:=make(chan int);b:=make(chan int);go func(){select{case a<-1:case b<-1:}}();select{case <-a:case <-b:}}`, "No error has been found"},
+		{"two-default-selects-never-rendezvous", `package main;func main(){ch:=make(chan int);done:=make(chan int);go func(){select{case ch<-1:var nilch chan int;<-nilch;default:};done<-1}();select{case <-ch:var nilch chan int;<-nilch;default:};<-done}`, "No error has been found"},
+		{"registered-select-closed", `package main;func main(){ch:=make(chan int);done:=make(chan int);go func(){close(ch);done<-1}();select{case <-ch:};<-done}`, "No error has been found"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) { checkTLC(t, fromSource(t, c.source), c.want) })
+	}
+}

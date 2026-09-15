@@ -79,8 +79,8 @@ func Generate(m *behavior.Model) (string, string, error) {
 	o.line("MutexSet == %s", set(m.Mutexes))
 	o.line("WaitGroupSet == %s", set(m.WaitGroups))
 	o.line("LocalSet == %s", set(locals))
-	o.line("VARIABLES pc, queues, closed, locks, wg, local, fault")
-	o.line("vars == <<pc, queues, closed, locks, wg, local, fault>>")
+	o.line("VARIABLES pc, queues, closed, locks, wg, local, fault, waiting")
+	o.line("vars == <<pc, queues, closed, locks, wg, local, fault, waiting>>")
 	pcs := []string{}
 	for _, p := range m.Processes {
 		loc := "Dormant"
@@ -107,6 +107,7 @@ func Generate(m *behavior.Model) (string, string, error) {
 		o.line("    /\\ local = [v \\in LocalSet |-> CASE %s]", strings.Join(initial, " [] "))
 	}
 	o.line("    /\\ fault = FALSE")
+	o.line("    /\\ waiting = [p \\in ProcSet |-> FALSE]")
 	o.line("Running == ~fault /\\ pc[%s] # %s", quote(m.InitialState.Main), quote(m.InitialState.Main+"_Done"))
 	o.line("NoSynchronizationErrors == ~fault")
 	for _, t := range m.Transitions {
@@ -128,6 +129,7 @@ func Generate(m *behavior.Model) (string, string, error) {
 		}
 	}
 	for _, t := range m.Transitions {
+		o.register(t)
 		o.single(t)
 	}
 	for i, a := range m.Transitions {
@@ -143,6 +145,7 @@ func Generate(m *behavior.Model) (string, string, error) {
 			name := fmt.Sprintf("Rendezvous_%s_%s_%d_%d", a.ID, c.ID, i, j)
 			o.line("\n%s ==", name)
 			o.line("    /\\ Pre_%s /\\ Pre_%s /\\ ~closed[%s]", a.ID, c.ID, quote(ae.Resource))
+			o.line("    /\\ (waiting[%s] \\/ waiting[%s])", quote(a.Process), quote(c.Process))
 			o.updates([]behavior.Transition{a, c}, map[string]string{})
 			o.actions = append(o.actions, name)
 		}
@@ -199,7 +202,7 @@ func (o *output) ready(t behavior.Transition, e behavior.Effect) string {
 		for _, other := range o.m.Transitions {
 			oe, ok := communication(other)
 			if ok && oe.Kind != e.Kind && oe.Resource == e.Resource && other.Process != t.Process {
-				parts = append(parts, "Pre_"+other.ID)
+				parts = append(parts, "(waiting["+quote(other.Process)+"] /\\ Pre_"+other.ID+")")
 			}
 		}
 	}
@@ -273,8 +276,10 @@ func (o *output) single(t behavior.Transition) {
 }
 func (o *output) updates(ts []behavior.Transition, changes map[string]string) {
 	pc := []string{}
+	waiting := []string{}
 	local := []string{}
 	for _, t := range ts {
+		waiting = append(waiting, fmt.Sprintf("![%s] = FALSE", quote(t.Process)))
 		pc = append(pc, fmt.Sprintf("![%s] = %s", quote(t.Process), quote(t.Destination)))
 		for _, e := range t.Effects {
 			if e.Kind == behavior.Spawn {
@@ -290,11 +295,12 @@ func (o *output) updates(ts []behavior.Transition, changes map[string]string) {
 		}
 	}
 	changes["pc"] = "[pc EXCEPT " + strings.Join(pc, ", ") + "]"
+	changes["waiting"] = "[waiting EXCEPT " + strings.Join(waiting, ", ") + "]"
 	if len(local) > 0 {
 		changes["local"] = "[local EXCEPT " + strings.Join(local, ", ") + "]"
 	}
 	unchanged := []string{}
-	for _, v := range []string{"pc", "queues", "closed", "locks", "wg", "local", "fault"} {
+	for _, v := range []string{"pc", "queues", "closed", "locks", "wg", "local", "fault", "waiting"} {
 		if x, ok := changes[v]; ok {
 			o.line("    /\\ %s' = (%s)", v, x)
 		} else {
@@ -316,4 +322,35 @@ func hasDefault(g behavior.Guard) bool {
 		}
 	}
 	return false
+}
+
+// register separates being poised at an operation from having executed it and
+// blocked. In particular, a default select cannot observe an unscheduled peer.
+// A blocking select registers all its alternatives atomically, not one chosen case.
+func (o *output) register(t behavior.Transition) {
+	if _, ok := communication(t); !ok {
+		return
+	}
+	alternatives := []string{}
+	for _, other := range o.m.Transitions {
+		if other.Process != t.Process || other.Source != t.Source {
+			continue
+		}
+		same := other.ID == t.ID || (t.ChoiceGroup != "" && other.ChoiceGroup == t.ChoiceGroup)
+		if !same {
+			continue
+		}
+		if hasDefault(other.Guard) {
+			return
+		} // Default selects never wait.
+		if _, ok := communication(other); ok {
+			alternatives = append(alternatives, "Ready_"+other.ID)
+		}
+	}
+	name := "Register_" + t.ID
+	o.line("\n%s ==", name)
+	o.line("    /\\ Pre_%s /\\ ~waiting[%s] /\\ ~%s", t.ID, quote(t.Process), disj(alternatives))
+	o.line("    /\\ waiting' = [waiting EXCEPT ![%s] = TRUE]", quote(t.Process))
+	o.line("    /\\ UNCHANGED <<pc, queues, closed, locks, wg, local, fault>>")
+	o.actions = append(o.actions, name)
 }

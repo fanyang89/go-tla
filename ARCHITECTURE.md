@@ -98,10 +98,15 @@ extensions. General shared-state and arbitrary assertion backends are not implem
   the synchronization-error invariant. Closing nil also triggers it; nil send and
   receive block forever.
 * An open unbuffered channel transfers only in a joint action advancing two
-  distinct processes. Neither side can complete alone. Select send/receive cases
-  participate in these same rendezvous actions.
+  distinct processes. Neither side can complete alone. Before blocking, an operation
+  executes a `Register` action that records its pending offer. A blocking select
+  registers all alternatives together only when none is ready; a default select
+  never registers. Rendezvous requires at least one registered process; merely
+  being poised at an operation is not a pending offer. Completion clears the
+  registration, including all unchosen select alternatives. This backend runtime
+  refinement of IR communication effects preserves default-before-peer schedules.
 * Select chooses nondeterministically among ready alternatives. Default is enabled
-  only when none is ready, including matching rendezvous partners. Closed-channel
+  only when none is ready, including registered matching rendezvous partners, not unscheduled peers. Closed-channel
   sends count as ready but fail, matching Go. Dispatch into the chosen case is exact.
 * Mutex state is a boolean, not an owner: Go permits unlock by another goroutine.
   Lock requires availability; unlocking an unlocked mutex is an error.

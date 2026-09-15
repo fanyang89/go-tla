@@ -33,7 +33,7 @@ func (b *builder) regions() {
 				}
 				if cur == p.ID+"_Done" {
 					if src != cur {
-						b.m.Transitions = append(b.m.Transitions, behavior.Transition{ID: fmt.Sprintf("%s_Finish_%d", p.ID, len(b.m.Transitions)), Process: p.ID, Source: src, Guard: combine(guards), Destination: cur})
+						b.m.Transitions = append(b.m.Transitions, behavior.Transition{ID: fmt.Sprintf("%s_Finish_%d", p.ID, len(b.m.Transitions)), Process: p.ID, Source: src, Guard: combine(guards), Destination: cur, SourcePosition: p.Source})
 						todo = append(todo, cur)
 					}
 					return

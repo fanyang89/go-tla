@@ -1,0 +1,8 @@
+/gotla
+/out/
+/deadlock-out/
+/unknown-out/
+/model.tla
+/model.cfg
+/model.json
+/states/

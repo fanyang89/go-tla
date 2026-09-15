@@ -3,6 +3,7 @@ package lowering
 
 import (
 	"fmt"
+	"go/constant"
 	"go/token"
 	"go/types"
 	"path/filepath"
@@ -58,6 +59,7 @@ func Lower(p *frontend.Program, opts Options) (*behavior.Model, error) {
 	b.process(main, nil, "main", main.Pos())
 	m.InitialState = behavior.InitialState{Main: "main", Active: []string{"main"}}
 	b.regions()
+	b.checkWaitGroupPhases()
 	return m, nil
 }
 func (b *builder) fresh(prefix string) string {
@@ -76,6 +78,9 @@ func sanitize(s string) string {
 	return w.String()
 }
 func (b *builder) position(pos token.Pos, f *ssa.Function) behavior.Position {
+	if pos == token.NoPos && f != nil {
+		pos = f.Pos()
+	}
 	p := b.p.Fset.Position(pos)
 	s := behavior.Position{File: filepath.Base(p.Filename), Line: p.Line, Column: p.Column}
 	if f != nil {
@@ -261,8 +266,11 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 					g := abstract.Predicate(x.Cond, fr.selects, k == 0)
 					if g.Kind == behavior.Choice && sl.Control[x] && k == 0 {
 						name := x.Cond.Name()
-						b.m.AbstractedPredicates = append(b.m.AbstractedPredicates, behavior.Predicate{Name: name, Source: b.position(x.Pos(), f), Reason: "data result controlling concurrency is nondeterministic"})
-						b.diag("warning", "abstract-predicate", "predicate "+name+" affects concurrency; modeled as nondeterministic boolean", x.Pos())
+						if c, ok := x.Cond.(*ssa.Call); ok && c.Common().StaticCallee() != nil {
+							name = c.Common().StaticCallee().String()
+						}
+						b.m.AbstractedPredicates = append(b.m.AbstractedPredicates, behavior.Predicate{Name: name, Source: b.position(x.Cond.Pos(), f), Reason: "data result controlling concurrency is nondeterministic"})
+						b.diag("warning", "abstract-predicate", "predicate "+name+" affects concurrency; modeled as nondeterministic boolean", x.Cond.Pos())
 					}
 					b.nodes[src].edges = append(b.nodes[src].edges, edge{to: fr.nodes[dst.Instrs[0]], guard: g, pos: e.pos})
 				}
@@ -299,7 +307,13 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 						}
 					}
 				}
-			case *ssa.Defer, *ssa.RunDefers, *ssa.Panic:
+			case *ssa.Panic:
+				if syntheticSelectPanic(x) {
+					e.effects = []behavior.Effect{{Kind: behavior.Assert, Value: 0}}
+				} else {
+					b.diag("error", "exception-control", "explicit panic unsupported", i.Pos())
+				}
+			case *ssa.Defer, *ssa.RunDefers:
 				b.diag("error", "exception-control", "defer, panic and recover unsupported", i.Pos())
 			case *ssa.Store:
 				if relevantType(x.Val.Type()) {
@@ -445,4 +459,18 @@ func capturedChannel(t types.Type) bool {
 	}
 	_, ok = p.Elem().Underlying().(*types.Chan)
 	return ok
+}
+
+// SSA synthesizes this unreachable panic after exhaustive blocking-select dispatch.
+// Keep it as an assertion, rather than silently deleting it or rejecting valid selects.
+func syntheticSelectPanic(p *ssa.Panic) bool {
+	if p.Pos() != token.NoPos {
+		return false
+	}
+	box, ok := p.X.(*ssa.MakeInterface)
+	if !ok {
+		return false
+	}
+	c, ok := box.X.(*ssa.Const)
+	return ok && c.Value != nil && c.Value.Kind() == constant.String && constant.StringVal(c.Value) == "blocking select matched no case"
 }

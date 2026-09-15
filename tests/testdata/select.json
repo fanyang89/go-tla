@@ -1,0 +1,367 @@
+{
+  "name": "model",
+  "outcome": "precisely-modeled",
+  "processes": [
+    {
+      "id": "main",
+      "kind": "main",
+      "entry": "main_entry_1",
+      "locations": [
+        "main_entry_1",
+        "main_L8_6",
+        "main_L9_7",
+        "main_L0_9",
+        "main_Done"
+      ],
+      "locals": [
+        {
+          "name": "main_select_8",
+          "domain": [
+            -1,
+            0,
+            1
+          ],
+          "initial": -1
+        }
+      ],
+      "source": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 4,
+        "column": 6
+      }
+    },
+    {
+      "id": "send_goroutine_17",
+      "kind": "send",
+      "entry": "send_goroutine_17_entry_18",
+      "locations": [
+        "send_goroutine_17_entry_18",
+        "send_L0_21",
+        "send_goroutine_17_Done"
+      ],
+      "locals": null,
+      "source": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "send",
+        "file": "main.go",
+        "line": 7,
+        "column": 2
+      }
+    },
+    {
+      "id": "send_goroutine_22",
+      "kind": "send",
+      "entry": "send_goroutine_22_entry_23",
+      "locations": [
+        "send_goroutine_22_entry_23",
+        "send_L0_26",
+        "send_goroutine_22_Done"
+      ],
+      "locals": null,
+      "source": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "send",
+        "file": "main.go",
+        "line": 8,
+        "column": 2
+      }
+    }
+  ],
+  "channels": [
+    {
+      "id": "main_channel_15",
+      "capacity": 0,
+      "source": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 5,
+        "column": 11
+      }
+    },
+    {
+      "id": "main_channel_16",
+      "capacity": 1,
+      "source": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 6,
+        "column": 11
+      }
+    }
+  ],
+  "mutexes": null,
+  "waitGroups": null,
+  "sharedState": null,
+  "initialState": {
+    "main": "main",
+    "active": [
+      "main"
+    ]
+  },
+  "transitions": [
+    {
+      "id": "main_Spawn_L7_0",
+      "process": "main",
+      "source": "main_entry_1",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": [
+        {
+          "kind": "Spawn",
+          "process": "send_goroutine_17"
+        }
+      ],
+      "destination": "main_L8_6",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 7,
+        "column": 2
+      }
+    },
+    {
+      "id": "main_Spawn_L8_1",
+      "process": "main",
+      "source": "main_L8_6",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": [
+        {
+          "kind": "Spawn",
+          "process": "send_goroutine_22"
+        }
+      ],
+      "destination": "main_L9_7",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 8,
+        "column": 2
+      }
+    },
+    {
+      "choiceGroup": "main_L9_7",
+      "id": "main_Receive_L10_2",
+      "process": "main",
+      "source": "main_L9_7",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": [
+        {
+          "kind": "Receive",
+          "resource": "main_channel_15"
+        },
+        {
+          "kind": "AssignAbstractState",
+          "variable": "main_select_8"
+        }
+      ],
+      "destination": "main_L0_9",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 10,
+        "column": 7
+      }
+    },
+    {
+      "choiceGroup": "main_L9_7",
+      "id": "main_Receive_L11_3",
+      "process": "main",
+      "source": "main_L9_7",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": [
+        {
+          "kind": "Receive",
+          "resource": "main_channel_16"
+        },
+        {
+          "kind": "AssignAbstractState",
+          "variable": "main_select_8",
+          "value": 1
+        }
+      ],
+      "destination": "main_L0_9",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 11,
+        "column": 7
+      }
+    },
+    {
+      "choiceGroup": "main_L9_7",
+      "id": "main_AssignAbstractState_L9_4",
+      "process": "main",
+      "source": "main_L9_7",
+      "guard": {
+        "kind": "default",
+        "variable": "main_L9_7"
+      },
+      "effects": [
+        {
+          "kind": "AssignAbstractState",
+          "variable": "main_select_8",
+          "value": -1
+        }
+      ],
+      "destination": "main_L0_9",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 9,
+        "column": 2
+      }
+    },
+    {
+      "id": "main_Finish_5",
+      "process": "main",
+      "source": "main_L0_9",
+      "guard": {
+        "kind": "equal",
+        "variable": "main_select_8"
+      },
+      "effects": null,
+      "destination": "main_Done",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 4,
+        "column": 6
+      }
+    },
+    {
+      "id": "main_Finish_6",
+      "process": "main",
+      "source": "main_L0_9",
+      "guard": {
+        "kind": "equal",
+        "variable": "main_select_8",
+        "negated": true
+      },
+      "effects": null,
+      "destination": "main_Done",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "main",
+        "file": "main.go",
+        "line": 4,
+        "column": 6
+      }
+    },
+    {
+      "id": "send_goroutine_17_Send_L3_7",
+      "process": "send_goroutine_17",
+      "source": "send_goroutine_17_entry_18",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": [
+        {
+          "kind": "Send",
+          "resource": "main_channel_15"
+        }
+      ],
+      "destination": "send_L0_21",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "send",
+        "file": "main.go",
+        "line": 3,
+        "column": 29
+      }
+    },
+    {
+      "id": "send_goroutine_17_Finish_8",
+      "process": "send_goroutine_17",
+      "source": "send_L0_21",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": null,
+      "destination": "send_goroutine_17_Done",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "send",
+        "file": "main.go",
+        "line": 7,
+        "column": 2
+      }
+    },
+    {
+      "id": "send_goroutine_22_Send_L3_9",
+      "process": "send_goroutine_22",
+      "source": "send_goroutine_22_entry_23",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": [
+        {
+          "kind": "Send",
+          "resource": "main_channel_16"
+        }
+      ],
+      "destination": "send_L0_26",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "send",
+        "file": "main.go",
+        "line": 3,
+        "column": 29
+      }
+    },
+    {
+      "id": "send_goroutine_22_Finish_10",
+      "process": "send_goroutine_22",
+      "source": "send_L0_26",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": null,
+      "destination": "send_goroutine_22_Done",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/select",
+        "function": "send",
+        "file": "main.go",
+        "line": 8,
+        "column": 2
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "NoSynchronizationErrors",
+      "description": "No closed-channel send/close, invalid unlock, or negative WaitGroup counter"
+    }
+  ],
+  "abstractedPredicates": null,
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "supported-domain",
+      "message": "Communication-only analysis assumes no implicit sequential runtime panics or resource exhaustion; synchronization failures remain modeled.",
+      "file": "main.go",
+      "line": 4
+    }
+  ],
+  "assumptions": [
+    "Communication-only analysis assumes no implicit sequential runtime panics or resource exhaustion; synchronization failures remain modeled.",
+    "Go main return terminates the whole program, including blocked workers.",
+    "Trusted-call contracts assert total, side-effect-free execution and no synchronization; return values are abstract."
+  ]
+}

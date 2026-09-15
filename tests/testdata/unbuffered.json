@@ -1,0 +1,188 @@
+{
+  "name": "model",
+  "outcome": "precisely-modeled",
+  "processes": [
+    {
+      "id": "main",
+      "kind": "main",
+      "entry": "main_entry_1",
+      "locations": [
+        "main_entry_1",
+        "main_L7_5",
+        "main_L0_6",
+        "main_Done"
+      ],
+      "locals": null,
+      "source": {
+        "package": "github.com/fanmi/go-tla/examples/unbuffered",
+        "function": "main",
+        "file": "main.go",
+        "line": 4,
+        "column": 6
+      }
+    },
+    {
+      "id": "worker_goroutine_8",
+      "kind": "worker",
+      "entry": "worker_goroutine_8_entry_9",
+      "locations": [
+        "worker_goroutine_8_entry_9",
+        "worker_L0_12",
+        "worker_goroutine_8_Done"
+      ],
+      "locals": null,
+      "source": {
+        "package": "github.com/fanmi/go-tla/examples/unbuffered",
+        "function": "worker",
+        "file": "main.go",
+        "line": 6,
+        "column": 2
+      }
+    }
+  ],
+  "channels": [
+    {
+      "id": "main_channel_7",
+      "capacity": 0,
+      "source": {
+        "package": "github.com/fanmi/go-tla/examples/unbuffered",
+        "function": "main",
+        "file": "main.go",
+        "line": 5,
+        "column": 12
+      }
+    }
+  ],
+  "mutexes": null,
+  "waitGroups": null,
+  "sharedState": null,
+  "initialState": {
+    "main": "main",
+    "active": [
+      "main"
+    ]
+  },
+  "transitions": [
+    {
+      "id": "main_Spawn_L6_0",
+      "process": "main",
+      "source": "main_entry_1",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": [
+        {
+          "kind": "Spawn",
+          "process": "worker_goroutine_8"
+        }
+      ],
+      "destination": "main_L7_5",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/unbuffered",
+        "function": "main",
+        "file": "main.go",
+        "line": 6,
+        "column": 2
+      }
+    },
+    {
+      "id": "main_Receive_L7_1",
+      "process": "main",
+      "source": "main_L7_5",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": [
+        {
+          "kind": "Receive",
+          "resource": "main_channel_7"
+        }
+      ],
+      "destination": "main_L0_6",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/unbuffered",
+        "function": "main",
+        "file": "main.go",
+        "line": 7,
+        "column": 2
+      }
+    },
+    {
+      "id": "main_Finish_2",
+      "process": "main",
+      "source": "main_L0_6",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": null,
+      "destination": "main_Done",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/unbuffered",
+        "function": "main",
+        "file": "main.go",
+        "line": 4,
+        "column": 6
+      }
+    },
+    {
+      "id": "worker_goroutine_8_Send_L3_3",
+      "process": "worker_goroutine_8",
+      "source": "worker_goroutine_8_entry_9",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": [
+        {
+          "kind": "Send",
+          "resource": "main_channel_7"
+        }
+      ],
+      "destination": "worker_L0_12",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/unbuffered",
+        "function": "worker",
+        "file": "main.go",
+        "line": 3,
+        "column": 31
+      }
+    },
+    {
+      "id": "worker_goroutine_8_Finish_4",
+      "process": "worker_goroutine_8",
+      "source": "worker_L0_12",
+      "guard": {
+        "kind": "true"
+      },
+      "effects": null,
+      "destination": "worker_goroutine_8_Done",
+      "sourcePosition": {
+        "package": "github.com/fanmi/go-tla/examples/unbuffered",
+        "function": "worker",
+        "file": "main.go",
+        "line": 6,
+        "column": 2
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "kind": "NoSynchronizationErrors",
+      "description": "No closed-channel send/close, invalid unlock, or negative WaitGroup counter"
+    }
+  ],
+  "abstractedPredicates": null,
+  "diagnostics": [
+    {
+      "severity": "info",
+      "code": "supported-domain",
+      "message": "Communication-only analysis assumes no implicit sequential runtime panics or resource exhaustion; synchronization failures remain modeled.",
+      "file": "main.go",
+      "line": 4
+    }
+  ],
+  "assumptions": [
+    "Communication-only analysis assumes no implicit sequential runtime panics or resource exhaustion; synchronization failures remain modeled.",
+    "Go main return terminates the whole program, including blocked workers.",
+    "Trusted-call contracts assert total, side-effect-free execution and no synchronization; return values are abstract."
+  ]
+}

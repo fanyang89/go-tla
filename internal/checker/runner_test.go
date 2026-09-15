@@ -13,9 +13,12 @@ import (
 // The test executable doubles as a shell-free Java stand-in. Normal unit tests
 // exercise subprocess failure/limits without installing or downloading TLC.
 func TestMain(m *testing.M) {
-	if mode := os.Getenv("GOTLA_TEST_JAVA"); mode != "" {
+	if mode := os.Getenv("GOTLA_TEST_JAVA"); mode != "" && len(os.Args) > 1 && (os.Args[1] == "-version" || strings.HasPrefix(os.Args[1], "-Xmx")) {
 		if len(os.Args) == 2 && os.Args[1] == "-version" {
 			fmt.Println(`openjdk version "fixture"`)
+			if mode == "probe-only" {
+				fmt.Print(transcript(frame(2193, 0, "misleading version probe")))
+			}
 			os.Exit(0)
 		}
 		if os.Getenv("JAVA_TOOL_OPTIONS") != "" || os.Getenv("JDK_JAVA_OPTIONS") != "" || os.Getenv("_JAVA_OPTIONS") != "" {
@@ -30,6 +33,11 @@ func TestMain(m *testing.M) {
 		case "deadlock":
 			fmt.Print(transcript(frame(2114, 1, "deadlock")))
 			os.Exit(11)
+		case "probe-only":
+			fmt.Println("No actual TLC protocol")
+		case "raw-memory":
+			fmt.Println("java.lang.OutOfMemoryError: Java heap space")
+			os.Exit(1)
 		case "failure":
 			fmt.Println("No error has been found")
 			os.Exit(150)
@@ -56,7 +64,7 @@ func TestRunnerBoundedOutcomes(t *testing.T) {
 	for _, c := range []struct {
 		mode string
 		want Status
-	}{{"pass", Passed}, {"deadlock", Deadlock}, {"failure", ToolError}, {"timeout", Incomplete}, {"log-limit", Incomplete}, {"memory", Incomplete}} {
+	}{{"pass", Passed}, {"deadlock", Deadlock}, {"failure", ToolError}, {"timeout", Incomplete}, {"log-limit", Incomplete}, {"memory", Incomplete}, {"raw-memory", Incomplete}, {"probe-only", ToolError}} {
 		t.Run(c.mode, func(t *testing.T) {
 			t.Setenv("GOTLA_TEST_JAVA", c.mode)
 			t.Setenv("JAVA_TOOL_OPTIONS", "must be removed")
@@ -115,6 +123,31 @@ func TestRunnerCancellationAndSetupFailure(t *testing.T) {
 	cancel()
 	if r := Run(ctx, cfg, "", "", filepath.Join(t.TempDir(), "tlc.log")); r.Status != Incomplete {
 		t.Fatalf("cancelled setup accepted: %+v", r)
+	}
+}
+
+func TestRunnerLiveCancellation(t *testing.T) {
+	t.Setenv("GOTLA_TEST_JAVA", "timeout")
+	t.Setenv("GORACE", "atexit_sleep_ms=0")
+	java, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	jar := filepath.Join(dir, "fixture.jar")
+	if err := os.WriteFile(jar, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := DefaultConfig()
+	cfg.Java, cfg.JAR, cfg.Timeout = java, jar, 5*time.Second
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	timer := time.AfterFunc(200*time.Millisecond, cancel)
+	defer timer.Stop()
+	start := time.Now()
+	r := Run(ctx, cfg, "spec", "config", filepath.Join(dir, "tlc.log"))
+	if r.Status != Incomplete || !strings.Contains(r.Reason, "context canceled") || time.Since(start) >= 3*time.Second {
+		t.Fatalf("parent cancellation did not stop subprocess promptly: %+v", r)
 	}
 }
 

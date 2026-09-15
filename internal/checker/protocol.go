@@ -16,7 +16,7 @@ var pcEntry = regexp.MustCompile(`(?:"([A-Za-z_][A-Za-z0-9_]*)"\s*:>|([A-Za-z_][
 
 type protocol struct {
 	started, finished, success, deadlock, invariant, resourceLimit, otherError bool
-	version, javaVersion, stats                                                string
+	version, stats                                                             string
 	lastPC, previousPC                                                         map[string]string
 }
 
@@ -31,9 +31,6 @@ func parseProtocol(r io.Reader) (protocol, error) {
 		if strings.Contains(line, "java.lang.OutOfMemoryError") {
 			p.resourceLimit = true
 		}
-		if strings.HasPrefix(line, "openjdk version ") || strings.HasPrefix(line, "java version ") {
-			p.javaVersion = line
-		}
 		if m := startMessage.FindStringSubmatch(line); m != nil {
 			if code != -1 {
 				return p, fmt.Errorf("nested TLC message")
@@ -42,6 +39,9 @@ func parseProtocol(r io.Reader) (protocol, error) {
 			class, _ = strconv.Atoi(m[2])
 			body.Reset()
 			continue
+		}
+		if strings.HasPrefix(line, "@!@!@STARTMSG") {
+			return p, fmt.Errorf("malformed TLC message header")
 		}
 		if strings.HasPrefix(line, "@!@!@ENDMSG") {
 			if code == -1 || line != fmt.Sprintf("@!@!@ENDMSG %d @!@!@", code) {
@@ -69,14 +69,39 @@ func parseProtocol(r io.Reader) (protocol, error) {
 }
 
 func (p *protocol) accept(code, class int, text string) {
+	expected := -1
+	switch code {
+	case 2262, 2185, 2186, 2193, 2199:
+		expected = 0
+	case 2114, 2107, 2110, 1001, 1002, 1003, 2121:
+		expected = 1
+	case 2216, 2217:
+		expected = 4
+	}
+	if expected != -1 && class != expected {
+		p.otherError = true
+		return
+	}
 	switch code {
 	case 2262:
+		if p.version != "" {
+			p.otherError = true
+		}
 		p.version = text
 	case 2185:
+		if p.started || p.finished {
+			p.otherError = true
+		}
 		p.started = true
 	case 2186:
+		if !p.started || p.finished {
+			p.otherError = true
+		}
 		p.finished = true
 	case 2193:
+		if !p.started || p.finished || p.success {
+			p.otherError = true
+		}
 		p.success = true
 	case 2114:
 		p.deadlock = true

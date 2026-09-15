@@ -54,6 +54,10 @@ func Run(parent context.Context, cfg Config, spec, configText, logPath string) (
 	}
 	defer log.Close()
 	output := &boundedLog{file: log, remaining: int64(cfg.MaxLogMiB) << 20, cancel: cancel}
+	if err := ctx.Err(); err != nil {
+		report.Status = Incomplete
+		return fail(fmt.Errorf("checker cancelled before startup: %w", err))
+	}
 	if cfg.JAR == "" {
 		return fail(fmt.Errorf("TLC JAR unavailable: set -tlc-jar or TLC_JAR, or provision ./tla2tools.jar"))
 	}
@@ -96,6 +100,17 @@ func Run(parent context.Context, cfg Config, spec, configText, logPath string) (
 		return cmd.Run()
 	}
 	versionErr := run("-version")
+	// The probe is preserved in the raw log but cannot supply TLC outcome frames.
+	tlcOffset, err := log.Seek(0, io.SeekCurrent)
+	if err != nil {
+		return fail(err)
+	}
+	versionBytes := make([]byte, min(tlcOffset, 4096))
+	if probe, err := os.Open(logPath); err == nil {
+		n, _ := probe.Read(versionBytes)
+		report.JavaVersion = strings.TrimSpace(string(versionBytes[:n]))
+		probe.Close()
+	}
 	var runErr error
 	if versionErr == nil && ctx.Err() == nil {
 		args := []string{fmt.Sprintf("-Xmx%dm", cfg.MemoryMiB), "-XX:+UseParallelGC", "-cp", report.JAR,
@@ -113,9 +128,13 @@ func Run(parent context.Context, cfg Config, spec, configText, logPath string) (
 	if err != nil {
 		return fail(err)
 	}
+	if _, err := f.Seek(tlcOffset, io.SeekStart); err != nil {
+		f.Close()
+		return fail(err)
+	}
 	p, parseErr := parseProtocol(f)
 	f.Close()
-	report.JavaVersion, report.TLCVersion, report.StateStats = p.javaVersion, p.version, p.stats
+	report.TLCVersion, report.StateStats = p.version, p.stats
 	report.LastPC, report.PreviousPC = p.lastPC, p.previousPC
 	if cause := context.Cause(ctx); cause != nil {
 		if errors.Is(cause, context.Canceled) || errors.Is(cause, context.DeadlineExceeded) || errors.Is(cause, errLogLimit) {

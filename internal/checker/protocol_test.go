@@ -26,7 +26,10 @@ func TestProtocolClassification(t *testing.T) {
 		{"initial-invariant", transcript(frame(2107, 1, "Invariant NoSynchronizationErrors is violated by the initial state")), 12, SynchronizationError},
 		{"different-invariant", transcript(frame(2110, 1, "Invariant SomethingElse is violated.")), 12, ToolError},
 		{"prose-is-not-proof", "No error has been found\n", 0, ToolError},
+		{"misordered-success", frame(2193, 0, "success") + transcript(""), 0, ToolError},
+		{"duplicate-run", transcript(frame(2193, 0, "success")) + transcript(frame(2193, 0, "success")), 0, ToolError},
 		{"missing-finish", frame(2262, 0, "version") + frame(2185, 0, "start") + frame(2193, 0, "success"), 0, ToolError},
+		{"wrong-message-class", transcript(frame(2193, 1, "not success")), 0, ToolError},
 		{"wrong-exit", transcript(frame(2193, 0, "success")), 153, ToolError},
 		{"zero-exit-deadlock", transcript(frame(2114, 1, "deadlock")), 0, ToolError},
 		{"contradictory", transcript(frame(2193, 0, "success") + frame(2114, 1, "deadlock")), 11, ToolError},
@@ -52,6 +55,7 @@ func TestMalformedProtocolRejected(t *testing.T) {
 	for _, log := range []string{
 		"@!@!@STARTMSG 2193:0 @!@!@\nsuccess",
 		"@!@!@ENDMSG 2193 @!@!@\n",
+		"@!@!@STARTMSG broken\n",
 		"@!@!@STARTMSG 2193:0 @!@!@\n@!@!@ENDMSG 2186 @!@!@\n",
 		"@!@!@STARTMSG 2193:0 @!@!@\n" + frame(2186, 0, "nested"),
 		strings.Repeat("x", (1<<20)+1),

@@ -137,7 +137,7 @@ func (b *builder) pureCall(c *ssa.CallCommon, seen map[*ssa.Function]bool) bool 
 	defer delete(seen, f)
 	for _, bb := range f.Blocks {
 		for _, i := range bb.Instrs {
-			if discovery.IsRoot(i) {
+			if discovery.IsRoot(i) || usesUnsafePointer(i) {
 				return false
 			}
 			switch x := i.(type) {
@@ -182,6 +182,7 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 	}
 	for _, bb := range f.Blocks {
 		for _, i := range bb.Instrs {
+			b.checkUnsafePointer(i)
 			fr.nodes[i] = b.fresh(f.Name() + "_" + fmt.Sprintf("L%d", b.p.Fset.Position(i.Pos()).Line))
 			b.nodes[fr.nodes[i]] = &node{}
 			if s, ok := i.(*ssa.Select); ok {

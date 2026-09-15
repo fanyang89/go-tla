@@ -131,7 +131,11 @@ might make it safe; closure writes and multiple stores are also rejected. Mutex/
 objects have stable identity. Struct fields, containers, changing captured channel
 cells, indirect shared identity stores, dynamic callbacks/interface dispatch,
 returned channel topology and different-identity phis are rejected when relevant.
-Synchronization objects cannot be passed by value or copied/reset. This is not
+Synchronization objects cannot be passed by value or copied/reset. Reachable SSA
+operations consuming or producing `unsafe.Pointer` (including casts and indirect
+pointer cells) are rejected, as are unsafe effects in initialization and inspected
+helpers. This prevents raw writes from bypassing the modeled channel/lock/counter
+state and is separate from the implicit sequential-panic assumption. This is not
 pointer analysis and must not be presented as one.
 
 All reachable SSA CFG cycles and recursive calls are rejected, including ordinary

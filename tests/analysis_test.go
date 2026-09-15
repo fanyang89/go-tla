@@ -183,3 +183,29 @@ func TestSynchronizationIdentityRequiresDominatingInitialization(t *testing.T) {
 		}
 	})
 }
+
+func TestUnsafeSynchronizationMutationRejected(t *testing.T) {
+	for name, source := range map[string]string{
+		"mutex-state":          `package main;import("sync";"unsafe");func main(){var mu sync.Mutex;mu.Lock();*(*int32)(unsafe.Pointer(&mu))=0;mu.Unlock()}`,
+		"waitgroup-state":      `package main;import("sync";"unsafe");func main(){var wg sync.WaitGroup;wg.Add(1);*(*uint64)(unsafe.Pointer(&wg))=0;wg.Wait()}`,
+		"pointer-cast":         `package main;import("sync";"unsafe");func main(){var mu sync.Mutex;p:=unsafe.Pointer(&mu);println(p);mu.Lock()}`,
+		"helper-mutation":      `package main;import("sync";"unsafe");func corrupt(p unsafe.Pointer){*(*int32)(p)=0};func main(){var mu sync.Mutex;mu.Lock();corrupt(unsafe.Pointer(&mu));mu.Unlock()}`,
+		"initializer-mutation": `package main;import("sync";"unsafe");var mu sync.Mutex;func init(){*(*int32)(unsafe.Pointer(&mu))=0};func main(){mu.Lock();mu.Unlock()}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := fromSource(t, source)
+			if !m.HasErrors() {
+				t.Fatalf("unsafe mutation accepted: %+v", m)
+			}
+			if _, _, err := tla.Generate(m); err == nil {
+				t.Fatal("unsafe model executable")
+			}
+		})
+	}
+	t.Run("unused-unsafe-function", func(t *testing.T) {
+		m := fromSource(t, `package main;import "unsafe";func unused(p unsafe.Pointer){*(*int32)(p)=0};func main(){}`)
+		if m.HasErrors() {
+			t.Fatalf("unreachable unsafe code rejected: %+v", m.Diagnostics)
+		}
+	})
+}

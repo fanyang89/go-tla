@@ -29,6 +29,7 @@ program may deadlock. Successful extraction does not mean successful verificatio
 | Local or direct global Mutex / WaitGroup | Stable identities; passing/copying these objects by value is rejected |
 | Inline Mutex / WaitGroup fields, including nested value structs | Static allocation/global object plus field path; zero initialization only for synchronization state |
 | Direct pointer-receiver methods on these objects | Supported with statically resolved receiver identities; closures can capture stable object pointers |
+| Immutable channel fields in local allocated objects | At most one allocation-frame initialization, dominating every read and object escape; omitted initialization means nil |
 | Mutex Lock / Unlock | Boolean lock availability, including unlock from another goroutine and invalid-unlock errors |
 | WaitGroup Add / Done / Wait | Single phase only; positive Add in main before any spawn or prior Wait; constant delta in -1024..1024 |
 | Local arithmetic / payload processing | Removed when irrelevant and otherwise within supported computation/call rules |
@@ -75,14 +76,48 @@ func main() {
 ```
 
 With `import "sync"`, this is supported without replacing the component's locking.
-Distinct objects and distinct inline fields remain distinct resources; repeated
+Distinct objects and distinct inline Mutex/WaitGroup fields remain distinct resources; repeated
 access through a direct pointer parameter/receiver refers to the same resource.
 Nested value-struct fields and zero-initialized direct globals are supported too.
 Copying/loading whole synchronization-bearing aggregates, value receivers/arguments,
 whole-object resets and initializer copies are rejected, even for zero values.
-Pointer/channel fields, array/slice elements, returned object identities, nil receivers
-and ambiguous object sources are not supported by this first M4 increment. Existing
-captured-cell dominance checks are not relaxed. No deferred cleanup is supported yet.
+Pointer fields, array/slice elements, returned object identities, nil receivers
+and ambiguous object sources remain unsupported. Existing captured-cell dominance
+checks are not relaxed. No deferred cleanup is supported yet.
+
+### Immutable channel fields
+
+```go
+type endpoint struct { ch chan int }
+
+func main() {
+    var e endpoint
+    e.ch = make(chan int)
+    go func() { e.ch <- 1 }()
+    <-e.ch
+}
+```
+
+Channel fields may also be initialized in a local struct literal, including nested
+value fields. Direct pointer-receiver calls and bound methods can read them. Fields
+initialized with the same channel retain that alias; fields initialized with different
+allocations remain distinct. An uninitialized field is nil, with normal nil-channel
+blocking/close-error behavior, not an invented channel.
+
+The proof inspects every SSA use, not only sliced operations. A field can have at
+most one store in its object's allocation frame. That store must dominate every
+field read and every call/capture/spawn exposing the object or its subobjects.
+This conservatively requires even unrelated channel-field initializations before
+an object escape. Initializers use direct allocations, channel parameters, already
+resolved captures, nil, or direction/type conversions of those values. Field stores
+seed the dependency slice; only proved initialization stores may be erased.
+
+Reassignment, initialization in a called method, field-address escape, whole-object
+copy/reset, field-to-field initializer loads, global channel-field access and returned
+objects remain unsupported. Capturing an addressable value object (`var e endpoint`)
+is supported after initialization; capturing a pointer variable through a `**endpoint`
+cell is currently rejected, even when a human can see it is immutable. Direct pointer
+receiver calls such as `go e.send()` do not require that pointer-cell capture.
 
 ### Unknown predicates require effect analysis
 
@@ -118,7 +153,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 |---|---|
 | Reachable loops, even constant-count loops; recursion | No implemented bound/termination proof pass |
 | Repeated/dynamic spawning or channel topology | No proved finite identity expansion |
-| Channel/pointer fields and synchronization objects in containers | No immutable field-initialization or container identity analysis yet; only inline Mutex/WaitGroup value fields are supported |
+| Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |
 | Dynamic callbacks/interface dispatch | No safe resolved-call support for these sites |
 | `defer`, explicit panic/recover | No modeled deferred-execution/unwinding semantics |

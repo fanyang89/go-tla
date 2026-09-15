@@ -45,6 +45,7 @@ func (b *builder) allocateResources(fr *frame) {
 			}
 		}
 	}
+	b.prepareChannelFields(fr)
 }
 
 func (b *builder) addSync(id, typ string) {
@@ -62,7 +63,7 @@ func relevantType(t types.Type) bool {
 	if _, ok := t.Underlying().(*types.Chan); ok {
 		return true
 	}
-	return discovery.SyncType(t) != "" || inlineSync(t) || aggregatePointer(t)
+	return discovery.SyncType(t) != "" || inlineSync(t) || inlineChannel(t) || aggregatePointer(t)
 }
 
 // callee consumes the call summary's graph-checked target and binds only statically
@@ -78,7 +79,7 @@ func (b *builder) callee(fr *frame, c *ssa.CallCommon, f *ssa.Function, pos toke
 	}
 	bind := map[ssa.Value]string{}
 	for j, p := range f.Params {
-		if discovery.SyncType(p.Type()) != "" || inlineSync(p.Type()) {
+		if discovery.SyncType(p.Type()) != "" || inlineSync(p.Type()) || channelAggregate(p.Type()) {
 			if _, ok := p.Type().(*types.Pointer); !ok {
 				b.diag("error", "sync-copy", "passing synchronization objects by value unsupported", pos)
 			}

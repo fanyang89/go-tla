@@ -1,6 +1,9 @@
 package discovery
 
-import "golang.org/x/tools/go/ssa"
+import (
+	"go/types"
+	"golang.org/x/tools/go/ssa"
+)
 
 // Function is the explicit primitive/process discovery result consumed by slicing
 // and context-sensitive lowering. All keys refer to the same immutable SSA function.
@@ -19,6 +22,12 @@ func Scan(f *ssa.Function) Function {
 				r.Roots[i] = true
 			}
 			switch x := i.(type) {
+			case *ssa.Store:
+				if _, field := x.Addr.(*ssa.FieldAddr); field {
+					if _, channel := x.Val.Type().Underlying().(*types.Chan); channel {
+						r.Roots[i] = true
+					}
+				}
 			case *ssa.Go:
 				r.Goroutines = append(r.Goroutines, x)
 			case *ssa.Select, *ssa.MakeChan:

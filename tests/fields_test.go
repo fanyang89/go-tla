@@ -40,17 +40,17 @@ func TestStaticSyncFields(t *testing.T) {
 
 func TestSyncFieldRefusalBoundaries(t *testing.T) {
 	for name, body := range map[string]string{
-		"copy":                 "var x T;y:=x;y.mu.Lock()",
-		"reset":                "var x T;x.mu.Lock();x=T{}",
-		"value-receiver":       "var x T;x.copyMethod()",
-		"value-argument":       "var x T;copyArg(x)",
-		"different-objects":    "var x,y T;p:=&x;if unknown(){p=&y};p.mu.Lock()",
-		"nil-receiver":         "var p *T;p.lock()",
-		"pointer-field":        "var x T;holder:=struct{p *T}{&x};holder.p.lock()",
-		"channel-field":        "x:=struct{ch chan int}{make(chan int,1)};x.ch<-1",
-		"array-element":        "var x [2]T;x[0].mu.Lock()",
-		"future-pointer-store": "var p *T;func(){p.lock()}();p=new(T)",
-		"interface":            "var x T;var i interface{lock()}=&x;callInterface(i)",
+		"copy":                  "var x T;y:=x;y.mu.Lock()",
+		"reset":                 "var x T;x.mu.Lock();x=T{}",
+		"value-receiver":        "var x T;x.copyMethod()",
+		"value-argument":        "var x T;copyArg(x)",
+		"different-objects":     "var x,y T;p:=&x;if unknown(){p=&y};p.mu.Lock()",
+		"nil-receiver":          "var p *T;p.lock()",
+		"pointer-field":         "var x T;holder:=struct{p *T}{&x};holder.p.lock()",
+		"mutable-channel-field": "x:=struct{ch chan int}{make(chan int,1)};x.ch=make(chan int,1);x.ch<-1",
+		"array-element":         "var x [2]T;x[0].mu.Lock()",
+		"future-pointer-store":  "var p *T;func(){p.lock()}();p=new(T)",
+		"interface":             "var x T;var i interface{lock()}=&x;callInterface(i)",
 	} {
 		t.Run(name, func(t *testing.T) {
 			m := fromSource(t, `package main;import "sync";type T struct{mu sync.Mutex};func(t *T)lock(){t.mu.Lock()};func(t T)copyMethod(){t.mu.Lock()};func copyArg(t T){};func unknown()bool;func callInterface(i interface{lock()}){i.lock()};func main(){`+body+`}`, "fixture.unknown")

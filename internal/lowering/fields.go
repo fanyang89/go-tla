@@ -34,18 +34,18 @@ func aggregatePointer(t types.Type) bool {
 		return false
 	}
 	_, ok = p.Elem().Underlying().(*types.Struct)
-	return ok && discovery.SyncType(types.Unalias(p.Elem())) == "" && inlineSync(p.Elem())
+	return ok && discovery.SyncType(types.Unalias(p.Elem())) == "" && (inlineSync(p.Elem()) || inlineChannel(p.Elem()))
 }
 
-// Only addressable inline fields inherit a concrete object's identity. Pointer,
-// channel, container and loaded aggregate identities are not inferred here.
+// Only addressable inline fields inherit a concrete object's identity. Channel
+// bindings require a separately proved immutable initialization.
 func (b *builder) fieldIdentity(fr *frame, x *ssa.FieldAddr, seen map[ssa.Value]bool) string {
 	if !aggregatePointer(x.X.Type()) {
 		return ""
 	}
 	p := x.X.Type().Underlying().(*types.Pointer)
 	field := p.Elem().Underlying().(*types.Struct).Field(x.Field)
-	if !inlineSync(field.Type()) {
+	if !inlineSync(field.Type()) && !inlineChannel(field.Type()) {
 		return ""
 	}
 	base := b.identity(fr, x.X, seen)
@@ -53,18 +53,28 @@ func (b *builder) fieldIdentity(fr *frame, x *ssa.FieldAddr, seen map[ssa.Value]
 		b.diag("error", "sync-identity", "synchronization field requires a non-nil static object", x.Pos())
 		return "invalid"
 	}
-	key := fmt.Sprintf("%s/%d", base, x.Field)
-	id := b.fields[key]
-	if id == "" {
-		id = b.fresh(fmt.Sprintf("%s_field_%d", base, x.Field))
-		b.fields[key] = id
-		if typ := discovery.SyncType(types.Unalias(field.Type())); typ != "" {
-			if typ != "Mutex" && typ != "WaitGroup" {
-				b.diag("error", "sync-type", "unsupported sync field type "+typ, x.Pos())
-			} else {
-				b.addSync(id, typ)
-			}
+	id := b.fieldID(base, x.Field)
+	if _, ok := field.Type().Underlying().(*types.Chan); ok {
+		if channel := b.channelFields[id]; channel != "" {
+			return channel
+		}
+		b.diag("error", "channel-field-initialization", "channel field lacks a proved allocation-frame initialization", x.Pos())
+		return "invalid"
+	}
+	if typ := discovery.SyncType(types.Unalias(field.Type())); typ != "" {
+		if typ != "Mutex" && typ != "WaitGroup" {
+			b.diag("error", "sync-type", "unsupported sync field type "+typ, x.Pos())
+		} else {
+			b.addSync(id, typ)
 		}
 	}
 	return id
+}
+
+func (b *builder) fieldID(base string, index int) string {
+	key := fmt.Sprintf("%s/%d", base, index)
+	if b.fields[key] == "" {
+		b.fields[key] = b.fresh(fmt.Sprintf("%s_field_%d", base, index))
+	}
+	return b.fields[key]
 }

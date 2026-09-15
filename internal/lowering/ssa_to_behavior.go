@@ -28,25 +28,27 @@ type edge struct {
 }
 type node struct{ edges []edge }
 type builder struct {
-	p         *frontend.Program
-	m         *behavior.Model
-	opts      Options
-	nodes     map[string]*node
-	names     map[string]int
-	globals   map[*ssa.Global]string
-	fields    map[string]string
-	stack     map[*ssa.Function]bool
-	resources map[string]bool
-	effects   *effects.Analyzer
-	plans     map[*ssa.Function]*functionPlan
+	p             *frontend.Program
+	m             *behavior.Model
+	opts          Options
+	nodes         map[string]*node
+	names         map[string]int
+	globals       map[*ssa.Global]string
+	fields        map[string]string
+	channelFields map[string]string
+	stack         map[*ssa.Function]bool
+	resources     map[string]bool
+	effects       *effects.Analyzer
+	plans         map[*ssa.Function]*functionPlan
 }
 type frame struct {
-	f       *ssa.Function
-	plan    *functionPlan
-	ids     map[ssa.Value]string
-	nodes   map[ssa.Instruction]string
-	selects map[*ssa.Select]string
-	process string
+	f           *ssa.Function
+	plan        *functionPlan
+	ids         map[ssa.Value]string
+	nodes       map[ssa.Instruction]string
+	selects     map[*ssa.Select]string
+	process     string
+	fieldStores map[*ssa.Store]bool
 }
 
 // Lower runs passes 3–8. Errors leave an inspectable partial IR, never an executable model.
@@ -59,7 +61,7 @@ func Lower(p *frontend.Program, opts Options) (*behavior.Model, error) {
 		return nil, err
 	}
 	m := &behavior.Model{SchemaVersion: behavior.SchemaVersion, Semantics: behavior.CommunicationSemantics, Termination: behavior.MainReturn, Metadata: modelMetadata(opts), Name: "model", Outcome: diagnostic.Precise, Assertions: []behavior.Assertion{{Kind: "NoSynchronizationErrors", Description: "No closed-channel send/close, invalid unlock, or negative WaitGroup counter"}}}
-	b := &builder{p: p, m: m, opts: opts, nodes: map[string]*node{}, stack: map[*ssa.Function]bool{}, resources: map[string]bool{}, effects: effects.New(p, opts.TrustedCalls), plans: map[*ssa.Function]*functionPlan{}, names: map[string]int{}, globals: map[*ssa.Global]string{}, fields: map[string]string{}}
+	b := &builder{p: p, m: m, opts: opts, nodes: map[string]*node{}, stack: map[*ssa.Function]bool{}, resources: map[string]bool{}, effects: effects.New(p, opts.TrustedCalls), plans: map[*ssa.Function]*functionPlan{}, names: map[string]int{}, globals: map[*ssa.Global]string{}, fields: map[string]string{}, channelFields: map[string]string{}}
 	m.Assumptions = append(m.Assumptions, "Communication-only analysis assumes no implicit sequential runtime panics or resource exhaustion; synchronization failures remain modeled.", "Go main return terminates the whole program, including blocked workers.", "Trusted-call contracts assert total, side-effect-free execution and no synchronization; return values are abstract.")
 	b.diag("info", "supported-domain", m.Assumptions[0], main.Pos())
 	b.initializers()
@@ -128,7 +130,7 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 	}
 	b.stack[f] = true
 	defer delete(b.stack, f)
-	fr := &frame{f: f, plan: plan, ids: map[ssa.Value]string{}, nodes: map[ssa.Instruction]string{}, selects: map[*ssa.Select]string{}, process: process}
+	fr := &frame{f: f, plan: plan, ids: map[ssa.Value]string{}, nodes: map[ssa.Instruction]string{}, selects: map[*ssa.Select]string{}, process: process, fieldStores: map[*ssa.Store]bool{}}
 	for v, id := range bindings {
 		fr.ids[v] = id
 	}
@@ -258,16 +260,16 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 			case *ssa.Defer, *ssa.RunDefers:
 				b.diag("error", "exception-control", "defer, panic and recover unsupported", i.Pos())
 			case *ssa.UnOp:
-				if x.Op == token.MUL && inlineSync(x.Type()) {
+				if x.Op == token.MUL && (inlineSync(x.Type()) || channelAggregate(x.Type())) {
 					b.diag("error", "sync-copy", "loading synchronization aggregates by value unsupported", x.Pos())
 				}
 			case *ssa.Store:
 				if relevantType(x.Val.Type()) {
-					if _, ok := x.Addr.(*ssa.Alloc); !ok {
+					if _, ok := x.Addr.(*ssa.Alloc); !ok && !fr.fieldStores[x] {
 						b.diag("error", "dynamic-topology", "storing synchronization identities through shared/indirect memory unsupported", x.Pos())
 					}
 				}
-				if discovery.SyncType(x.Val.Type()) != "" || inlineSync(x.Val.Type()) {
+				if discovery.SyncType(x.Val.Type()) != "" || inlineSync(x.Val.Type()) || channelAggregate(x.Val.Type()) {
 					b.diag("error", "sync-copy", "copying or resetting synchronization objects unsupported", x.Pos())
 				}
 			}

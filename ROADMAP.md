@@ -73,8 +73,9 @@ synchronization errors** in a finite communication-oriented abstraction.
 | Usability | One-command check, bounded resource use, stable result categories, actionable source references |
 
 This table describes the **target**, not today's support. Inline Mutex/WaitGroup
-fields and direct pointer receivers have an initial implementation; channel/pointer
-fields, `defer`, and proved finite loops are not available yet. The `check` workflow is
+fields, local immutable channel fields and direct pointer receivers have an initial
+implementation; mutable/global channel fields, pointer fields, `defer`, and proved
+finite loops are not available yet. The `check` workflow is
 implemented within the current restricted frontend scope.
 
 ## 2. Current baseline
@@ -101,8 +102,9 @@ Implemented:
 - An explicit checksum-pinned TLC provisioning script and required verification
   workflow; missing/mismatched checker and snapshot regeneration fail the gate.
 
-Current restrictions include all reachable CFG cycles and recursion, channel/pointer
-fields and synchronization containers, general aliasing, defer/recover/explicit panic, and dynamic
+Current restrictions include all reachable CFG cycles and recursion, mutable/global
+channel fields, pointer fields and synchronization containers, general aliasing,
+defer/recover/explicit panic, and dynamic
 process/resource topology. TLC is explicitly provisioned and can run through `check` or manually. Plain
 `go test ./...` skips actual TLC tests unless `TLC_JAR` is configured.
 
@@ -168,7 +170,7 @@ do not invent performance guarantees before measuring the target examples.
 | M1: Quality baseline | Implemented; local gate passed | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; strict gate cannot silently skip TLC; hosted run pending |
 | M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run pending |
 | M3: Analysis and IR contract | Implemented; local gate passed | Consumed graph/effect/discovery/slice plans; separated identity checks; versioned IR and common validation; explicit terminals and stable source naming | Malformed-IR/pass/round-trip/naming tests pass; eight size baselines unchanged; pinned TLC gate passed |
-| M4: Common Go patterns | In progress: inline Mutex/WaitGroup fields and direct pointer receivers | Static fields/direct receivers, restricted defers, then proved finite loops | Semantics and rejection boundaries documented and tested for each addition |
+| M4: Common Go patterns | In progress: inline synchronization fields, local immutable channel fields and direct pointer receivers | Static fields/direct receivers, restricted defers, then proved finite loops | Semantics and rejection boundaries documented and tested for each addition |
 | M5: Component acceptance | Planned | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
 
 Implement milestones in this order. M2 should use existing abstractions rather
@@ -297,6 +299,28 @@ writing its plan or skipping its checker tests does not count as implementation.
   snapshots/sizes unchanged. Full internal/CLI/integration race tests also passed locally.
 - This is a self-contained first increment, **not completion of M4 / step 6**.
 
-**Next action:** extend static field support to immutable channel initialization,
-with alias/order rejection tests; then implement restricted synchronization defers
-and proved finite loops. Do not mark M4 done before all acceptance gates pass.
+### M4 progress: immutable channel fields
+
+- Local allocated structs and nested value fields can hold channel identities from
+  direct allocations, parameters, resolved captures or nil. Fields sharing a channel
+  retain the alias; binding a field does not allocate a new channel.
+- The allocation-frame proof scans all object/field uses, not merely the slice.
+  Initialization must be unique and dominate reads and calls/captures/spawns exposing
+  any part of the object. Field writes seed the data slice and are erased only with
+  an explicit per-frame proof. Callee writes, reassignment, escaped field addresses,
+  aggregate copies/resets and unproved object-pointer cells remain rejected.
+- Tests replace the former blanket channel-field rejection with a mutable-field
+  rejection plus positive/refusal coverage, including direct initialization-order
+  diagnostics. Seven additional actual TLC cases cover rendezvous, nil/closed errors,
+  shared/distinct identities and default-before-peer deadlock. The previous 39
+  semantic cases and four CLI cases remain; original snapshots/sizes are unchanged.
+  The strict checksum-pinned TLC/vet/test gate and full internal/CLI/integration race
+  tests passed locally, with zero skips. Hosted CI has not been run or claimed.
+- Global channel-field access, returned object identities and general alias analysis
+  are still outside this increment. See [SUPPORTED_GO.md](docs/SUPPORTED_GO.md) for
+  exact accepted forms, including the current pointer-variable capture restriction.
+- M4 / step 6 remains incomplete until defers and proved finite loops meet their gates.
+
+**Next action:** restricted `defer mu.Unlock()` / `defer wg.Done()` with argument
+capture, registration timing, LIFO and all normal-return paths preserved; then proved
+finite loops. Do not mark M4 done before all acceptance gates pass.

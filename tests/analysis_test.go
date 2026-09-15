@@ -111,7 +111,7 @@ func TestUnsupportedIsNeverExecutable(t *testing.T) {
 		{"init-unknown", `package main;func external();func init(){external()};func main(){}`},
 		{"defer", `package main;func main(){defer func(){}()}`},
 		{"panic", `package main;func main(){panic("bad")}`},
-		{"unresolved-field", `package main;type box struct{ch chan int};func main(){b:=box{make(chan int)};b.ch<-1}`},
+		{"mutable-channel-field", `package main;type box struct{ch chan int};func main(){b:=box{make(chan int)};b.ch=make(chan int);b.ch<-1}`},
 		{"changing-capture", `package main;func main(){ch:=make(chan int);go func(){ch=make(chan int);ch<-1}();<-ch}`},
 		{"mutex-copy", `package main;import "sync";func f(mu sync.Mutex){mu.Lock()};func main(){var mu sync.Mutex;f(mu)}`},
 		{"waitgroup-reuse", `package main;import "sync";func main(){var wg sync.WaitGroup;wg.Wait();wg.Add(1)}`},

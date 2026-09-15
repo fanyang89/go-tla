@@ -76,11 +76,11 @@ func (b *builder) initializers() {
 				case *ssa.Panic, *ssa.Defer:
 					b.diag("error", "initializer", "exception control in package initialization unsupported", i.Pos())
 				case *ssa.UnOp:
-					if inlineSync(x.Type()) {
+					if inlineSync(x.Type()) || channelAggregate(x.Type()) {
 						b.diag("error", "initializer", "loading synchronization aggregates by value in initializer unsupported", i.Pos())
 					}
 				case *ssa.Store:
-					if discovery.SyncType(x.Val.Type()) != "" || inlineSync(x.Val.Type()) {
+					if discovery.SyncType(x.Val.Type()) != "" || inlineSync(x.Val.Type()) || channelAggregate(x.Val.Type()) {
 						b.diag("error", "initializer", "synchronization object copying in initializer unsupported", i.Pos())
 					}
 				case *ssa.Call:

@@ -96,7 +96,23 @@ TLC cases, separate from CLI integration tests.
 receiver/subobject calls, stable aliases and captures. `TestSyncFieldRefusalBoundaries`
 and `TestSyncAggregateInitializerCopyRejected` retain copy/reset, value receiver,
 ambiguous/nil/future identities, interface, channel/pointer field and container
-refusals. Channel-field initialization, defers and loops remain future increments.
+refusals. Immutable channel-field initialization is covered by the next increment;
+defers and loops remain future work.
+
+## M4 increment: seven immutable-channel-field TLC checks
+
+`tests/channel_fields_test.go` adds `TestTLCImmutableChannelFields`: rendezvous,
+nil-send deadlock, nil-close/closed-send faults, shared/distinct channel identities,
+and default-before-peer deadlock. The total semantic suite is now 46 cases, plus
+four CLI integration cases.
+
+Extraction tests cover local literals/assignments, nested fields, nil, direction
+conversions, receiver/bound-method calls, captures and independent invocation
+contexts. Refusal tests cover future/conditional stores, capture/spawn/call before
+initialization, duplicate/callee/closure writes, escaped field addresses, copies and
+unproved pointer cells. Ordering cases require the initialization diagnostic, not
+merely an unrelated unsupported error. Former blanket field rejection tests now
+reject mutable fields; accepted forms have explicit positive and TLC coverage.
 
 ## Check workflow regressions (M2)
 
@@ -122,7 +138,7 @@ They assert unsupported extraction and failure to emit executable TLA+.
 
 | Test group | Cases |
 |---|---|
-| `TestUnsupportedIsNeverExecutable` | Dynamic capacity; loops/recursion; unavailable effects (including discarded results); dynamic calls; channel/goroutine/unknown initialization; defer/panic; unresolved fields; changing captures; Mutex copying; WaitGroup reuse/concurrent Add; RWMutex |
+| `TestUnsupportedIsNeverExecutable` | Dynamic capacity; loops/recursion; unavailable effects (including discarded results); dynamic calls; channel/goroutine/unknown initialization; defer/panic; mutable channel fields; changing captures; Mutex copying; WaitGroup reuse/concurrent Add; RWMutex |
 | `TestSynchronizationIdentityRequiresDominatingInitialization` | Future-store send/close, store after spawn/capture, conditional initialization; a dominating-store positive control remains supported |
 | `TestUnsafeSynchronizationMutationRejected` | Mutex/WaitGroup state mutation, casts, helper and initializer unsafe effects; an unused unsafe function positive control remains supported |
 

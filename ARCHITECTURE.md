@@ -156,9 +156,15 @@ objects have stable identity. Inline Mutex/WaitGroup fields now use a static loc
 allocation or direct global object plus nested value-field path. Direct pointer
 receivers/parameters and stable closure captures preserve that object identity.
 Synchronization state remains zero-initialized; whole-aggregate loads/copies,
-value receivers/arguments, resets and initializer copies are rejected. Channel and
-pointer fields, containers, changing captured channel cells, indirect shared identity
-stores, dynamic callbacks/interface dispatch,
+value receivers/arguments, resets and initializer copies are rejected. Local channel
+fields now bind to an existing channel (or nil) after an allocation-frame proof:
+all field-address uses are inspected, writes are unique, and initialization dominates
+all reads and object/subobject calls, captures and spawns. Field stores seed the data
+slice; only individually proved stores can be discarded. Callees may read, but not
+initialize or mutate, these bindings. No field-specific state or syntax enters the IR.
+Global/mutable channel fields, pointer fields and unproved object-pointer cells,
+containers, changing captured
+channel cells, indirect shared identity stores, dynamic callbacks/interface dispatch,
 returned channel topology and different-identity phis are rejected when relevant.
 Synchronization objects cannot be passed by value or copied/reset. Reachable SSA
 operations consuming or producing `unsafe.Pointer` (including casts and indirect

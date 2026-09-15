@@ -9,6 +9,14 @@ This is a deliberately restricted analyzer, not a Go compiler or a proof of all
 Go behavior. Unsupported constructs fail closed. Read [ARCHITECTURE.md](ARCHITECTURE.md)
 before interpreting a successful check.
 
+## Development target
+
+The next milestone is a basically usable checker for small Go concurrency
+components with explicit finite analysis scope—not a general Go verifier.
+[ROADMAP.md](ROADMAP.md) defines the target workflow, semantic boundaries,
+acceptance criteria, and staged implementation plan. Planned capabilities there
+are not supported features until implemented and tested.
+
 ## Quick start
 
 Requires Go 1.26 or newer. Run from this repository:

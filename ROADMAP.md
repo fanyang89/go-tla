@@ -1,0 +1,219 @@
+# Roadmap to a basically usable gotla
+
+## Status and document ownership
+
+The current implementation is a restricted, end-to-end MVP. The next milestone
+is a usable tool for small, explicitly scoped Go concurrency components, **not**
+a general Go verifier. This roadmap defines that target; it does not expand the
+current supported language.
+
+- [README.md](README.md): current installation and command usage.
+- [ARCHITECTURE.md](ARCHITECTURE.md): current semantics, assumptions, and limitations.
+- This document: target scope, acceptance gates, priorities, and progress.
+
+Planned documentation includes `docs/SUPPORTED_GO.md` (supported, abstracted, and
+rejected Go patterns) and `docs/VERIFICATION.md` (results, assumptions, false
+positives, and incomplete checks). Those documents are not implemented yet.
+
+## 1. What “basically usable” means
+
+### Intended user and workflow
+
+A Go developer can analyze a small concurrent component in its existing module,
+with an explicit main-package analysis harness when necessary. The developer
+should be able to:
+
+1. Identify the supported input scope before running analysis.
+2. Inspect the extracted processes, resources, transitions, and abstractions.
+3. Run extraction and TLC through one command, without composing Java commands.
+4. Distinguish a completed check from a counterexample, unsupported input, or an
+   incomplete/failed checking run.
+5. Locate the relevant source operations and inspect the assumptions behind a
+   finding, without reverse-engineering anonymous TLA+ actions.
+6. Reproduce the check using saved artifacts and recorded tool/configuration data.
+
+The user supplies ordinary Go source, not a behavioral DSL. A harness may choose
+finite inputs, construct resources, and invoke the component, but should not
+replace its concurrency implementation. A harness result applies to that harness
+and its declared environment, not every possible caller of a library.
+
+### Verification target
+
+The first usable version checks **whole-program deadlock and modeled
+synchronization errors** in a finite communication-oriented abstraction.
+
+- Preserve blocking sends/receives, select readiness/default behavior, lock
+  availability, WaitGroup blocking, spawning, closing, and normal main termination.
+- Preserve a branch's commitment to a potentially blocking operation; a currently
+  enabled alternative must not erase the possibility of blocking.
+- Report a completed successful run as “no modeled violation found under the
+  recorded assumptions,” not “the Go program is safe.”
+- An abstract counterexample may be infeasible in Go. Present it as a potential
+  problem until the abstraction and source have been inspected.
+- A timeout, resource limit, cancellation, unsupported construct, or tool error is
+  not a successful verification result.
+- Main return terminates the program. A worker left blocked after main returns is
+  not, by itself, a whole-program deadlock. Goroutine leaks and starvation require
+  separate future verification targets.
+
+### Required scope for the target version
+
+| Area | Target boundary |
+|---|---|
+| Entry | Exactly one main package; documented explicit harnesses for library components |
+| Processes | Statically identifiable goroutine instances; finite worker creation with proved bounds |
+| Channels | Static identities/capacities, nil/closed behavior, buffered queues, rendezvous, select/default |
+| Synchronization | Mutex and single-phase WaitGroup; no implicit ownership restriction on Go mutex unlock |
+| Common Go patterns | Static synchronization fields and direct receiver calls; restricted synchronization defers; proved finite loops |
+| Computation | Remove irrelevant sequential work; abstract concurrency-controlling values with visible diagnostics |
+| Calls | Inspect supported bodies or require explicit, recorded summaries/contracts; unknown effects cannot be silently discarded |
+| Output | Independent behavioral IR, readable TLA+, diagnostics, raw checker log, and machine-readable check result |
+| Usability | One-command check, bounded resource use, stable result categories, actionable source references |
+
+This table describes the **target**, not today's support. In particular, fields,
+`defer`, proved finite loops, and the `check` command are not available yet.
+
+## 2. Current baseline
+
+Implemented:
+
+- Typed Go package loading, Go SSA, static call graph, concurrency discovery,
+  conservative dependency slicing, atomic regions, and an independent behavioral IR.
+- Static goroutine instances and direct synchronous call lowering.
+- Channels, select/default, Mutex, and restricted single-phase WaitGroup semantics.
+- Explicit unknown-branch commitment and registered unbuffered offers, preserving
+  default-before-peer and blocked-branch schedules.
+- Conservative rejection of ambiguous synchronization identities, unsafe pointer
+  operations, and unresolved call effects; recorded trusted-call assumptions.
+- `inspect` summaries and `analyze` output (`model.json`, `model.tla`, `model.cfg`).
+- A copyable TLC command after successful analysis, using `TLC_JAR` or a local JAR.
+- Eight examples, unit/rejection/snapshot tests, and 33 optional actual TLC checks.
+
+Current restrictions include all reachable CFG cycles and recursion, synchronization
+fields/containers, general aliasing, defer/recover/explicit panic, and dynamic
+process/resource topology. TLC is manually provisioned and run separately. Plain
+`go test ./...` skips actual TLC tests unless `TLC_JAR` is configured.
+
+The current supported-domain assumption excludes implicit sequential runtime
+panics and resource exhaustion. It does not exclude modeled synchronization
+errors. See [ARCHITECTURE.md](ARCHITECTURE.md) for the authoritative full contract.
+
+## 3. Non-negotiable semantic boundaries
+
+1. **Trustworthiness before coverage.** If identity, control, or effects cannot be
+   handled safely, emit unsupported diagnostics rather than a plausible model.
+2. **No silent bounds.** Initially accept loops only when a finite iteration count
+   can be proved for the supported form. Reject an over-budget expansion rather
+   than truncate its behaviors. Any future user-supplied bound must be described
+   as bounded checking, not conservative whole-program coverage.
+3. **No automatic purity for unknown calls.** A trusted call is an explicit user
+   contract about termination, normal return, and absence of shared/concurrent
+   effects. Record it; do not add broad library allowlists merely to pass examples.
+4. **Separate abstraction from failure.** Keep precise-within-domain,
+   conservatively-abstracted, and unsupported extraction outcomes distinct from
+   checker outcomes such as deadlock or incomplete checking.
+5. **Keep the IR backend-independent.** Go-specific analysis stays in the frontend;
+   TLA+ runtime encodings stay in the backend. Document generic communication
+   semantics so a later backend does not have to infer them from generated TLA+.
+6. **Do not redefine support through documentation.** New supported syntax requires
+   implemented semantics, rejection tests, and checker regressions before moving
+   from planned to supported.
+
+## 4. Definition of done
+
+The basically usable milestone is complete only when all of these are satisfied:
+
+- [ ] M1–M5 below meet their acceptance gates, with evidence recorded per change.
+- [ ] A user can build the CLI, provision the documented TLC version, and run a
+      component check using documented non-interactive commands.
+- [ ] Successful, deadlocking, synchronization-error, unsupported, tool-failure,
+      and incomplete runs have distinguishable CLI and machine-readable results.
+- [ ] Checks record assumptions, trusted contracts, tool/configuration information,
+      artifact locations, and model size; stale artifacts cannot masquerade as a
+      new successful result.
+- [ ] Three production-style component examples retain their concurrency source
+      and have small explicit harnesses where needed: a finite worker pool, a
+      close-driven pipeline, and a struct-based synchronized component.
+- [ ] Each component has a correct version and an intentionally faulty version;
+      tests assert the expected checker outcome, not just successful TLA parsing.
+- [ ] Supported loop forms, defers, and field identities each have positive,
+      negative, and blocking/synchronization-error regression coverage.
+- [ ] CI runs real TLC and fails if the required checker is unavailable; plain unit
+      test success alone cannot satisfy the release gate.
+- [ ] Documentation lists remaining restrictions and explains that completed
+      abstract checking is neither arbitrary Go correctness nor leak/starvation
+      verification.
+
+Model size, state count, elapsed time, and peak resource use should be measured on
+a recorded reference environment. Choose numerical budgets from those baselines;
+do not invent performance guarantees before measuring the target examples.
+
+## 5. Delivery milestones
+
+| Milestone | Status | Deliverables | Acceptance gate |
+|---|---|---|---|
+| Scope definition | Done (documentation) | Target users/workflow, supported-domain boundary, non-goals, definition of done | This roadmap separates current capabilities from planned ones |
+| M1: Quality baseline | Planned | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; CI cannot silently skip TLC |
+| M2: Check workflow | Planned | `gotla check`; JAR/timeout/memory/worker settings; raw log and structured result; source-oriented summary; stale-output handling | End-to-end use without composing Java commands; failure and incomplete runs never report pass |
+| M3: Analysis and IR contract | Planned | Focused pass separation; consumed analysis results; versioned IR metadata; generic IR validation; stable source naming | Independently testable passes and explicit malformed-IR rejection without model-size regression |
+| M4: Common Go patterns | Planned | Static fields/direct receivers, restricted defers, then proved finite loops | Semantics and rejection boundaries documented and tested for each addition |
+| M5: Component acceptance | Planned | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
+
+Implement milestones in this order. M2 should use existing abstractions rather
+than undertake M3's refactoring prematurely; integrate its metadata with the
+versioned IR contract in M3. Do not add new frontend support until M1's regression
+gates are established.
+
+### M4 substeps and refusal rules
+
+1. **Static fields and direct receivers:** resolve fields by statically known
+   object plus field path. Preserve initialization-order checks. Reject copying
+   synchronization objects, ambiguous object sources, and mutable identity aliases.
+2. **Restricted defers:** start with `defer mu.Unlock()` and `defer wg.Done()`.
+   Preserve argument evaluation, registration timing, conditional registration,
+   LIFO order, and every supported normal return. Do not pretend normal-return
+   lowering implements panic/recover behavior.
+3. **Proved finite loops:** begin with narrowly recognized constant-bound forms.
+   Distinguish local computation from repeated behavioral operations; verify
+   termination/bounds before eliminating or expanding either. Repeated spawn or
+   allocation needs distinct finite identities. Nested forms and expansion size
+   must have explicit acceptance/rejection rules. Worker receive loops and channel
+   ranges are not automatically supported merely because a test uses few values.
+
+### M5 evidence per component
+
+Record the source/harness boundary, model process/resource/transition counts,
+abstract predicates and contracts, checker version/options, state counts, elapsed
+checking time, and the expected result for both versions. Faults should include
+missing communication, omitted completion signaling, and incorrect channel closure.
+If a component requires a new semantic capability, document and implement that
+capability; do not hide it behind a false trusted-call contract.
+
+## 6. Deferred scope
+
+The following are not requirements for the basically usable milestone:
+
+- General infinite control flow, recursion, or dynamic goroutine/channel topology.
+- Full pointer/alias analysis or arbitrary interface/callback dispatch.
+- RWMutex, WaitGroup reuse/concurrent enrollment, or complete Go runtime modeling.
+- General panic/recover, reflection/unsafe behavior, network/syscall blocking,
+  or broad standard-library concurrency summaries.
+- Precise payload verification, arbitrary temporal properties, fairness,
+  starvation, goroutine-leak analysis, or proof of functional correctness.
+- Automatic argument/topology synthesis for arbitrary library entry functions.
+- Full counterexample decoding/replay, property-directed refinement, or new backends.
+
+Basic source references and checker-result summaries remain in scope; complete
+counterexample replay does not. These deferrals are revisitable only with explicit
+semantic contracts and evidence, not by weakening rejection rules.
+
+## 7. Progress rules and next action
+
+Use one atomic commit per independent change. Every capability update must include
+its tests, documentation boundary, validation commands/results, and remaining
+limitations. Mark a milestone complete only after its acceptance gate is met;
+writing its plan or skipping its checker tests does not count as implementation.
+
+**Next action:** M1 — inventory the existing semantic tests into a coverage matrix,
+add the supported-pattern and verification guides, and establish a required TLC
+CI gate. No analysis semantics changed as part of the scope-definition step.

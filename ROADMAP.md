@@ -73,7 +73,8 @@ synchronization errors** in a finite communication-oriented abstraction.
 | Usability | One-command check, bounded resource use, stable result categories, actionable source references |
 
 This table describes the **target**, not today's support. In particular, fields,
-`defer`, proved finite loops, and the `check` command are not available yet.
+`defer`, and proved finite loops are not available yet. The `check` workflow is
+implemented within the current restricted frontend scope.
 
 ## 2. Current baseline
 
@@ -87,7 +88,11 @@ Implemented:
   default-before-peer and blocked-branch schedules.
 - Conservative rejection of ambiguous synchronization identities, unsafe pointer
   operations, and unresolved call effects; recorded trusted-call assumptions.
-- `inspect` summaries and `analyze` output (`model.json`, `model.tla`, `model.cfg`).
+- `inspect` summaries, `analyze` output (`model.json`, `model.tla`, `model.cfg`), and
+  `check` execution with bounded Java/TLC, raw logs, versioned result JSON, and
+  best-effort source candidates.
+- Stable check outcome/exit categories, per-directory output locks, early stale
+  artifact invalidation, and nonfinal `running` markers.
 - A copyable TLC command after successful analysis, using `TLC_JAR` or a local JAR.
 - Eight examples, unit/rejection/snapshot tests, and 33 actual TLC checks (optional
   in ordinary local tests, required in the strict CI gate).
@@ -97,7 +102,7 @@ Implemented:
 
 Current restrictions include all reachable CFG cycles and recursion, synchronization
 fields/containers, general aliasing, defer/recover/explicit panic, and dynamic
-process/resource topology. TLC is manually provisioned and run separately. Plain
+process/resource topology. TLC is explicitly provisioned and can run through `check` or manually. Plain
 `go test ./...` skips actual TLC tests unless `TLC_JAR` is configured.
 
 The current supported-domain assumption excludes implicit sequential runtime
@@ -160,7 +165,7 @@ do not invent performance guarantees before measuring the target examples.
 |---|---|---|---|
 | Scope definition | Done (documentation) | Target users/workflow, supported-domain boundary, non-goals, definition of done | This roadmap separates current capabilities from planned ones |
 | M1: Quality baseline | Implemented; local gate passed | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; strict gate cannot silently skip TLC; hosted run pending |
-| M2: Check workflow | Planned | `gotla check`; JAR/timeout/memory/worker settings; raw log and structured result; source-oriented summary; stale-output handling | End-to-end use without composing Java commands; failure and incomplete runs never report pass |
+| M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run pending |
 | M3: Analysis and IR contract | Planned | Focused pass separation; consumed analysis results; versioned IR metadata; generic IR validation; stable source naming | Independently testable passes and explicit malformed-IR rejection without model-size regression |
 | M4: Common Go patterns | Planned | Static fields/direct receivers, restricted defers, then proved finite loops | Semantics and rejection boundaries documented and tested for each addition |
 | M5: Component acceptance | Planned | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
@@ -234,6 +239,23 @@ writing its plan or skipping its checker tests does not count as implementation.
   maintainers must require the workflow job in repository policy separately.
 - No supported-language or synchronization semantics were expanded by M1.
 
-**Next action:** M2 — specify checker result/exit categories and implement
-`gotla check` with bounded execution, logs, and stale-output safety, without
-broadening frontend support. The CLI still only implements `inspect` and `analyze`.
+### M2 validation record
+
+- `gotla check` records `result.json` schema version 1 and `tlc.log`; model JSON/IR
+  semantics and supported Go scope remain unchanged.
+- Actual CLI/TLC tests cover completed pass, deadlock, and synchronization-error
+  outcomes, with hashes/provenance and source candidates. Deadline, cancellation,
+  log limit, setup/protocol failure, stale-output, and concurrent-writer paths have
+  focused regression coverage. The original 33 semantic TLC checks remain in place.
+- Go tests, vet, strict pinned-TLC gate, and focused race checks passed locally.
+  Hosted CI has not been run or claimed.
+- Bounds apply to Java/TLC execution (including startup), JVM heap, and combined
+  output. They do not bound Go SSA/lowering time, total process memory, or state-store
+  disk use. Cancellation is checked between analysis passes. These limits are explicit
+  in the CLI help and verification guide, not described as a whole-pipeline sandbox.
+- Full trace decoding/replay, automatic source-build provenance capture, and handling
+  abandoned output locks without operator inspection remain outside this milestone.
+
+**Next action:** M3 — consolidate the consumed analysis passes and backend-independent
+IR validation/version contract. Preserve the established semantic regression gates;
+do not broaden frontend support as a side effect of that refactoring.

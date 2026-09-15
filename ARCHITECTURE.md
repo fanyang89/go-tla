@@ -35,7 +35,10 @@ The passes are explicit functions/packages:
 9. `tla.Validate` checks supported IR features; `Generate` emits runtime state,
    transition actions, rendezvous actions, `Init`, `Next`, `Spec`, and configuration.
 10. The CLI writes diagnostics and artifacts, or displays the inspection summary.
-    TLC is deliberately a separately provisioned executable, not a hidden download.
+    `check` additionally invokes `internal/checker` to run explicitly provisioned
+    TLC with a deadline, heap/log limits, framed result parsing, and saved evidence.
+    `internal/artifact` serializes writers and invalidates old outputs before
+    analysis. Neither layer changes model semantics or downloads executables.
 
 Unit tests exercise recognition, call-graph inclusion, slicing and abstraction;
 integration tests exercise the complete pipeline. Snapshots cover channel and
@@ -44,6 +47,14 @@ diagnostics, TLA, and config determinism. Actual TLC tests validate semantic out
 not just syntax; they are optional locally but mandatory in the pinned verification
 gate. See the [semantic test matrix](docs/SEMANTIC_TEST_MATRIX.md) and
 [verification guide](docs/VERIFICATION.md).
+
+The checker result has its own versioned JSON envelope; this does not version or
+change the behavioral IR. Source summaries map simple trace `pc` locations to
+candidate IR transitions, not a complete counterexample decoder. Timeout applies
+to checker execution; package loading is cancellable, while SSA/lowering currently
+check cancellation only at pass boundaries. See the
+[verification contract](docs/VERIFICATION.md) for output ownership, incomplete
+results, resource-limit scope, and exit codes.
 
 ## What survives slicing
 

@@ -74,6 +74,23 @@ TLC must find a deadlock; an always-enabled skip must not hide the blocked branc
 | `two-default-selects-never-rendezvous` | No error; no invented rendezvous between two nonblocking polls |
 | `registered-select-closed` | No error; a registered receive can complete after close |
 
+## Check workflow regressions (M2)
+
+The original 33 checks above remain unchanged. Additional workflow tests cover:
+
+| Contract | Evidence | Expected result |
+|---|---|---|
+| Real end-to-end CLI/TLC outcomes | `cmd/gotla/check_test.go`: `TestCheckTLCIntegration` | Real pass/deadlock/invariant outcomes have matching gotla statuses/exits, artifact hashes, provenance, and source candidates; tiny deadline is incomplete |
+| Checker outcome authentication | `internal/checker/protocol_test.go` | Framed completion/outcome and exit code must agree; prose-only, conflicting, truncated, and unknown-error output never passes |
+| Resource and subprocess handling | `internal/checker/runner_test.go` | Shell-free Java stand-in exercises timeout, log limit, memory exhaustion, tool failure, and cancellation; logs remain bounded and workspace is cleaned |
+| Setup and options | Same file | Missing JAR/Java and invalid resource options fail explicitly |
+| Failed extraction and stale results | `cmd/gotla/check_test.go` | Load failure, unsupported source, cancelled analysis, and missing tool replace/invalidate old success; `analyze` also removes previous checker artifacts |
+| Writer isolation and partial output | `internal/artifact/directory_test.go` and CLI lock tests | Concurrent writers cannot modify current results; unknown directory contents are not recursively removed; temporary writes are cleaned |
+| Result separation | `check_test.go`, `protocol_test.go` | Extraction precision is independent of checker status; exit mapping is stable; argument errors do not start/overwrite a run |
+
+Fake-Java subprocess tests are control-path tests, not actual TLC semantic evidence.
+Source candidates are intentionally not a complete trace replay/causality proof.
+
 ## Fail-closed extraction
 
 All following groups are in [tests/analysis_test.go](../tests/analysis_test.go).

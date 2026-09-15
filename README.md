@@ -34,7 +34,10 @@ produce no new model. Use a separate output directory per analysis.
 ## Model checking
 
 Obtain `tla2tools.jar` from the [official TLA+ releases](https://github.com/tlaplus/tlaplus/releases).
-No jar is bundled or automatically downloaded. With Java installed:
+No jar is bundled or automatically downloaded. After a successful `analyze`, the
+CLI prints a copyable POSIX-shell TLC command. It uses `TLC_JAR` when set, otherwise
+looks for `tla2tools.jar` in the current directory. If neither is available, it
+prompts you to set `TLC_JAR` to an absolute JAR path. With Java installed:
 
 ```sh
 cd out

@@ -85,6 +85,36 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	fmt.Fprintf(stdout, "wrote %s/{model.tla,model.cfg,model.json} (%s)\n", *out, m.Outcome)
+	printTLCHint(stdout, *out)
 	return 0
 }
+
+// printTLCHint emits a POSIX-shell command without changing the caller's directory.
+func printTLCHint(w io.Writer, out string) {
+	jar := os.Getenv("TLC_JAR")
+	if jar == "" {
+		if info, err := os.Stat("tla2tools.jar"); err == nil && info.Mode().IsRegular() {
+			jar = "tla2tools.jar"
+		}
+	}
+	dir, err := filepath.Abs(out)
+	if err != nil {
+		fmt.Fprintln(w, "Run TLC from the output directory: java -cp /absolute/path/tla2tools.jar tlc2.TLC -workers 1 model.tla")
+		return
+	}
+	classpath := `"${TLC_JAR:?Set TLC_JAR to the absolute path of tla2tools.jar}"`
+	if jar != "" {
+		if path, err := filepath.Abs(jar); err == nil {
+			classpath = shellQuote(path)
+		}
+	} else {
+		fmt.Fprintln(w, "Set TLC_JAR to the absolute path of tla2tools.jar (https://github.com/tlaplus/tlaplus/releases).")
+	}
+	fmt.Fprintf(w, "Run TLC:\n  (cd %s && java -cp %s tlc2.TLC -workers 1 model.tla)\n", shellQuote(dir), classpath)
+}
+
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
+}
+
 func main() { os.Exit(run(os.Args[1:], os.Stdout, os.Stderr)) }

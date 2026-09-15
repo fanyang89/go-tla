@@ -1,0 +1,47 @@
+name: Verify concurrency semantics
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Go and required TLC
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TLC_JAR: ${{ runner.temp }}/gotla-tools/tla2tools.jar
+      GOTLA_REQUIRE_TLC: '1'
+      UPDATE_SNAPSHOTS: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Check shell syntax
+        run: bash -n scripts/download-tlc.sh scripts/test-ci.sh
+      - name: Provision pinned official TLC
+        run: bash scripts/download-tlc.sh "$TLC_JAR"
+      - name: Verify Go, snapshots, and TLC outcomes
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/gotla"
+          set -o pipefail
+          bash scripts/test-ci.sh 2>&1 | tee "$RUNNER_TEMP/gotla/verification.log"
+      - name: Preserve verification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-log
+          path: ${{ runner.temp }}/gotla/verification.log
+          if-no-files-found: ignore
+          retention-days: 14

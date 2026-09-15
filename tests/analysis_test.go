@@ -148,3 +148,38 @@ func TestDiagnosticsAndIRDeterministic(t *testing.T) {
 		}
 	}
 }
+
+func TestSynchronizationIdentityRequiresDominatingInitialization(t *testing.T) {
+	for name, source := range map[string]string{
+		"future-store-send":   `package main;func main(){var ch chan int;func(){ch<-1}();ch=make(chan int,1);<-ch}`,
+		"future-store-close":  `package main;func main(){var ch chan int;func(){close(ch)}();ch=make(chan int,1)}`,
+		"store-after-spawn":   `package main;func main(){var ch chan int;go func(){ch<-1}();ch=make(chan int,1);<-ch}`,
+		"store-after-capture": `package main;func main(){var ch chan int;f:=func(){ch<-1};ch=make(chan int,1);f();<-ch}`,
+		"conditional-store":   `package main;func yes()bool{return true};func main(){var ch chan int;if yes(){ch=make(chan int,1)};func(){ch<-1}()}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := fromSource(t, source)
+			if !m.HasErrors() {
+				t.Fatalf("future/non-dominating store accepted: %+v", m)
+			}
+			found := false
+			for _, d := range m.Diagnostics {
+				if d.Code == "sync-initialization-order" {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("missing initialization-order diagnostic: %+v", m.Diagnostics)
+			}
+			if _, _, err := tla.Generate(m); err == nil {
+				t.Fatal("unsafe model executable")
+			}
+		})
+	}
+	t.Run("dominating-store", func(t *testing.T) {
+		m := fromSource(t, `package main;func main(){ch:=make(chan int,1);func(){ch<-1}();<-ch}`)
+		if m.HasErrors() {
+			t.Fatalf("dominating store rejected: %+v", m.Diagnostics)
+		}
+	})
+}

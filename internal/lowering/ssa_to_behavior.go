@@ -414,8 +414,11 @@ func (b *builder) identity(fr *frame, v ssa.Value, seen map[ssa.Value]bool) stri
 			return b.identity(fr, x.X, seen)
 		}
 	case *ssa.Alloc:
-		// A captured channel cell is safe only if there is exactly one direct store and no escape other than closures/loads.
+		// A captured cell requires one immutable initialization that dominates
+		// every load and closure capture. A unique future store is not its value.
 		var value ssa.Value
+		var store *ssa.Store
+		uses := []ssa.Instruction{}
 		count := 0
 		safe := true
 		if refs := x.Referrers(); refs != nil {
@@ -424,17 +427,26 @@ func (b *builder) identity(fr *frame, v ssa.Value, seen map[ssa.Value]bool) stri
 				case *ssa.Store:
 					if z.Addr == x {
 						value = z.Val
+						store = z
 						count++
 					} else {
 						safe = false
 					}
-				case *ssa.UnOp, *ssa.DebugRef, *ssa.MakeClosure:
+				case *ssa.UnOp, *ssa.MakeClosure:
+					uses = append(uses, r)
+				case *ssa.DebugRef:
 				default:
 					safe = false
 				}
 			}
 		}
 		if count == 1 && safe {
+			for _, use := range uses {
+				if !instructionDominates(store, use) {
+					b.diag("error", "sync-initialization-order", "synchronization identity initialization must dominate every load and closure capture; future or conditional stores unsupported", use.Pos())
+					return "invalid"
+				}
+			}
 			return b.identity(fr, value, seen)
 		}
 	case *ssa.Phi:
@@ -474,4 +486,23 @@ func syntheticSelectPanic(p *ssa.Panic) bool {
 	}
 	c, ok := box.X.(*ssa.Const)
 	return ok && c.Value != nil && c.Value.Kind() == constant.String && constant.StringVal(c.Value) == "blocking select matched no case"
+}
+
+// Dominance includes instruction order within a block, not just CFG block dominance.
+func instructionDominates(before, after ssa.Instruction) bool {
+	if before.Parent() != after.Parent() || before.Block() == nil || after.Block() == nil {
+		return false
+	}
+	if before.Block() != after.Block() {
+		return before.Block().Dominates(after.Block())
+	}
+	for _, i := range before.Block().Instrs {
+		if i == before {
+			return true
+		}
+		if i == after {
+			return false
+		}
+	}
+	return false
 }

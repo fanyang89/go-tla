@@ -123,7 +123,11 @@ extensions. General shared-state and arbitrary assertion backends are not implem
 
 Precise identity supports channel allocations, direct parameters, constant nil,
 direction conversions, same-identity phis, and static closure captures through
-single-assignment nonescaping cells. Mutex/WaitGroup allocations and direct global
+single-assignment nonescaping cells. Their unique initialization must dominate
+every load and closure capture, including instruction order inside a basic block.
+A later or conditionally executed store cannot retroactively define a captured
+channel. Capturing before initialization is rejected even if a later invocation
+might make it safe; closure writes and multiple stores are also rejected. Mutex/WaitGroup allocations and direct global
 objects have stable identity. Struct fields, containers, changing captured channel
 cells, indirect shared identity stores, dynamic callbacks/interface dispatch,
 returned channel topology and different-identity phis are rejected when relevant.

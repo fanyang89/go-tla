@@ -40,11 +40,14 @@ func (b *builder) regions() {
 				}
 				for _, e := range n.edges {
 					gs := append(append([]behavior.Guard{}, guards...), e.guard)
-					if len(e.effects) == 0 {
+					if len(e.effects) == 0 && !e.boundary {
 						walk(e.to, gs, path)
 						continue
 					}
-					name := string(e.effects[0].Kind)
+					name := "Choose"
+					if len(e.effects) > 0 {
+						name = string(e.effects[0].Kind)
+					}
 					b.m.Transitions = append(b.m.Transitions, behavior.Transition{ID: fmt.Sprintf("%s_%s_L%d_%d", p.ID, name, e.pos.Line, len(b.m.Transitions)), Process: p.ID, Source: src, Guard: combine(gs), Effects: e.effects, Destination: e.to, SourcePosition: e.pos, ChoiceGroup: e.group})
 					todo = append(todo, e.to)
 				}

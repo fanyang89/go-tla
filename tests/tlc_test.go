@@ -100,3 +100,11 @@ func TestTLCBlockingAndErrors(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) { checkTLC(t, fromSource(t, c.source), c.want) })
 	}
 }
+
+func TestTLCAbstractBranchCommitsBeforeBlocking(t *testing.T) {
+	if os.Getenv("TLC_JAR") == "" {
+		t.Skip("TLC_JAR not configured")
+	}
+	m := fromSource(t, `package main;func unknown()bool;func main(){ch:=make(chan int);if unknown(){ch<-1}}`, "fixture.unknown")
+	checkTLC(t, m, "Error: Deadlock reached")
+}

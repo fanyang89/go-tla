@@ -20,11 +20,12 @@ import (
 
 type Options struct{ TrustedCalls []string }
 type edge struct {
-	group   string
-	to      string
-	guard   behavior.Guard
-	effects []behavior.Effect
-	pos     behavior.Position
+	boundary bool
+	group    string
+	to       string
+	guard    behavior.Guard
+	effects  []behavior.Effect
+	pos      behavior.Position
 }
 type node struct{ edges []edge }
 type builder struct {
@@ -272,7 +273,7 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 						b.m.AbstractedPredicates = append(b.m.AbstractedPredicates, behavior.Predicate{Name: name, Source: b.position(x.Cond.Pos(), f), Reason: "data result controlling concurrency is nondeterministic"})
 						b.diag("warning", "abstract-predicate", "predicate "+name+" affects concurrency; modeled as nondeterministic boolean", x.Cond.Pos())
 					}
-					b.nodes[src].edges = append(b.nodes[src].edges, edge{to: fr.nodes[dst.Instrs[0]], guard: g, pos: e.pos})
+					b.nodes[src].edges = append(b.nodes[src].edges, edge{to: fr.nodes[dst.Instrs[0]], guard: g, pos: b.position(x.Cond.Pos(), f), boundary: g.Kind == behavior.Choice && sl.Control[x]})
 				}
 				continue
 			case *ssa.Jump:

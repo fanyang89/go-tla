@@ -84,6 +84,9 @@ extensions. General shared-state and arbitrary assertion backends are not implem
 
 * Local sequential work is epsilon-closed between scheduling points. Guards for
   a region are conjoined. Finishing a process is an explicit transition.
+* A concurrency-relevant unknown branch has an explicit nondeterministic commit
+  transition before entering its chosen region. Merging `Send` and `Skip` as
+  competing readiness-guarded actions would incorrectly hide the choice to block.
 * Every static goroutine starts dormant and is enabled only by its spawn action.
   Each synchronous invocation has separate SSA binding context. No runtime process
   pool is silently truncated.

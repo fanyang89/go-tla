@@ -92,6 +92,7 @@ regenerate with `UPDATE_SNAPSHOTS=1 go test ./tests -run TestExamplesAndSnapshot
 
 The implementation was checked with Go 1.26.2, Java 25, and the official v1.8.0
 release jar (SHA-256 `2c903dcd6f50f12b0c0a2e14c1406be782126c7cee64f3e0b8550c2020870293`).
-The integration suite checks all eight examples and nineteen additional cases
+The integration suite checks all eight examples and twenty additional cases
 covering nil/closed channels, select readiness/dispatch, rendezvous, main exit,
-mutex errors, and WaitGroup errors/blocking.
+mutex errors, WaitGroup errors/blocking, and committing an abstract branch before
+a blocking operation.

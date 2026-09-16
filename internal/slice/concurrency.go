@@ -78,8 +78,8 @@ func FromRoots(f *ssa.Function, roots map[ssa.Instruction]bool) Result {
 	return r
 }
 
-// HasCycle rejects unbounded allocation/spawn/counters and silent sequential
-// divergence. Supporting bounded loops requires a separate proved bound pass.
+// HasCycle flags residual cyclic control. Callers must reject it or discharge
+// a separate finite-state/control proof; slicing alone cannot justify a loop.
 func HasCycle(f *ssa.Function) bool {
 	color := map[*ssa.BasicBlock]int{}
 	var visit func(*ssa.BasicBlock) bool

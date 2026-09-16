@@ -45,19 +45,19 @@ func TestProvedIntegerRange(t *testing.T) {
 
 func TestFiniteLoopRefusals(t *testing.T) {
 	for name, body := range map[string]string{
-		"index":            "for i:=range 2 {_=i}",
-		"dynamic":          "n:=2;for range n {}",
-		"over-budget":      "for range 17 {}",
-		"nested":           "for range 2 {for range 2 {}}",
-		"continue":         "for range 2 {continue}",
-		"goto":             "for range 2 {goto done};done:",
-		"label":            "for range 2 {again: goto again}",
-		"line-directive":   "\n//line virtual.go:50\nfor range 2 {}",
-		"unknown-body":     "for range 2 {unknown()}",
-		"break":            "for range 2 {break}",
-		"classic":          "for i:=0;i<2;i++ {}",
-		"channel-range":    "ch:=make(chan int);for range ch {}",
-		"loop-defer-limit": "var mu sync.Mutex;for range 16 {defer mu.Unlock();defer mu.Unlock();defer mu.Unlock();defer mu.Unlock();defer mu.Unlock()}",
+		"index":                    "for i:=range 2 {_=i}",
+		"dynamic":                  "n:=2;for range n {}",
+		"over-budget":              "for range 17 {}",
+		"nested":                   "for range 2 {for range 2 {}}",
+		"continue":                 "for range 2 {continue}",
+		"goto":                     "for range 2 {goto done};done:",
+		"label":                    "for range 2 {again: goto again}",
+		"line-directive":           "\n//line virtual.go:50\nfor range 2 {}",
+		"unknown-body":             "for range 2 {unknown()}",
+		"break":                    "for range 2 {break}",
+		"classic":                  "for i:=0;i<2;i++ {}",
+		"channel-range-allocation": "ch:=make(chan int);for range ch {next:=make(chan int);_=next}",
+		"loop-defer-limit":         "var mu sync.Mutex;for range 16 {defer mu.Unlock();defer mu.Unlock();defer mu.Unlock();defer mu.Unlock();defer mu.Unlock()}",
 	} {
 		t.Run(name, func(t *testing.T) {
 			m := fromSource(t, `package main;import "sync";var _ sync.Mutex;func unknown();func main(){`+body+`}`)

@@ -24,8 +24,8 @@ Backends must perform their own capability checks and refuse unsupported feature
 
 `metadata` records producer/version, optional analyzer-binary VCS revision/dirty
 state, language, toolchain and analysis options. These are descriptive, not executable
-expressions. Gotla records the `acyclic-static-identity` profile and normalized
-trusted-call names. Binary provenance is not provenance of the analyzed source.
+expressions. Gotla records `acyclic-static-identity`, or `finite-state-static-identity`
+when receive cycles are proved, plus normalized trusted-call names. Binary provenance is not provenance of the analyzed source.
 Metadata option keys may describe producer-specific configuration.
 
 `result.json` retains its independent checker-envelope version 1, with additive
@@ -99,8 +99,13 @@ not infer a different rendezvous contract from generic guarded transitions.
 ## Current TLA capability profile
 
 After common validation, TLA rejects shared abstract state, missing synchronization
-error checking, cyclic process control, unsafe/repeated spawn targets, and multiple
-scheduling effects per transition. Assignments may accompany one scheduling effect.
+error checking, unsafe/repeated spawn targets, and multiple scheduling effects per
+transition. Assignments may accompany one scheduling effect. Cycles must cross a
+status-producing Receive on every cycle: removing those edges must leave an acyclic
+graph. Any repeatable Spawn, WaitGroupAdd or WaitGroupDone is rejected, even when a
+guard appears to limit it. Together with bounded queues/locals and Boolean locks,
+this ensures finite modeled state without trusting source-specific loop annotations.
+It does not prove termination or require a channel eventually to close.
 Positive WaitGroup enrollment is main-only, before worker activation or prior Wait.
 Ambiguous blocking alternatives need a select group, equivalent duplicate effects,
 provably disjoint finite-local guards, or an explicit branch-commit location.

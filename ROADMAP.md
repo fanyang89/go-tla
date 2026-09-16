@@ -172,7 +172,7 @@ do not invent performance guarantees before measuring the target examples.
 | M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run pending |
 | M3: Analysis and IR contract | Implemented; local gate passed | Consumed graph/effect/discovery/slice plans; separated identity checks; versioned IR and common validation; explicit terminals and stable source naming | Malformed-IR/pass/round-trip/naming tests pass; eight size baselines unchanged; pinned TLC gate passed |
 | M4: Common Go patterns | Complete within the documented restricted profile | Static fields/direct receivers, restricted defers, proved constant integer ranges | Positive, refusal, identity, deadlock and synchronization-error regressions pass |
-| M5: Component acceptance | In progress: finite batch worker-pool pair validated | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
+| M5: Component acceptance | In progress: worker-pool pair and close-driven pipeline variants validated | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
 
 Implement milestones in this order. M2 should use existing abstractions rather
 than undertake M3's refactoring prematurely; integrate its metadata with the
@@ -408,10 +408,39 @@ writing its plan or skipping its checker tests does not count as implementation.
 - The pinned-TLC/vet/test gate passed locally with zero skips, and full internal/
   CLI/integration/component race tests passed. Existing snapshots and size
   baselines remain unchanged. Hosted CI execution is not claimed.
-- M5 / step 7 remains incomplete. This prerequisite does not admit channel ranges
-  or constitute a verified close-driven pipeline.
+- This status prerequisite alone did not admit channel ranges or complete M5.
 
-**Next action:** implement and validate close-driven receive control with explicit
-finite-state/boundedness obligations, then the pipeline's correct/faulty variants,
-mutex-protected component and consolidated delivery evidence. Do not substitute
-user-guessed receive counts for close-driven control.
+### M5 progress: finite-state receive cycles and a real pipeline
+
+- Added a reachable-SSA-SCC proof for close-driven receive control. Every accepted
+  cyclic component has one dominating comma-ok receive, an exact closed-empty
+  exit, a channel identity evaluated outside the cycle and no reception-bypassing
+  subcycle. Repeating allocation/spawn/defer/store/helper/select/counter effects
+  are rejected; scalar computations, sends, stable fields and close/Lock/Unlock
+  remain supported under ordinary identity/effect rules.
+- Cycles are preserved in behavioral IR, not unrolled to a guessed receive count.
+  The backend independently rejects repeatable spawn/counter updates and cycles
+  lacking status-producing receives. Bounded modeled queues/locals/locks and
+  fixed process identities imply finite state, not termination or fairness.
+- Deferred registrations/drains remain acyclic; may-pending analysis now reaches
+  a fixed point across receive SCCs. Cleanup remains pending during a missing-close
+  block and executes on supported normal returns afterward.
+- Fourteen new actual TLC cases cover empty/closed/buffered/nil streams, forwarding,
+  omitted/incorrect close, explicit comma-ok loops, deferred cleanup across loops,
+  mutex use, sequential loops and 32 deliveries without a guessed receive limit.
+  Refusal/SCC/IR tests cover repeated effects, wrong exits, subcycles, saved models
+  and malicious repeatable spawn/counter effects. The semantic TLC total is 93.
+- Added a genuine producer/transform/reducer library with allocation-only harnesses.
+  Both consumers retain their channel ranges. Correct, missing-output-close and
+  early-output-close variants respectively report passed, deadlock and a
+  synchronization error through real CLI/TLC checks (nine CLI cases total).
+  Native tests, model-size baselines and measured resource/state reports are in
+  [COMPONENTS.md](docs/COMPONENTS.md).
+- The strict pinned-TLC/vet/test gate passed locally with zero skips, as did full
+  internal/CLI/integration/component race tests. Original snapshots and size
+  baselines remain unchanged. Hosted CI execution is not claimed.
+- M5 / step 7 remains incomplete: the mutex-protected component and consolidated
+  acceptance/delivery report are still outstanding.
+
+**Next action:** validate a struct-based mutex-protected component and its faulty
+variant, then finish the consolidated basically-usable acceptance evidence.

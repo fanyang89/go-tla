@@ -17,9 +17,9 @@ type deferredCall struct {
 	source behavior.Position
 }
 
-// Acyclic control executes each registration site at most once per invocation.
-// A topological order is a linear extension of every executable registration
-// order, so reversing its registered subset implements LIFO without a stack bound.
+// Registration/drain sites must be acyclic, even when receive-only SCCs exist.
+// Their reverse-postorder is a linear extension of executable registration order.
+// Reversing the registered subset implements LIFO without assuming a stack bound.
 // Each invocation owns fresh flags and statically captured resource identities.
 func (b *builder) prepareDefers(fr *frame) bool {
 	blocks := normalBlockOrder(fr.f)
@@ -60,7 +60,7 @@ func (b *builder) prepareDefers(fr *frame) bool {
 	// A may-pending analysis chooses which sites need tests at each drain. Runtime
 	// flags retain exact conditional registration; joins must not assume all sites ran.
 	out := map[*ssa.BasicBlock]map[*ssa.Defer]bool{}
-	for _, bb := range blocks {
+	transfer := func(bb *ssa.BasicBlock, emit bool) map[*ssa.Defer]bool {
 		pending := map[*ssa.Defer]bool{}
 		for _, pred := range bb.Preds {
 			maps.Copy(pending, out[pred])
@@ -70,15 +70,31 @@ func (b *builder) prepareDefers(fr *frame) bool {
 			case *ssa.Defer:
 				pending[x] = true
 			case *ssa.RunDefers, *ssa.Return:
-				for _, d := range order {
-					if pending[d] {
-						fr.cleanup[i] = append(fr.cleanup[i], fr.defers[d])
+				if emit {
+					for _, d := range order {
+						if pending[d] {
+							fr.cleanup[i] = append(fr.cleanup[i], fr.defers[d])
+						}
 					}
 				}
 				clear(pending)
 			}
 		}
-		out[bb] = pending
+		return pending
+	}
+	// Monotone union/kill transfer reaches a fixed point across receive SCCs.
+	for changed := true; changed; {
+		changed = false
+		for _, bb := range blocks {
+			pending := transfer(bb, false)
+			if !maps.Equal(pending, out[bb]) {
+				out[bb] = pending
+				changed = true
+			}
+		}
+	}
+	for _, bb := range blocks {
+		transfer(bb, true)
 	}
 	return true
 }

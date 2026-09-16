@@ -10,6 +10,9 @@ import (
 func (b *builder) recordLoops(f *ssa.Function) bool {
 	valid := true
 	for _, proof := range b.p.LoopProofs(f) {
+		if proof.ChannelRange {
+			continue
+		}
 		pos := proof.Source
 		pos.Function = b.p.Position(f.Pos(), f).Function
 		if proof.Reason != "" {

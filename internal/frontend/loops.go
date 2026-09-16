@@ -28,9 +28,10 @@ type loopOwner struct {
 
 // LoopProof is a consumed, source-attributed normalization result.
 type LoopProof struct {
-	Source behavior.Position
-	Count  int
-	Reason string // Nonempty means the loop was retained and must be refused if reached.
+	Source       behavior.Position
+	Count        int
+	ChannelRange bool   // Candidate only: SSA must prove finite-state receive control.
+	Reason       string // Nonempty means the loop was retained and must be refused if reached.
 }
 
 // Loaded keeps re-type-checked packages and their original-source loop proofs.
@@ -95,6 +96,11 @@ func normalizeLoops(ps []*packages.Package, sources map[string][]byte) (map[stri
 					}
 					proof := LoopProof{Source: positions.Position(loop.Pos(), nil)}
 					proof.Source.Package = p.PkgPath
+					if _, ok := p.TypesInfo.TypeOf(loop.X).Underlying().(*types.Chan); ok {
+						proof.ChannelRange = true
+						proofs[key] = append(proofs[key], proof)
+						return false
+					}
 					count, reason := rangeCount(p.TypesInfo, loop)
 					proof.Count, proof.Reason = count, reason
 					if reason == "" {

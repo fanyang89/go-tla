@@ -45,8 +45,8 @@ func Validate(m *behavior.Model) error {
 				return err
 			}
 		}
-		if cyclic(m, p.ID) {
-			return fmt.Errorf("TLA backend requires acyclic process control to bound counters and process starts")
+		if err := finiteControl(m, p.ID); err != nil {
+			return err
 		}
 	}
 	for _, c := range m.Channels {
@@ -169,30 +169,4 @@ func pathExists(m *behavior.Model, process, from, to string) bool {
 		return false
 	}
 	return visit(from)
-}
-func cyclic(m *behavior.Model, process string) bool {
-	color := map[string]int{}
-	var visit func(string) bool
-	visit = func(loc string) bool {
-		if color[loc] == 1 {
-			return true
-		}
-		if color[loc] == 2 {
-			return false
-		}
-		color[loc] = 1
-		for _, next := range outgoing(m, process, loc) {
-			if visit(next) {
-				return true
-			}
-		}
-		color[loc] = 2
-		return false
-	}
-	for _, t := range m.Transitions {
-		if t.Process == process && visit(t.Source) {
-			return true
-		}
-	}
-	return false
 }

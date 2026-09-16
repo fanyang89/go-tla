@@ -19,7 +19,7 @@ program may deadlock. Successful extraction does not mean successful verificatio
 
 | Go pattern | Current treatment |
 |---|---|
-| One main package, direct acyclic helper calls | Supported; helpers are lowered in the caller's process |
+| One main package, direct nonrecursive helper calls | Supported bodies are lowered in the caller's process |
 | `go worker(ch)` / statically bound closure | One statically known process per reachable spawn context |
 | `for range N` / `for _ = range N` | Main-module constant integer range; no live index, nested loops or branch statements; at most 16 iterations |
 | `make(chan T)` / constant capacity | Supported; capacity must be in 0..1024 |
@@ -35,6 +35,7 @@ program may deadlock. Successful extraction does not mean successful verificatio
 | Direct `defer mu.Unlock()` / `defer wg.Done()` | Static receiver capture, conditional registration and LIFO cleanup at normal returns; at most 64 sites per invocation |
 | WaitGroup Add / Done / Wait | Single phase only; positive Add in main before any spawn or prior Wait; constant delta in -1024..1024 |
 | Local arithmetic / payload processing | Removed when irrelevant and otherwise within supported computation/call rules |
+| Close-driven channel ranges / equivalent comma-ok loops | Restricted receive SCCs preserve closure exits and finite modeled state, without guessing a trip count |
 | Receive `ok` in direct conditions | Exact for direct receives/select receives, negation and comparison with Boolean constants |
 | Other nonconstant concurrency-controlling predicate | Abstract nondeterministic branch with explicit commitment before blocking |
 | Channel payload and ordinary memory value correlations | Not tracked; conditions depending on them may be independently abstracted |
@@ -144,8 +145,10 @@ their own registrations. Flags are cleared as calls execute; multiple compiler
 `RunDefers` points cannot run the same registration twice. Main's own cleanup precedes
 program termination; workers interrupted by main return are not guaranteed cleanup.
 
-After proved range expansion, control remains acyclic and each expanded defer site
-executes at most once per invocation.
+Defer registration/drain sites must remain acyclic, including after integer-range
+expansion. Each expanded registration executes at most once per invocation.
+Cleanup registered outside a supported receive cycle runs only after return, not
+while the function is blocked in that cycle.
 The implementation accepts at most 64 sites; exceeding this is unsupported, never
 truncated cleanup or an assumed stack bound. Cleanup effects retain the defer site's
 source position. Plain helper-function/closure defers, bound method values, deferred
@@ -184,8 +187,9 @@ source is type-checked first, then equivalent Go is expanded in memory and reloa
 before SSA construction; files on disk and import initialization are preserved.
 Proofs and refusal reasons are reported. Original source locations are retained.
 
-Classic `for i := ...` loops, live range indices, nonconstant ranges, channel ranges,
-general receive loops and returned/dynamic resource topology remain unsupported.
+Classic `for i := ...` loops, live integer-range indices, nonconstant integer
+ranges and returned/dynamic resource topology remain unsupported. Channel ranges
+have a separate, non-unrolling acceptance rule below.
 Synchronization/alias rules still apply inside accepted loops, including WaitGroup's
 single enrollment phase and the per-invocation defer-site limit after expansion.
 
@@ -201,8 +205,41 @@ recomputed from the channel when a later condition executes.
 Direct uses, `!ok`, and `ok == false`/`true != ok` stay exact. Merged values, status
 returned through calls, shared-memory propagation and received Boolean payloads
 still use the documented conservative predicate abstraction. This is not general
-Boolean/dataflow tracking. Channel ranges and close-driven receive loops remain
-unsupported until their separate control/boundedness implementation is complete.
+Boolean/dataflow tracking. Close-driven control uses the separate proof below.
+
+### Close-driven receive cycles
+
+```go
+func double(input <-chan int, output chan<- int) {
+    for value := range input {
+        output <- value * 2
+    }
+    close(output)
+}
+```
+
+The loop is kept cyclic. Consumers are not rewritten to receive a fixed number of
+values; neither closure nor termination is assumed. A supported cyclic SSA component
+must contain exactly one comma-ok receive in a dominating header, an exact status
+branch whose false result exits that component, and no subcycle bypassing reception.
+The channel must be evaluated outside the cycle and retain a proved static identity.
+Equivalent explicit `for { _, ok := <-ch; if !ok { break }; ... }` forms can qualify.
+Sequential receive loops and value payloads are allowed; nested receive cycles are not.
+
+Inside a repeating component, scalar SSA computations, sends, stable field reads
+and direct close/Lock/Unlock are allowed. Allocation, goroutine creation, defer
+registration/draining, stores, select, helper/trusted calls, changing resource
+identities and WaitGroup counter changes are rejected. These operations may occur
+outside the cycle under their existing restrictions. Thus a deferred Done registered
+before reception runs after normal completion, but not on a missing-close deadlock.
+
+Finite-state refers to the **modeled** queues, Boolean locks/status, finite locals,
+fixed processes and nonrepeating counter updates—not concrete Go heap/payload bounds.
+A passing safety/deadlock check does not prove termination, delivery counts, fairness
+or starvation freedom. A communication cycle may run forever without deadlocking.
+Pure/sequential cycles and status-ignoring receive loops are still refused. Saved IR
+receives an independent backend finite-state check, not a trusted frontend annotation.
+See [the real pipeline harnesses](COMPONENTS.md#close-driven-pipeline).
 
 ### Unknown predicates require effect analysis
 
@@ -236,7 +273,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 
 | Pattern | Why it is currently rejected |
 |---|---|
-| Unproved/indexed/nested loop forms; recursion | Only the documented constant integer-range form has a bound and identity-expansion proof |
+| Unproved/indexed/nested loop forms; recursion | Only documented integer expansion or close-driven receive SCCs discharge their respective proof obligations |
 | Dynamic or over-budget spawning/channel topology | Only static sites, including accepted integer-range expansions, have finite identities |
 | Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |

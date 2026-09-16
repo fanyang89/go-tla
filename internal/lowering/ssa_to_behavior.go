@@ -127,8 +127,11 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 		return end
 	}
 	plan := b.plan(f)
-	if b.stack[f] || plan.Cyclic {
-		b.diag("error", "unbounded-control", "recursion or cyclic control flow unsupported (no proved finite bound)", f.Pos())
+	if b.stack[f] {
+		b.diag("error", "unbounded-control", "recursive calls unsupported", f.Pos())
+		return end
+	}
+	if plan.Cyclic && !b.proveReceiveLoops(f, plan) {
 		return end
 	}
 	if len(f.Blocks) == 0 {

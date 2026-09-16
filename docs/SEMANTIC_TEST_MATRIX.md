@@ -156,7 +156,28 @@ TLC cases, separate from six CLI integration cases.
 `TestReceiveStatusIRContract` verifies saved-IR round trips and rejection of missing,
 non-Boolean/shared/foreign-process destinations, duplicate writes in either order and send bindings.
 A lowering regression keeps status returned through a call conservatively abstract.
-The channel-range refusal tests still apply; these tests do not validate a pipeline.
+This prerequisite alone did not validate channel ranges or a pipeline.
+
+## M5: fourteen finite-state receive-cycle TLC checks
+
+`TestTLCReceiveLoops` checks closed-empty and buffered draining, unbuffered streams,
+missing close, nil input, forwarding, wrong close, explicit status exits, pending
+cleanup during blocking, conditional cleanup across loops, mutex operations,
+sequential loops and 32 deliveries (beyond the integer expansion limit). Cycles
+remain in IR; no receive count is guessed. The semantic TLC total is now 93.
+
+`TestReceiveLoopRefusals` covers pure/ignored-status cycles, wrong exits, repeated
+allocation/spawn/defer/stores/counter changes/helper calls, nested receive cycles,
+bypassing subcycles and changing channel identity. SCC unit tests cover empty,
+single, sequential and nested cases. `TestReceiveLoopIRFiniteStateContract` checks
+saved-model round trips and backend refusal of pure subcycles and repeatable
+spawn/counter updates independently of the frontend.
+
+`TestCheckPipelineComponents` adds three real CLI cases: proper close passes,
+missing output close deadlocks, and early close violates synchronization safety.
+Exact topology/model-size and source/provenance checks accompany actual outcomes.
+There are now nine CLI integration cases, separate from the 93 semantic cases.
+Native tests verify the correct component with channel capacities 0, 1 and 2.
 
 ## M5 component acceptance (in progress)
 

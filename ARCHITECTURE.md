@@ -140,7 +140,7 @@ extensions. General shared-state and arbitrary assertion backends are not implem
   counters. Positive Add is supported only in main before any goroutine spawn or
   prior Wait on the group. Concurrent enrollment and reuse are rejected, so a
   counter suffices without pretending to model waiter generations. All control is
-  acyclic, so the total finite number of Add effects bounds counter values.
+  acyclic at counter-changing sites, so the finite number of Add effects bounds counters.
 * Main return terminates all goroutines, as in Go. Only main termination enables
   terminal stuttering. While main is active, no enabled action means a TLC deadlock.
   No fairness or starvation/liveness property is asserted by the MVP.
@@ -157,8 +157,31 @@ ownership/domain and duplicate writes, independently of TLA. The backend assigns
 1 for rendezvous or a nonempty pre-receive buffer, 0 for closed-empty completion;
 nil/open-empty blocking assigns nothing. Select index and status update together.
 No payload values or backend expression strings are added to the IR. Exact status
-is a prerequisite for close-driven control, not permission to accept cyclic SSA
-or channel ranges without their own implementation and validation.
+is a prerequisite for close-driven control. Cyclic SSA has the separate proof below.
+
+## Finite-state close-driven receive control
+
+`slice.CyclicComponents` finds reachable SSA SCCs. Channel-range syntax is only a
+frontend candidate, not a proof or expansion instruction. Lowering consumes each
+cyclic component: exactly one status-producing receive, a dominating header whose
+exact closed-empty branch exits the SCC, and no subcycle when the header is removed.
+The input identity is evaluated outside the SCC and undergoes ordinary identity
+validation. Repeating instructions are whitelisted: scalar computation, sends,
+stable field access and direct close/Lock/Unlock. Calls, stores, topology creation,
+select, counter updates and deferred registration/draining may not repeat.
+
+Receive cycles survive region construction as actual IR back edges. There is no
+user-supplied receive count and no assumption that a sender closes. Deferred sites
+outside SCCs remain single-execution; their may-pending union/kill analysis now
+uses a fixed point, while registration order still follows the acyclic sites.
+This preserves conditional cleanup across normal returns after reception blocks.
+
+The TLA backend independently rejects repeatable spawn/counter changes and any
+cycle surviving removal of status-producing Receive edges. Existing bounded queue,
+local-domain, Boolean lock/status and spawn-activation contracts then imply finite
+modeled state. This is not a termination, fairness, concrete-memory or delivery-count
+proof. Frontend profiles are provenance only and cannot bypass this backend check.
+Pure loops, nested receive SCCs and unsupported repeated effects still fail closed.
 
 ## Proved integer-range normalization
 
@@ -169,7 +192,7 @@ applies only to main-module function declarations and their nested function lite
 Nonpositive constants have zero iterations. Positive bounds must be at most 16;
 expanded replacement text is limited to 256 KiB per file. Over-budget/unsupported
 ranges remain unexpanded and are rejected when their owning function is reached.
-Other cyclic control still fails lowering. These are expansion limits, not user
+Other cycles need the independent receive proof above or fail lowering. These are expansion limits, not user
 assumptions that an unproved loop stops early.
 
 Each iteration becomes a distinct lexical block, not a helper function. Fresh Go
@@ -184,7 +207,7 @@ Generated line directives preserve original file/line/column attribution, includ
 subsequent functions. Files already using line directives are not normalized.
 Proof/rejection records are consumed by lowering and purity checks, with reached
 proofs emitted as informational metadata. Unused unsupported functions do not fail
-an entry point. Backends still receive only the independent acyclic behavioral IR;
+an entry point. Backends still receive only the independent behavioral IR;
 no Go loop syntax, source overlays or runtime loop counter enters it.
 
 ## Restricted deferred cleanup
@@ -194,9 +217,9 @@ primitive execution. Discovery retains registration and `RunDefers` as slice roo
 call summaries validate static targets. `lowering/defers.go` captures resource
 identities at registration sites and gives each invocation fresh finite local flags.
 
-In acyclic control, each registration site can run at most once. A topological
-ordering of sites extends every executable registration order; reversing the
-registered subset therefore gives LIFO without abstracting order. A may-pending
+Registration/drain sites remain outside cyclic SCCs and can run at most once.
+Their reverse-postorder extends executable registration order; reversing the
+registered subset gives LIFO without abstracting order. A fixed-point may-pending
 analysis selects sites at each `RunDefers`/normal return, while exact flags preserve
 conditional registration. Cleanup tests each flag, performs one primitive and clears
 it atomically. Callee invocations cannot drain caller flags. Return expressions and
@@ -238,9 +261,9 @@ helpers. This prevents raw writes from bypassing the modeled channel/lock/counte
 state and is separate from the implicit sequential-panic assumption. This is not
 pointer analysis and must not be presented as one.
 
-After proved integer-range normalization, all remaining reachable SSA CFG cycles
-and recursive calls are rejected. Classic indexed loops, dynamic ranges, nested
-loop forms and general worker/channel receive loops remain unsupported. Repeated
+After integer-range normalization, remaining SSA cycles require the close-driven
+receive SCC proof. Recursive calls, classic indexed loops, dynamic integer ranges,
+nested receive cycles and repeated effects outside the whitelist remain unsupported. Repeated
 spawn/allocation in an accepted expansion has distinct static identities; there is
 no unexplained truncation or silent nontermination assumption. Capacities must
 be static integers in 0..1024; Add deltas must be static in -1024..1024.
@@ -266,7 +289,7 @@ produce errors. Unsupported results cannot be emitted as executable TLA+.
 An explicit `-trust-call` contract asserts total, side-effect-free execution with no
 synchronization and normal return; its result remains nondeterministic. A bodyless
 call without a contract is an error even if its result is discarded. Reachable
-ordinary calls with inspectable acyclic bodies are traversed, so unknown effects
+ordinary calls with inspectable supported bodies are traversed, so unknown effects
 cannot hide inside a sequential helper.
 
 The supported-domain assumption excludes implicit sequential runtime panics and

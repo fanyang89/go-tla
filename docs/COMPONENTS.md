@@ -76,12 +76,63 @@ The measured model sizes establish component regression baselines. Time/RSS rema
 observations rather than brittle CI thresholds; the checker retains its explicit
 30-second incomplete outcome instead of treating a timeout as success.
 
+## Close-driven pipeline
+
+`examples/components/pipeline/{good,missingclose,earlyclose}/pipeline.go` contains
+producer, transformation and reduction stages plus their launch/join orchestration.
+The producer supplies two values and closes input. Transformation and reduction
+use real `for value := range channel` loops; consumers do **not** know a receive
+count. The transformer owns output closure. `Run` joins both workers before
+returning. Harnesses only allocate two distinct unbuffered channels and call Run.
+The API transfers exclusive ownership of initially empty channels for one run.
+
+The correct variant passes. `missingclose` removes only the transformer's output
+closure, leaving the reducer blocked despite successful worker completion.
+`earlyclose` moves that closure before forwarding and exposes a send-on-closed
+synchronization error. These are real source variants, not injected IR errors.
+No custom trusted contracts or abstracted predicates are needed. Add/Done remain
+explicit because WaitGroup.Go is outside the current frontend profile. Native Go
+tests check total 84 with capacities 0, 1 and 2; TLC does not claim arithmetic correctness.
+
+The new receive-SCC proof preserves loops as cyclic finite-state IR. It checks
+exact closed-empty exits, stable identities, no bypass subcycles and no repeating
+allocation/spawn/defer/store/helper/counter effects. The backend independently
+checks finite-state control. Missing closure is not assumed away, and no user
+trip-count bound is used. A passing deadlock/safety check still does not prove
+termination or fairness. See [the supported domain](SUPPORTED_GO.md#close-driven-receive-cycles).
+
+Using the same built CLI and pinned JAR as above:
+
+```sh
+./gotla check -tlc-jar "$TLC_JAR" -timeout=30s \
+  -out "$HOME/tmp/pi/pipeline-good" ./examples/components/pipeline/good/harness
+# passed / 0
+./gotla check -tlc-jar "$TLC_JAR" -timeout=30s \
+  -out "$HOME/tmp/pi/pipeline-missingclose" ./examples/components/pipeline/missingclose/harness
+# deadlock / 3
+./gotla check -tlc-jar "$TLC_JAR" -timeout=30s \
+  -out "$HOME/tmp/pi/pipeline-earlyclose" ./examples/components/pipeline/earlyclose/harness
+# synchronization-error / 4
+```
+
+`TestCheckPipelineComponents` checks these outcomes, saved-artifact provenance,
+source candidates, finite-state profile and exact model-size baselines. The local
+reference build contains the receive-loop change based on `8c3d395` (working tree),
+with the same CPU/OS/Go/Java/JAR and checker options as the worker-pool measurement.
+Each model has 3 processes, 2 channels, 1 WaitGroup, no mutexes and no abstract predicates.
+
+| Variant | Locations/transitions | Generated/distinct states | TLC elapsed | Full command wall time | GNU time max RSS (KiB) | Result |
+|---|---|---|---|---|---|---|
+| good | 21/22 | 204/102 | 609 ms | 1.02 s | 146684 | passed / 0 |
+| missingclose | 20/21 | 154/79 | 641 ms | 1.07 s | 148240 | deadlock / 3 |
+| earlyclose | 21/22 | 67/37 | 622 ms | 1.06 s | 148196 | synchronization-error / 4 |
+
+The same timing/RSS limitations apply. Raw local artifacts are under
+`$HOME/tmp/pi/gotla-m5-pipeline/`; they are not committed. These are measured
+baselines, not platform-independent performance guarantees.
+
 ## Remaining M5 work
 
-- A genuine close-driven pipeline and an incorrect-close/missing-communication
-  variant. Channel ranges/general receive loops remain unsupported; implement the
-  necessary semantics/proof before claiming this component passes. Replacing a
-  close-driven loop with a guessed receive count is not acceptable evidence.
 - A struct-based mutex-protected component with a reproducible faulty variant.
-- A consolidated acceptance report and delivery gate. This first pair alone does
+- A consolidated acceptance report and delivery gate. These two component families do
   not complete M5 or the basically-usable milestone.

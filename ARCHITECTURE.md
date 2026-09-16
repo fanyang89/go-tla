@@ -13,7 +13,9 @@ without loading Go packages.
 
 The passes are explicit functions/packages:
 
-1. `frontend.Load` loads real packages, dependencies, syntax and type information.
+1. `frontend.Load` loads and type-checks the original packages. A restricted typed
+   integer-range proof may produce in-memory Go overlays; these are reloaded and
+   type-checked before SSA construction. On-disk source is never rewritten.
 2. `frontend.BuildSSA` constructs Go SSA; `BuildCallGraph` builds the static call graph.
 3. `effects.Analyzer` caches call-effect summaries using graph-checked SSA call
    targets. Unknown/dynamic/unsafe/recursive effects never receive pure summaries.
@@ -143,6 +145,33 @@ extensions. General shared-state and arbitrary assertion backends are not implem
   terminal stuttering. While main is active, no enabled action means a TLC deadlock.
   No fairness or starvation/liveness property is asserted by the MVP.
 
+## Proved integer-range normalization
+
+`frontend/loops.go` recognizes `for range N` (or a blank iteration binding) when
+Go type information proves N is an integer constant. This first form has no live
+iteration variable, nested loops, labels or branch statements in the body. It
+applies only to main-module function declarations and their nested function literals.
+Nonpositive constants have zero iterations. Positive bounds must be at most 16;
+expanded replacement text is limited to 256 KiB per file. Over-budget/unsupported
+ranges remain unexpanded and are rejected when their owning function is reached.
+Other cyclic control still fails lowering. These are expansion limits, not user
+assumptions that an unproved loop stops early.
+
+Each iteration becomes a distinct lexical block, not a helper function. Fresh Go
+syntax is re-type-checked and translated to fresh SSA values, preserving allocation,
+spawn and local-variable identity. Return exits the original function; deferred
+calls remain on that function's stack, rather than running at iteration boundaries.
+A zero-trip body stays under `if false` to retain type checking and import usage.
+A discarded reference to the constant bound also preserves imports used only there;
+package initialization is never removed by this normalization.
+
+Generated line directives preserve original file/line/column attribution, including
+subsequent functions. Files already using line directives are not normalized.
+Proof/rejection records are consumed by lowering and purity checks, with reached
+proofs emitted as informational metadata. Unused unsupported functions do not fail
+an entry point. Backends still receive only the independent acyclic behavioral IR;
+no Go loop syntax, source overlays or runtime loop counter enters it.
+
 ## Restricted deferred cleanup
 
 Direct deferred Mutex.Unlock and WaitGroup.Done are separate from immediate
@@ -194,9 +223,11 @@ helpers. This prevents raw writes from bypassing the modeled channel/lock/counte
 state and is separate from the implicit sequential-panic assumption. This is not
 pointer analysis and must not be presented as one.
 
-All reachable SSA CFG cycles and recursive calls are rejected, including ordinary
-loops and repeated spawn/allocation. This is restrictive but prevents unexplained
-truncation, unbounded state and silent nontermination assumptions. Capacities must
+After proved integer-range normalization, all remaining reachable SSA CFG cycles
+and recursive calls are rejected. Classic indexed loops, dynamic ranges, nested
+loop forms and general worker/channel receive loops remain unsupported. Repeated
+spawn/allocation in an accepted expansion has distinct static identities; there is
+no unexplained truncation or silent nontermination assumption. Capacities must
 be static integers in 0..1024; Add deltas must be static in -1024..1024.
 
 Package initialization is checked, not silently erased. Application and dependency
@@ -235,5 +266,5 @@ reaching such behavior are rejected unless a user supplies a truthful contract.
 False positives arise from independent abstract predicates, erased payload values,
 lost shared-memory correlations, and collapsing sequential regions. Counterexamples
 must be inspected against these assumptions. General functional correctness,
-property-directed refinement, arbitrary temporal properties, bounded-loop inference,
+property-directed refinement, arbitrary temporal properties, broader loop-bound inference,
 WaitGroup reuse, full alias analysis and counterexample replay remain future work.

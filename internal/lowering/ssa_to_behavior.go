@@ -40,6 +40,7 @@ type builder struct {
 	resources     map[string]bool
 	effects       *effects.Analyzer
 	plans         map[*ssa.Function]*functionPlan
+	loopReported  map[*ssa.Function]bool
 }
 type frame struct {
 	f           *ssa.Function
@@ -63,7 +64,7 @@ func Lower(p *frontend.Program, opts Options) (*behavior.Model, error) {
 		return nil, err
 	}
 	m := &behavior.Model{SchemaVersion: behavior.SchemaVersion, Semantics: behavior.CommunicationSemantics, Termination: behavior.MainReturn, Metadata: modelMetadata(opts), Name: "model", Outcome: diagnostic.Precise, Assertions: []behavior.Assertion{{Kind: "NoSynchronizationErrors", Description: "No closed-channel send/close, invalid unlock, or negative WaitGroup counter"}}}
-	b := &builder{p: p, m: m, opts: opts, nodes: map[string]*node{}, stack: map[*ssa.Function]bool{}, resources: map[string]bool{}, effects: effects.New(p, opts.TrustedCalls), plans: map[*ssa.Function]*functionPlan{}, names: map[string]int{}, globals: map[*ssa.Global]string{}, fields: map[string]string{}, channelFields: map[string]string{}}
+	b := &builder{p: p, m: m, opts: opts, nodes: map[string]*node{}, stack: map[*ssa.Function]bool{}, resources: map[string]bool{}, effects: effects.New(p, opts.TrustedCalls), plans: map[*ssa.Function]*functionPlan{}, names: map[string]int{}, globals: map[*ssa.Global]string{}, fields: map[string]string{}, channelFields: map[string]string{}, loopReported: map[*ssa.Function]bool{}}
 	m.Assumptions = append(m.Assumptions, "Communication-only analysis assumes no implicit sequential runtime panics or resource exhaustion; synchronization failures remain modeled.", "Go main return terminates the whole program, including blocked workers.", "Trusted-call contracts assert total, side-effect-free execution and no synchronization; return values are abstract.")
 	b.diag("info", "supported-domain", m.Assumptions[0], main.Pos())
 	b.initializers()
@@ -121,6 +122,9 @@ func (b *builder) process(f *ssa.Function, bindings map[ssa.Value]string, id str
 	b.nodes[entry].edges = []edge{{to: start, guard: behavior.Guard{Kind: behavior.True}}}
 }
 func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, process, end string) string {
+	if !b.recordLoops(f) {
+		return end
+	}
 	plan := b.plan(f)
 	if b.stack[f] || plan.Cyclic {
 		b.diag("error", "unbounded-control", "recursion or cyclic control flow unsupported (no proved finite bound)", f.Pos())

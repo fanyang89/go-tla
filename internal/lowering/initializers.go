@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/fanmi/go-tla/internal/discovery"
+	"github.com/fanmi/go-tla/internal/effects"
 	cslice "github.com/fanmi/go-tla/internal/slice"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
@@ -62,6 +63,9 @@ func (b *builder) initializers() {
 		if f.Pkg != nil && summarized[f.Pkg.Pkg.Path()] {
 			return
 		}
+		if !b.recordLoops(f) {
+			return
+		}
 		if cslice.HasCycle(f) {
 			b.diag("error", "initializer", "cyclic package initialization unsupported", f.Pos())
 			return
@@ -88,6 +92,8 @@ func (b *builder) initializers() {
 						check(callee)
 					} else if !b.effects.Call(x).IsPure() {
 						b.diag("error", "initializer", "effectful or unknown package initialization unsupported", i.Pos())
+					} else if summary := b.effects.Call(x); summary.Kind == effects.Pure {
+						check(summary.Callee)
 					}
 				}
 			}

@@ -75,7 +75,8 @@ synchronization errors** in a finite communication-oriented abstraction.
 This table describes the **target**, not today's support. Inline Mutex/WaitGroup
 fields, local immutable channel fields and direct pointer receivers have an initial
 implementation, as do direct deferred Unlock/Done on normal-return paths. Mutable/global
-channel fields, pointer fields, general defers and proved finite loops are not available yet. The `check` workflow is
+channel fields, pointer fields and general defers remain unavailable. The first proved
+finite loop form is a constant integer range without a live index (up to 16 iterations). The `check` workflow is
 implemented within the current restricted frontend scope.
 
 ## 2. Current baseline
@@ -150,7 +151,7 @@ The basically usable milestone is complete only when all of these are satisfied:
       close-driven pipeline, and a struct-based synchronized component.
 - [ ] Each component has a correct version and an intentionally faulty version;
       tests assert the expected checker outcome, not just successful TLA parsing.
-- [ ] Supported loop forms, defers, and field identities each have positive,
+- [x] Supported loop forms, defers, and field identities each have positive,
       negative, and blocking/synchronization-error regression coverage.
 - [ ] CI runs real TLC and fails if the required checker is unavailable; plain unit
       test success alone cannot satisfy the release gate.
@@ -170,7 +171,7 @@ do not invent performance guarantees before measuring the target examples.
 | M1: Quality baseline | Implemented; local gate passed | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; strict gate cannot silently skip TLC; hosted run pending |
 | M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run pending |
 | M3: Analysis and IR contract | Implemented; local gate passed | Consumed graph/effect/discovery/slice plans; separated identity checks; versioned IR and common validation; explicit terminals and stable source naming | Malformed-IR/pass/round-trip/naming tests pass; eight size baselines unchanged; pinned TLC gate passed |
-| M4: Common Go patterns | In progress: static fields/direct receivers and restricted normal-return defers | Static fields/direct receivers, restricted defers, then proved finite loops | Semantics and rejection boundaries documented and tested for each addition |
+| M4: Common Go patterns | Complete within the documented restricted profile | Static fields/direct receivers, restricted defers, proved constant integer ranges | Positive, refusal, identity, deadlock and synchronization-error regressions pass |
 | M5: Component acceptance | Planned | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
 
 Implement milestones in this order. M2 should use existing abstractions rather
@@ -342,8 +343,37 @@ writing its plan or skipping its checker tests does not count as implementation.
   CLI integration cases, with zero skips. Full internal/CLI/integration race tests
   passed; original snapshots and model-size baselines remain unchanged. Hosted CI
   has not been run or claimed.
-- M4 / step 6 is still incomplete: proved finite loops are not implemented yet.
+- This defer increment alone did not complete M4 / step 6.
 
-**Next action:** narrowly proved finite loops, with distinct identities for repeated
-allocation/spawn and explicit expansion-budget rejection. No arbitrary truncation
-or admission of general worker receive loops/channel ranges.
+### M4 completion: proved constant integer ranges
+
+- Added a typed-source proof/normalization pass before SSA: only main-module
+  `for range N`/blank bindings with compile-time integer bounds. Original Go must
+  type-check first; in-memory overlays are then reloaded/type-checked. No source
+  file is rewritten and no Go-specific loop operation enters behavioral IR.
+- Each iteration is a distinct lexical block with distinct SSA allocations/spawns.
+  Return and deferred cleanup retain their original function scope. Zero-trip
+  bodies and constant-bound references retain imports and their initialization.
+  Source directives preserve original positions, including subsequent functions.
+- Bounds above 16, over 256 KiB of expanded text per file, live indices, nested
+  loop syntax, body labels/branch statements and existing line directives are
+  explicitly refused. Classic/dynamic/channel ranges and unbounded receive loops
+  remain unsupported. No bound is guessed and no behavior is silently truncated.
+- Loop proof/rejection records are consumed by lowering and purity analysis;
+  initialization helper proofs are recorded too. Unused unsupported helpers do not
+  reject an otherwise supported entry point. Existing alias, initialization,
+  WaitGroup phase and deferred-site restrictions remain in force after expansion.
+- Nine new actual TLC cases cover finite workers, repeated identities, double
+  close, blocked sends, cleanup timing, omitted completion, early return and zero
+  iterations. Extraction/refusal/source-immutability/proof-ownership tests cover
+  the accepted form and expansion limits. The semantic total is 66 TLC cases plus
+  four CLI integration cases.
+- The strict pinned-TLC/vet/test gate passed locally with zero skips. Full
+  internal/CLI/integration race tests passed separately after the combined command
+  exceeded its harness time allowance. Original snapshots and model-size baselines
+  remain unchanged. Hosted CI has not been run or claimed.
+
+**Next action:** M5 real-component validation: reproducible small worker-pool,
+producer/consumer and mutex-protected examples, each with an intentionally faulty
+variant and an end-to-end `check` result. Keep the admitted language profile
+explicit; do not present unsupported general receive loops as analyzed.

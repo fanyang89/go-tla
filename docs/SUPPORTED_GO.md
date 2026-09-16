@@ -21,6 +21,7 @@ program may deadlock. Successful extraction does not mean successful verificatio
 |---|---|
 | One main package, direct acyclic helper calls | Supported; helpers are lowered in the caller's process |
 | `go worker(ch)` / statically bound closure | One statically known process per reachable spawn context |
+| `for range N` / `for _ = range N` | Main-module constant integer range; no live index, nested loops or branch statements; at most 16 iterations |
 | `make(chan T)` / constant capacity | Supported; capacity must be in 0..1024 |
 | Send / receive / close | Supported, including nil blocking, closed-channel receive and synchronization errors |
 | `select`, including default | Ready cases are nondeterministic; default is unavailable when a communication is ready |
@@ -142,14 +143,50 @@ their own registrations. Flags are cleared as calls execute; multiple compiler
 `RunDefers` points cannot run the same registration twice. Main's own cleanup precedes
 program termination; workers interrupted by main return are not guaranteed cleanup.
 
-Control remains acyclic, so every defer site executes at most once per invocation.
+After proved range expansion, control remains acyclic and each expanded defer site
+executes at most once per invocation.
 The implementation accepts at most 64 sites; exceeding this is unsupported, never
 truncated cleanup or an assumed stack bound. Cleanup effects retain the defer site's
 source position. Plain helper-function/closure defers, bound method values, deferred
-Lock/Wait/Add/close, foreign defer stacks, initializer defers, panic/recover and loops
+Lock/Wait/Add/close, foreign defer stacks, initializer defers, panic/recover and unproved loop forms
 remain unsupported. A trusted-call contract does not extend this whitelist. Implicit
 sequential panics remain excluded by the recorded domain assumption; this is not
 panic unwinding or exception-safety verification.
+
+### Proved finite integer ranges
+
+```go
+const workers = 2
+
+func main() {
+    var wg sync.WaitGroup
+    wg.Add(workers)
+    for range workers {
+        go func() { defer wg.Done() }()
+    }
+    wg.Wait()
+}
+```
+
+With `import "sync"`, the two goroutines above are distinct static instances. The
+range bound must be a Go compile-time integer constant, not a variable that happens
+to contain a small value. No iteration variable is currently supported except `_`.
+The body may return or register supported defers: return exits the original function,
+and defers execute at its normal return, **not** at the end of each iteration.
+Nonpositive bounds execute no body operations.
+
+Bounds above 16, nested loop syntax, labels, break/continue/goto/fallthrough in a body,
+and more than 256 KiB of expanded text per file are rejected rather than truncated.
+The current normalizer handles main-module function declarations and nested function
+literals, not dependency modules or files with existing line directives. Original
+source is type-checked first, then equivalent Go is expanded in memory and reloaded
+before SSA construction; files on disk and import initialization are preserved.
+Proofs and refusal reasons are reported. Original source locations are retained.
+
+Classic `for i := ...` loops, live range indices, nonconstant ranges, channel ranges,
+general receive loops and returned/dynamic resource topology remain unsupported.
+Synchronization/alias rules still apply inside accepted loops, including WaitGroup's
+single enrollment phase and the per-invocation defer-site limit after expansion.
 
 ### Unknown predicates require effect analysis
 
@@ -183,8 +220,8 @@ patterns are also rejected; this is intentional conservative scope restriction.
 
 | Pattern | Why it is currently rejected |
 |---|---|
-| Reachable loops, even constant-count loops; recursion | No implemented bound/termination proof pass |
-| Repeated/dynamic spawning or channel topology | No proved finite identity expansion |
+| Unproved/indexed/nested loop forms; recursion | Only the documented constant integer-range form has a bound and identity-expansion proof |
+| Dynamic or over-budget spawning/channel topology | Only static sites, including accepted integer-range expansions, have finite identities |
 | Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |
 | Dynamic callbacks/interface dispatch | No safe resolved-call support for these sites |

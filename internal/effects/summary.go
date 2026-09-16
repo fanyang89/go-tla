@@ -71,6 +71,11 @@ func (a *Analyzer) Call(site ssa.CallInstruction) Summary {
 	return s
 }
 func (a *Analyzer) pureFunction(f *ssa.Function) (pure bool) {
+	for _, proof := range a.program.LoopProofs(f) {
+		if proof.Reason != "" {
+			return false
+		}
+	}
 	if p, ok := a.pure[f]; ok {
 		return p
 	}

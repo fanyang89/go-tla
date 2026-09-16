@@ -145,6 +145,21 @@ extensions. General shared-state and arbitrary assertion backends are not implem
   terminal stuttering. While main is active, no enabled action means a TLC deadlock.
   No fairness or starvation/liveness property is asserted by the MVP.
 
+## Exact receive completion status
+
+`lowering/receive_status.go` retains used SSA comma-ok/select status extracts as
+finite process-local flags. Direct tests, negation and Boolean-constant comparisons
+become exact equality guards; Phi/call/memory propagation keeps the existing
+explicit conservative abstraction. Each invocation owns fresh flags.
+
+The generic Receive effect can bind a local `{0,1}` destination. Validation checks
+ownership/domain and duplicate writes, independently of TLA. The backend assigns
+1 for rendezvous or a nonempty pre-receive buffer, 0 for closed-empty completion;
+nil/open-empty blocking assigns nothing. Select index and status update together.
+No payload values or backend expression strings are added to the IR. Exact status
+is a prerequisite for close-driven control, not permission to accept cyclic SSA
+or channel ranges without their own implementation and validation.
+
 ## Proved integer-range normalization
 
 `frontend/loops.go` recognizes `for range N` (or a blank iteration binding) when

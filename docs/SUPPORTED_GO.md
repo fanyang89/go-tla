@@ -35,7 +35,8 @@ program may deadlock. Successful extraction does not mean successful verificatio
 | Direct `defer mu.Unlock()` / `defer wg.Done()` | Static receiver capture, conditional registration and LIFO cleanup at normal returns; at most 64 sites per invocation |
 | WaitGroup Add / Done / Wait | Single phase only; positive Add in main before any spawn or prior Wait; constant delta in -1024..1024 |
 | Local arithmetic / payload processing | Removed when irrelevant and otherwise within supported computation/call rules |
-| Nonconstant concurrency-controlling predicate | Abstract nondeterministic branch with explicit commitment before blocking |
+| Receive `ok` in direct conditions | Exact for direct receives/select receives, negation and comparison with Boolean constants |
+| Other nonconstant concurrency-controlling predicate | Abstract nondeterministic branch with explicit commitment before blocking |
 | Channel payload and ordinary memory value correlations | Not tracked; conditions depending on them may be independently abstracted |
 | Explicit trusted call | User asserts total, side-effect-free, normally returning, nonsynchronizing behavior; results remain abstract |
 
@@ -187,6 +188,21 @@ Classic `for i := ...` loops, live range indices, nonconstant ranges, channel ra
 general receive loops and returned/dynamic resource topology remain unsupported.
 Synchronization/alias rules still apply inside accepted loops, including WaitGroup's
 single enrollment phase and the per-invocation defer-site limit after expansion.
+
+### Receive completion status
+
+`_, ok := <-ch` and `case _, ok := <-ch` retain an exact process-local status.
+Delivering a value sets `ok=true`, including buffered values drained after close;
+a closed-and-empty receive sets `ok=false`. A nil or open-empty receive without a
+sender blocks and does not produce a status. Unbuffered rendezvous sets true;
+waking on closure sets false. The status is captured atomically at reception, not
+recomputed from the channel when a later condition executes.
+
+Direct uses, `!ok`, and `ok == false`/`true != ok` stay exact. Merged values, status
+returned through calls, shared-memory propagation and received Boolean payloads
+still use the documented conservative predicate abstraction. This is not general
+Boolean/dataflow tracking. Channel ranges and close-driven receive loops remain
+unsupported until their separate control/boundedness implementation is complete.
 
 ### Unknown predicates require effect analysis
 

@@ -392,6 +392,26 @@ writing its plan or skipping its checker tests does not count as implementation.
 - M5 / step 7 remains incomplete. A finite single-use pool does not stand in for a
   general receive-loop worker service or the required close-driven pipeline.
 
-**Next action:** close-driven pipeline capability and correct/faulty component
-validation, then the mutex-protected component and consolidated delivery evidence.
-Do not substitute guessed receive counts for close-driven control.
+### M5 prerequisite: exact receive completion status
+
+- Direct comma-ok and select receive status now drives exact guards (including
+  negation/Boolean-constant comparisons). Delivered values produce true, closed
+  empty reads false; nil/open-empty blocking produces no result. Buffered draining
+  and unbuffered rendezvous/wakeup preserve these distinctions atomically.
+- Generic Receive optionally binds a process-local Boolean-domain destination.
+  IR validation enforces ownership, domain and single writes; the TLA backend
+  implements the binding without Go syntax or payload tracking. Saved IR round
+  trips and malformed bindings are tested. Existing models remain unchanged.
+- Thirteen new actual TLC cases cover these semantics, bringing the semantic total
+  to 79, separate from six CLI integration cases. Status propagated through calls,
+  Phi/shared memory or Boolean payloads is not claimed exact.
+- The pinned-TLC/vet/test gate passed locally with zero skips, and full internal/
+  CLI/integration/component race tests passed. Existing snapshots and size
+  baselines remain unchanged. Hosted CI execution is not claimed.
+- M5 / step 7 remains incomplete. This prerequisite does not admit channel ranges
+  or constitute a verified close-driven pipeline.
+
+**Next action:** implement and validate close-driven receive control with explicit
+finite-state/boundedness obligations, then the pipeline's correct/faulty variants,
+mutex-protected component and consolidated delivery evidence. Do not substitute
+user-guessed receive counts for close-driven control.

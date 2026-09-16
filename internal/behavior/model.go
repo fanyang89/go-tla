@@ -114,6 +114,9 @@ const (
 	Assert              EffectKind = "Assert"
 )
 
+// Receive may bind Variable to a process-local {0,1} status: 1 for a delivered
+// value (including buffered values after close), 0 for closed-and-empty. Nil
+// receives never complete. The binding is atomic with the receive itself.
 type Effect struct {
 	Kind     EffectKind `json:"kind"`
 	Resource string     `json:"resource,omitempty"`

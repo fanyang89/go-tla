@@ -144,13 +144,27 @@ ranges, nested loops, break/continue, iteration/byte limits and defer-site overf
 after expansion. Unused unsupported functions do not reject main. Frontend tests
 check source immutability and proof ownership after a preceding expanded function.
 
+## M5 prerequisite: thirteen exact receive-status TLC checks
+
+`TestTLCReceiveStatus` checks closed-empty false, buffered draining true then false,
+status capture before subsequent close, unbuffered rendezvous true, closure wakeup
+false, nil/open-empty blocking, a fault gated by closed status, and buffered,
+rendezvous, closure-wakeup, send and default select cases. It rejects accidental
+predicate abstraction in these direct-status cases. The semantic total is now 79
+TLC cases, separate from six CLI integration cases.
+
+`TestReceiveStatusIRContract` verifies saved-IR round trips and rejection of missing,
+non-Boolean/shared/foreign-process destinations, duplicate writes in either order and send bindings.
+A lowering regression keeps status returned through a call conservatively abstract.
+The channel-range refusal tests still apply; these tests do not validate a pipeline.
+
 ## M5 component acceptance (in progress)
 
 `cmd/gotla/components_test.go` runs the finite batch worker-pool library harnesses
 through `check` and real TLC: correct joins pass; missing Done deadlocks. Both
 assert artifact/provenance validation, exact model-size baselines, zero abstracted
 predicates/custom trusted calls, and source candidates for the counterexample.
-These add two CLI integration cases (six total), separate from 66 semantic TLC
+These add two CLI integration cases (six total), separate from the semantic TLC
 cases. The correct library also has a native Go result test. See
 [component evidence](COMPONENTS.md) for boundaries, measurements and pending work.
 

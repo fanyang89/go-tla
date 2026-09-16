@@ -43,15 +43,16 @@ type builder struct {
 	loopReported  map[*ssa.Function]bool
 }
 type frame struct {
-	f           *ssa.Function
-	plan        *functionPlan
-	ids         map[ssa.Value]string
-	nodes       map[ssa.Instruction]string
-	selects     map[*ssa.Select]string
-	process     string
-	fieldStores map[*ssa.Store]bool
-	defers      map[*ssa.Defer]deferredCall
-	cleanup     map[ssa.Instruction][]deferredCall
+	f             *ssa.Function
+	plan          *functionPlan
+	ids           map[ssa.Value]string
+	nodes         map[ssa.Instruction]string
+	selects       map[*ssa.Select]string
+	receiveStatus map[ssa.Value]string
+	process       string
+	fieldStores   map[*ssa.Store]bool
+	defers        map[*ssa.Defer]deferredCall
+	cleanup       map[ssa.Instruction][]deferredCall
 }
 
 // Lower runs passes 3–8. Errors leave an inspectable partial IR, never an executable model.
@@ -136,13 +137,14 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 	}
 	b.stack[f] = true
 	defer delete(b.stack, f)
-	fr := &frame{f: f, plan: plan, ids: map[ssa.Value]string{}, nodes: map[ssa.Instruction]string{}, selects: map[*ssa.Select]string{}, process: process, fieldStores: map[*ssa.Store]bool{}, defers: map[*ssa.Defer]deferredCall{}, cleanup: map[ssa.Instruction][]deferredCall{}}
+	fr := &frame{f: f, plan: plan, ids: map[ssa.Value]string{}, nodes: map[ssa.Instruction]string{}, selects: map[*ssa.Select]string{}, receiveStatus: map[ssa.Value]string{}, process: process, fieldStores: map[*ssa.Store]bool{}, defers: map[*ssa.Defer]deferredCall{}, cleanup: map[ssa.Instruction][]deferredCall{}}
 	for v, id := range bindings {
 		fr.ids[v] = id
 	}
 	for _, bb := range f.Blocks {
 		for _, i := range bb.Instrs {
 			b.checkUnsafePointer(i)
+			b.prepareReceiveStatus(fr, i)
 			fr.nodes[i] = b.fresh(f.Name() + "_" + fmt.Sprintf("L%d", b.p.Fset.Position(i.Pos()).Line))
 			b.nodes[fr.nodes[i]] = &node{}
 			if s, ok := i.(*ssa.Select); ok {
@@ -191,6 +193,9 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 						b.diag("error", "sync-identity", "nil synchronization pointer unsupported", i.Pos())
 					}
 					ef := behavior.Effect{Kind: p.Kind, Resource: id}
+					if recv, ok := i.(*ssa.UnOp); ok && p.Kind == behavior.Receive {
+						ef.Variable = fr.receiveStatus[recv]
+					}
 					if p.Kind == behavior.WaitGroupAdd {
 						if !b.requireData(fr, p.Delta) {
 							continue
@@ -212,7 +217,10 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 					continue
 				}
 				for k, dst := range bb.Succs {
-					g := abstract.Predicate(x.Cond, fr.selects, k == 0)
+					g, exact := receiveStatusGuard(x.Cond, fr.receiveStatus, k == 0)
+					if !exact {
+						g = abstract.Predicate(x.Cond, fr.selects, k == 0)
+					}
 					if g.Kind == behavior.Choice && sl.Control[x] && k == 0 {
 						name := x.Cond.Name()
 						if c, ok := x.Cond.(*ssa.Call); ok && c.Common().StaticCallee() != nil {
@@ -237,10 +245,22 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 					if s.Dir == types.SendOnly {
 						kind = behavior.Send
 					}
-					b.nodes[src].edges = append(b.nodes[src].edges, edge{group: src, to: next, guard: behavior.Guard{Kind: behavior.True}, effects: []behavior.Effect{{Kind: kind, Resource: b.identity(fr, s.Chan, map[ssa.Value]bool{})}, {Kind: behavior.AssignAbstractState, Variable: fr.selects[x], Value: k}}, pos: b.position(s.Pos, f)})
+					communication := behavior.Effect{Kind: kind, Resource: b.identity(fr, s.Chan, map[ssa.Value]bool{})}
+					if kind == behavior.Receive {
+						communication.Variable = fr.receiveStatus[x]
+					}
+					effects := []behavior.Effect{communication, {Kind: behavior.AssignAbstractState, Variable: fr.selects[x], Value: k}}
+					if flag := fr.receiveStatus[x]; flag != "" && kind == behavior.Send {
+						effects = append(effects, behavior.Effect{Kind: behavior.AssignAbstractState, Variable: flag, Value: 0})
+					}
+					b.nodes[src].edges = append(b.nodes[src].edges, edge{group: src, to: next, guard: behavior.Guard{Kind: behavior.True}, effects: effects, pos: b.position(s.Pos, f)})
 				}
 				if !x.Blocking {
-					b.nodes[src].edges = append(b.nodes[src].edges, edge{group: src, to: next, guard: behavior.Guard{Kind: behavior.Default, Variable: src}, effects: []behavior.Effect{{Kind: behavior.AssignAbstractState, Variable: fr.selects[x], Value: -1}}, pos: e.pos})
+					effects := []behavior.Effect{{Kind: behavior.AssignAbstractState, Variable: fr.selects[x], Value: -1}}
+					if flag := fr.receiveStatus[x]; flag != "" {
+						effects = append(effects, behavior.Effect{Kind: behavior.AssignAbstractState, Variable: flag, Value: 0})
+					}
+					b.nodes[src].edges = append(b.nodes[src].edges, edge{group: src, to: next, guard: behavior.Guard{Kind: behavior.Default, Variable: src}, effects: effects, pos: e.pos})
 				}
 				continue
 			case *ssa.Call:

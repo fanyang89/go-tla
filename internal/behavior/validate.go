@@ -250,6 +250,14 @@ func Validate(m *Model) error {
 			switch e.Kind {
 			case Send, Receive, CloseChannel:
 				kind, resource = "channel", true
+				if e.Kind == Receive && e.Variable != "" {
+					variable = true
+					v, ok := variables[e.Variable]
+					if !ok || v.owner != t.Process || len(v.value.Domain) != 2 || !slices.Contains(v.value.Domain, 0) || !slices.Contains(v.value.Domain, 1) || writes[e.Variable] {
+						return fmt.Errorf("transition %q has invalid/duplicate receive status destination %q", t.ID, e.Variable)
+					}
+					writes[e.Variable] = true
+				}
 				if e.Kind != CloseChannel {
 					communications++
 				}

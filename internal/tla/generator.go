@@ -300,6 +300,15 @@ func (o *output) updates(ts []behavior.Transition, changes map[string]string) {
 			if e.Kind == behavior.AssignAbstractState {
 				local = append(local, fmt.Sprintf("![%s] = %d", quote(e.Variable), e.Value))
 			}
+			if e.Kind == behavior.Receive && e.Variable != "" {
+				status := "0"
+				if len(ts) == 2 {
+					status = "1"
+				} else if o.caps[e.Resource] > 0 {
+					status = fmt.Sprintf("IF Len(queues[%s]) > 0 THEN 1 ELSE 0", quote(e.Resource))
+				}
+				local = append(local, fmt.Sprintf("![%s] = %s", quote(e.Variable), status))
+			}
 		}
 	}
 	changes["pc"] = "[pc EXCEPT " + strings.Join(pc, ", ") + "]"

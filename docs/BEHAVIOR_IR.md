@@ -61,6 +61,15 @@ provenance with the IR. A valid IR header is not a completed verification result
 - Buffered `Send` needs space; `Receive` needs data or closure. Closed buffered
   channels can drain, and closed empty receives complete. Nil sends/receives block.
   Sending to a closed channel and closing a nil/already-closed channel are errors.
+- `Receive` may optionally set its `variable` destination atomically: 1 when a
+  value is delivered (including draining a closed buffer), 0 for closed-and-empty.
+  A blocked receive makes no assignment. The destination must belong to the
+  receiving process, have exactly domain `{0,1}`, and not be written again in the
+  same transition. Status reflects the receive, not a later channel-state query.
+  Receives without a destination retain their original semantics. This is an
+  additive schema-1/communication-v1 capability; older strict validators reject
+  the formerly unused Receive variable field rather than silently dropping it.
+  Consumers must still validate capabilities before executing saved IR.
 - An open zero-capacity channel requires a joint send/receive between distinct
   processes. A process merely poised at an operation is not a pending offer:
   execution must first register a blocked operation. A blocking select registers

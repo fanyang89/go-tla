@@ -144,6 +144,16 @@ ranges, nested loops, break/continue, iteration/byte limits and defer-site overf
 after expansion. Unused unsupported functions do not reject main. Frontend tests
 check source immutability and proof ownership after a preceding expanded function.
 
+## M5 component acceptance (in progress)
+
+`cmd/gotla/components_test.go` runs the finite batch worker-pool library harnesses
+through `check` and real TLC: correct joins pass; missing Done deadlocks. Both
+assert artifact/provenance validation, exact model-size baselines, zero abstracted
+predicates/custom trusted calls, and source candidates for the counterexample.
+These add two CLI integration cases (six total), separate from 66 semantic TLC
+cases. The correct library also has a native Go result test. See
+[component evidence](COMPONENTS.md) for boundaries, measurements and pending work.
+
 ## Check workflow regressions (M2)
 
 The original 33 checks above remain unchanged. Additional workflow tests cover:

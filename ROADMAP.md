@@ -172,7 +172,7 @@ do not invent performance guarantees before measuring the target examples.
 | M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run pending |
 | M3: Analysis and IR contract | Implemented; local gate passed | Consumed graph/effect/discovery/slice plans; separated identity checks; versioned IR and common validation; explicit terminals and stable source naming | Malformed-IR/pass/round-trip/naming tests pass; eight size baselines unchanged; pinned TLC gate passed |
 | M4: Common Go patterns | Complete within the documented restricted profile | Static fields/direct receivers, restricted defers, proved constant integer ranges | Positive, refusal, identity, deadlock and synchronization-error regressions pass |
-| M5: Component acceptance | Planned | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
+| M5: Component acceptance | In progress: finite batch worker-pool pair validated | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
 
 Implement milestones in this order. M2 should use existing abstractions rather
 than undertake M3's refactoring prematurely; integrate its metadata with the
@@ -373,7 +373,25 @@ writing its plan or skipping its checker tests does not count as implementation.
   exceeded its harness time allowance. Original snapshots and model-size baselines
   remain unchanged. Hosted CI has not been run or claimed.
 
-**Next action:** M5 real-component validation: reproducible small worker-pool,
-producer/consumer and mutex-protected examples, each with an intentionally faulty
-variant and an end-to-end `check` result. Keep the admitted language profile
-explicit; do not present unsupported general receive loops as analyzed.
+### M5 progress: finite batch worker pool
+
+- Added real library components and allocation-only main harnesses under
+  `examples/components/workerpool`. The correct single-use pool submits two jobs,
+  receives their results and joins two workers. Its faulty counterpart omits Done
+  but preserves job/result communication, exposing a Wait deadlock.
+- Both variants run through real CLI/TLC integration with expected status/exit,
+  artifact hashes/provenance, source candidates and model-size baselines. Native Go
+  tests cover the correct component's result; payload arithmetic is not a TLC claim.
+- Recorded model/state counts, tool/configuration, elapsed time and GNU time RSS
+  with its measurement limitations in [COMPONENTS.md](docs/COMPONENTS.md). No custom
+  trusted calls or abstracted predicates are needed. The pair adds two end-to-end
+  CLI checks, separate from the existing 66 semantic TLC cases and four CLI cases.
+- The pinned-TLC/vet/test gate passed locally with zero skips. Full internal/CLI/
+  integration/component race tests passed; the original snapshots and size
+  baselines are unchanged. No hosted CI execution is claimed.
+- M5 / step 7 remains incomplete. A finite single-use pool does not stand in for a
+  general receive-loop worker service or the required close-driven pipeline.
+
+**Next action:** close-driven pipeline capability and correct/faulty component
+validation, then the mutex-protected component and consolidated delivery evidence.
+Do not substitute guessed receive counts for close-driven control.

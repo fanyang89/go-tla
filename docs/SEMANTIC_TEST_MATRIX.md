@@ -179,7 +179,21 @@ Exact topology/model-size and source/provenance checks accompany actual outcomes
 There are now nine CLI integration cases, separate from the 93 semantic cases.
 Native tests verify the correct component with channel capacities 0, 1 and 2.
 
-## M5 component acceptance (in progress)
+## M5 completion: captured inline-sync objects and mutex component
+
+`TestTLCCapturedSyncObjects` adds two actual TLC cases: cross-goroutine access
+preserves a shared object's identity, and distinct captured objects do not collapse.
+`TestCapturedSyncObjectRefusals` covers future/conditional initialization, reassignment,
+closure/nested-closure writes, escaped cells, nil access and whole-object copies.
+The semantic TLC total is now 95.
+
+`TestCheckCounterComponents` adds correct/missing-unlock CLI variants, including
+exact topology/size, result/artifact provenance and source candidates. There are now
+11 CLI cases (four workflow plus seven component variants). Native Go tests cover
+the correct counter, with full race testing separate from TLC's communication model.
+[ACCEPTANCE.md](ACCEPTANCE.md) records local completion and the hosted-CI limitation.
+
+## Earlier M5 component acceptance
 
 `cmd/gotla/components_test.go` runs the finite batch worker-pool library harnesses
 through `check` and real TLC: correct joins pass; missing Done deadlocks. Both

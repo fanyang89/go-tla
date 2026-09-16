@@ -86,8 +86,14 @@ Nested value-struct fields and zero-initialized direct globals are supported too
 Copying/loading whole synchronization-bearing aggregates, value receivers/arguments,
 whole-object resets and initializer copies are rejected, even for zero values.
 Pointer fields, array/slice elements, returned object identities, nil receivers
-and ambiguous object sources remain unsupported. Existing captured-cell dominance
-checks are not relaxed. Restricted normal-return cleanup is described below.
+and ambiguous object sources remain unsupported. A closure may capture a pointer
+cell for a struct containing inline synchronization but **no channel fields** when
+one store dominates all loads/captures and no unsupported pointer-cell escape or
+write occurs. This includes the receiver cell of a pointer method launching a
+closure. Reassignments, future/conditional initialization, closure writes, nil use
+and whole-object copies remain refused; capture does not create a fresh object.
+Channel-bearing pointer cells retain the stricter refusal below. Restricted
+normal-return cleanup is described below.
 
 ### Immutable channel fields
 

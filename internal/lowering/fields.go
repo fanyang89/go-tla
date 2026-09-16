@@ -37,6 +37,18 @@ func aggregatePointer(t types.Type) bool {
 	return ok && discovery.SyncType(types.Unalias(p.Elem())) == "" && (inlineSync(p.Elem()) || inlineChannel(p.Elem()))
 }
 
+// Captured pointer cells are resolved by identity's unique dominating-store
+// proof, not treated as fresh objects. Channel-bearing objects keep their stricter
+// allocation-frame escape rules; this capability is for inline synchronization.
+func capturedSyncObject(t types.Type) bool {
+	cell, ok := t.Underlying().(*types.Pointer)
+	if !ok || !aggregatePointer(cell.Elem()) {
+		return false
+	}
+	object := cell.Elem().Underlying().(*types.Pointer).Elem()
+	return inlineSync(object) && !inlineChannel(object)
+}
+
 // Only addressable inline fields inherit a concrete object's identity. Channel
 // bindings require a separately proved immutable initialization.
 func (b *builder) fieldIdentity(fr *frame, x *ssa.FieldAddr, seen map[ssa.Value]bool) string {

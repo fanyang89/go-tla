@@ -2,10 +2,10 @@
 
 ## Status and document ownership
 
-The current implementation is a restricted, end-to-end MVP. The next milestone
-is a usable tool for small, explicitly scoped Go concurrency components, **not**
-a general Go verifier. This roadmap defines that target; it does not expand the
-current supported language.
+The implementation has local M1–M5 acceptance evidence for small, explicitly scoped
+Go concurrency components, **not** arbitrary Go verification. The hosted-CI release
+gate remains pending. This roadmap records the target and evidence; only the
+supported-domain guide defines the admitted language.
 
 - [README.md](README.md): current installation and command usage.
 - [ARCHITECTURE.md](ARCHITECTURE.md): current semantics, assumptions, and limitations.
@@ -16,6 +16,7 @@ Current companion guides:
 - [docs/SUPPORTED_GO.md](docs/SUPPORTED_GO.md): supported, abstracted, and rejected Go patterns.
 - [docs/VERIFICATION.md](docs/VERIFICATION.md): results, assumptions, false positives, and incomplete checks.
 - [docs/SEMANTIC_TEST_MATRIX.md](docs/SEMANTIC_TEST_MATRIX.md): regression evidence and coverage gaps.
+- [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md): local acceptance matrix and outstanding hosted release gate.
 
 ## 1. What “basically usable” means
 
@@ -76,8 +77,11 @@ This table describes the **target**, not today's support. Inline Mutex/WaitGroup
 fields, local immutable channel fields and direct pointer receivers have an initial
 implementation, as do direct deferred Unlock/Done on normal-return paths. Mutable/global
 channel fields, pointer fields and general defers remain unavailable. The first proved
-finite loop form is a constant integer range without a live index (up to 16 iterations). The `check` workflow is
-implemented within the current restricted frontend scope.
+finite loop form is a constant integer range without a live index (up to 16 iterations).
+Close-driven receive cycles instead require a finite-state SCC proof, not a trip
+count. Immutable pointer-cell captures of inline-sync structs without channel fields
+are supported under the dominating-store rules. The `check` workflow is implemented
+within this restricted frontend scope.
 
 ## 2. Current baseline
 
@@ -138,24 +142,25 @@ errors. See [ARCHITECTURE.md](ARCHITECTURE.md) for the authoritative full contra
 
 The basically usable milestone is complete only when all of these are satisfied:
 
-- [ ] M1–M5 below meet their acceptance gates, with evidence recorded per change.
-- [ ] A user can build the CLI, provision the documented TLC version, and run a
+- [x] M1–M5 local acceptance gates pass, with evidence recorded per change; the
+      separate hosted-CI gate below remains outstanding.
+- [x] A user can build the CLI, provision the documented TLC version, and run a
       component check using documented non-interactive commands.
-- [ ] Successful, deadlocking, synchronization-error, unsupported, tool-failure,
+- [x] Successful, deadlocking, synchronization-error, unsupported, tool-failure,
       and incomplete runs have distinguishable CLI and machine-readable results.
-- [ ] Checks record assumptions, trusted contracts, tool/configuration information,
+- [x] Checks record assumptions, trusted contracts, tool/configuration information,
       artifact locations, and model size; stale artifacts cannot masquerade as a
       new successful result.
-- [ ] Three production-style component examples retain their concurrency source
+- [x] Three production-style component examples retain their concurrency source
       and have small explicit harnesses where needed: a finite worker pool, a
       close-driven pipeline, and a struct-based synchronized component.
-- [ ] Each component has a correct version and an intentionally faulty version;
+- [x] Each component has a correct version and an intentionally faulty version;
       tests assert the expected checker outcome, not just successful TLA parsing.
 - [x] Supported loop forms, defers, and field identities each have positive,
       negative, and blocking/synchronization-error regression coverage.
 - [ ] CI runs real TLC and fails if the required checker is unavailable; plain unit
       test success alone cannot satisfy the release gate.
-- [ ] Documentation lists remaining restrictions and explains that completed
+- [x] Documentation lists remaining restrictions and explains that completed
       abstract checking is neither arbitrary Go correctness nor leak/starvation
       verification.
 
@@ -172,7 +177,7 @@ do not invent performance guarantees before measuring the target examples.
 | M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run pending |
 | M3: Analysis and IR contract | Implemented; local gate passed | Consumed graph/effect/discovery/slice plans; separated identity checks; versioned IR and common validation; explicit terminals and stable source naming | Malformed-IR/pass/round-trip/naming tests pass; eight size baselines unchanged; pinned TLC gate passed |
 | M4: Common Go patterns | Complete within the documented restricted profile | Static fields/direct receivers, restricted defers, proved constant integer ranges | Positive, refusal, identity, deadlock and synchronization-error regressions pass |
-| M5: Component acceptance | In progress: worker-pool pair and close-driven pipeline variants validated | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
+| M5: Component acceptance | Complete locally: three component families, seven correct/faulty CLI/TLC checks | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
 
 Implement milestones in this order. M2 should use existing abstractions rather
 than undertake M3's refactoring prematurely; integrate its metadata with the
@@ -442,5 +447,25 @@ writing its plan or skipping its checker tests does not count as implementation.
 - M5 / step 7 remains incomplete: the mutex-protected component and consolidated
   acceptance/delivery report are still outstanding.
 
-**Next action:** validate a struct-based mutex-protected component and its faulty
-variant, then finish the consolidated basically-usable acceptance evidence.
+### M5 completion: mutex component and consolidated local acceptance
+
+- Added a real inline-Mutex counter with Increment/Value methods, concurrent batch
+  orchestration and allocation-only harnesses. Correct deferred Unlock passes;
+  omitted Unlock deadlocks. Native tests cover sample values separately from TLC's
+  synchronization projection. Exact model-size and artifact/source checks apply.
+- The original closure syntax exposed a missing receiver-pointer capture capability.
+  Added only immutable pointer-cell capture for inline-sync structs with no channel
+  fields, consuming the existing unique dominating-store proof. Future/conditional
+  stores, reassignment, nested closure writes, escapes, nil use and copies remain
+  rejected; shared and distinct identities have two new real TLC checks.
+- Three component families now have seven real CLI/TLC variants. The local gate
+  totals 95 semantic TLC checks and 11 CLI cases. [COMPONENTS.md](docs/COMPONENTS.md)
+  records model/state counts, timing/RSS, source boundaries and limitations.
+  [ACCEPTANCE.md](docs/ACCEPTANCE.md) consolidates the local milestone evidence,
+  reproduction commands, result interpretation, delivery order and deferred scope.
+- M5 / step 7 is complete locally. This does not claim hosted CI or full release
+  acceptance; the unchecked hosted gate above still requires execution evidence.
+
+**Next action:** run the checked-in hosted CI job against the delivered revision
+and retain its verification log before declaring the release gate complete. No
+push, PR, workflow dispatch or branch-protection changes are authorized by this record.

@@ -90,7 +90,7 @@ func (b *builder) callee(fr *frame, c *ssa.CallCommon, f *ssa.Function, pos toke
 	}
 	if mc, ok := c.Value.(*ssa.MakeClosure); ok {
 		for j, v := range f.FreeVars {
-			if relevantType(v.Type()) || capturedChannel(v.Type()) {
+			if relevantType(v.Type()) || capturedChannel(v.Type()) || capturedSyncObject(v.Type()) {
 				bind[v] = b.identity(fr, mc.Bindings[j], map[ssa.Value]bool{})
 			}
 		}

@@ -38,7 +38,7 @@ func checkComponent(t *testing.T, path string, want checker.Status) *behavior.Mo
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(m.Processes) != 3 || len(m.Channels) != 2 || len(m.WaitGroups) != 1 || len(m.AbstractedPredicates) != 0 {
+	if len(m.Processes) != 3 || len(m.WaitGroups) != 1 || len(m.AbstractedPredicates) != 0 {
 		t.Fatalf("component topology/predicates changed: %+v", m.Statistics())
 	}
 	if want != checker.Passed && len(r.SourceCandidates) == 0 {
@@ -57,7 +57,7 @@ func TestCheckWorkerPoolComponents(t *testing.T) {
 		t.Run(c.variant, func(t *testing.T) {
 			m := checkComponent(t, "workerpool/"+c.variant, c.want)
 			stats := m.Statistics()
-			if stats.Locations != c.locations || stats.Transitions != c.transitions || stats.Mutexes != 0 {
+			if stats.Locations != c.locations || stats.Transitions != c.transitions || stats.Mutexes != 0 || stats.Channels != 2 {
 				t.Fatalf("component size baseline changed: %+v", stats)
 			}
 		})
@@ -75,7 +75,7 @@ func TestCheckPipelineComponents(t *testing.T) {
 		t.Run(c.variant, func(t *testing.T) {
 			m := checkComponent(t, "pipeline/"+c.variant, c.want)
 			stats := m.Statistics()
-			if stats.Locations != c.locations || stats.Transitions != c.transitions || stats.Mutexes != 0 {
+			if stats.Locations != c.locations || stats.Transitions != c.transitions || stats.Mutexes != 0 || stats.Channels != 2 {
 				t.Fatalf("pipeline size baseline changed: %+v", stats)
 			}
 			if profile := m.Metadata.Options["profile"]; len(profile) != 1 || profile[0] != "finite-state-static-identity" {

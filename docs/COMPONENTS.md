@@ -1,4 +1,4 @@
-# Component acceptance (M5, in progress)
+# Component acceptance (M5, local evidence)
 
 ## Finite batch worker pool
 
@@ -131,8 +131,49 @@ The same timing/RSS limitations apply. Raw local artifacts are under
 `$HOME/tmp/pi/gotla-m5-pipeline/`; they are not committed. These are measured
 baselines, not platform-independent performance guarantees.
 
-## Remaining M5 work
+## Struct-based mutex-protected counter
 
-- A struct-based mutex-protected component with a reproducible faulty variant.
-- A consolidated acceptance report and delivery gate. These two component families do
-  not complete M5 or the basically-usable milestone.
+`examples/components/counter/{good,bad}/counter.go` stores a Mutex and integer in
+one Counter. Increment and Value use pointer receivers; RunBatch launches two
+increments, joins both and takes a protected snapshot. Harnesses only construct a
+fresh zero-value Counter and invoke RunBatch. They do not replace its locks,
+spawning, cleanup or join. No other caller participates in this checked environment.
+
+The good component defers Unlock; the bad component omits it in Increment. The
+first worker leaves the mutex locked and the second cannot finish, so the parent
+Wait deadlocks. This is not a payload race test. Native tests check snapshots 2
+and then 3, with `-race` applied separately; TLC checks blocking and modeled
+synchronization errors, not the numeric value or general race freedom.
+
+Its unmodified closure style required a narrow new identity capability: capturing
+an immutable pointer cell for an inline-sync struct without channel fields. The
+existing single dominating-store proof resolves the cell to the original object;
+reassignment, future/conditional stores, escaped/written cells, nil use and whole
+copies remain refused. Tests ensure shared captures alias and distinct captures
+remain distinct. Channel-bearing pointer cells are not admitted by this change.
+
+```sh
+./gotla check -tlc-jar "$TLC_JAR" -timeout=30s \
+  -out "$HOME/tmp/pi/counter-good" ./examples/components/counter/good/harness
+# passed / 0
+./gotla check -tlc-jar "$TLC_JAR" -timeout=30s \
+  -out "$HOME/tmp/pi/counter-bad" ./examples/components/counter/bad/harness
+# deadlock / 3
+```
+
+`TestCheckCounterComponents` checks actual results, topology/model-size baselines,
+source candidates and artifact provenance. The reference build contains the counter
+change based on `976b1d9` (working tree), with the environment/options above. Both
+models have 3 processes, no channels, 1 Mutex, 1 WaitGroup and no abstract predicates
+or custom trusted calls. Explicit Add/Done remains within the supported profile;
+WaitGroup.Go is not supported.
+
+| Variant | Locations/transitions | Generated/distinct states | TLC elapsed | Full command wall time | GNU time max RSS (KiB) | Result |
+|---|---|---|---|---|---|---|
+| good | 23/27 | 128/74 | 615 ms | 1.06 s | 143868 | passed / 0 |
+| bad | 19/19 | 34/23 | 594 ms | 1.02 s | 138636 | deadlock / 3 |
+
+Raw local artifacts are under `$HOME/tmp/pi/gotla-m5-counter/`. The same measurement
+limitations apply. The seven variants across three component families now have
+real CLI/TLC acceptance checks; [ACCEPTANCE.md](ACCEPTANCE.md) consolidates evidence
+and distinguishes local completion from the outstanding hosted-CI release gate.

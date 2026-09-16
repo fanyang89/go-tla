@@ -143,6 +143,27 @@ extensions. General shared-state and arbitrary assertion backends are not implem
   terminal stuttering. While main is active, no enabled action means a TLC deadlock.
   No fairness or starvation/liveness property is asserted by the MVP.
 
+## Restricted deferred cleanup
+
+Direct deferred Mutex.Unlock and WaitGroup.Done are separate from immediate
+primitive execution. Discovery retains registration and `RunDefers` as slice roots;
+call summaries validate static targets. `lowering/defers.go` captures resource
+identities at registration sites and gives each invocation fresh finite local flags.
+
+In acyclic control, each registration site can run at most once. A topological
+ordering of sites extends every executable registration order; reversing the
+registered subset therefore gives LIFO without abstracting order. A may-pending
+analysis selects sites at each `RunDefers`/normal return, while exact flags preserve
+conditional registration. Cleanup tests each flag, performs one primitive and clears
+it atomically. Callee invocations cannot drain caller flags. Return expressions and
+blocking operations before cleanup retain their original SSA order.
+
+This emits only generic assignments, guards and existing synchronization effects;
+there is no Go-specific defer stack in behavioral IR or TLA runtime. More than 64
+sites per invocation, non-direct/custom cleanup, alternate SSA defer stacks and
+initializer defers are rejected. Explicit panic/recover remain unsupported and
+implicit sequential panics remain excluded: normal-return cleanup is not unwinding.
+
 ## Identity and supported domain
 
 Precise identity supports channel allocations, direct parameters, constant nil,
@@ -193,7 +214,7 @@ Outcomes are `precisely-modeled`, `conservatively-abstracted`, and `unsupported`
 and environment assumptions**, not all Go semantics. Payload data is outside this
 domain. Unknown control predicates and trusted return values produce warnings and
 an abstracted outcome. Unresolved side effects/nontermination, unavailable bodies,
-explicit panic/recover/defer, RWMutex, unsupported sync APIs and unsafe identities
+explicit panic/recover, unsupported defer forms, RWMutex, unsupported sync APIs and unsafe identities
 produce errors. Unsupported results cannot be emitted as executable TLA+.
 
 An explicit `-trust-call` contract asserts total, side-effect-free execution with no
@@ -206,7 +227,7 @@ The supported-domain assumption excludes implicit sequential runtime panics and
 resource exhaustion. This assumption is emitted as a diagnostic and model metadata.
 It covers, for example, arithmetic/bounds/nil-dereference failures in otherwise
 ordinary computation. It does **not** excuse synchronization failures, explicit
-panic/defer/recover, unknown call effects or divergent loops. Runtime scheduling
+panic/recover, unsupported defer forms, unknown call effects or divergent loops. Runtime scheduling
 internals, allocation failures, signal handling, unsafe/reflection semantics,
 network/syscall blocking and the entire Go runtime are not modeled. Unknown calls
 reaching such behavior are rejected unless a user supplies a truthful contract.

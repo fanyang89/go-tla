@@ -97,14 +97,14 @@ receiver/subobject calls, stable aliases and captures. `TestSyncFieldRefusalBoun
 and `TestSyncAggregateInitializerCopyRejected` retain copy/reset, value receiver,
 ambiguous/nil/future identities, interface, channel/pointer field and container
 refusals. Immutable channel-field initialization is covered by the next increment;
-defers and loops remain future work.
+restricted defers are covered below; proved loops remain future work.
 
 ## M4 increment: seven immutable-channel-field TLC checks
 
 `tests/channel_fields_test.go` adds `TestTLCImmutableChannelFields`: rendezvous,
 nil-send deadlock, nil-close/closed-send faults, shared/distinct channel identities,
 and default-before-peer deadlock. The total semantic suite is now 46 cases, plus
-four CLI integration cases.
+four CLI integration cases at that increment.
 
 Extraction tests cover local literals/assignments, nested fields, nil, direction
 conversions, receiver/bound-method calls, captures and independent invocation
@@ -113,6 +113,21 @@ initialization, duplicate/callee/closure writes, escaped field addresses, copies
 unproved pointer cells. Ordering cases require the initialization diagnostic, not
 merely an unrelated unsupported error. Former blanket field rejection tests now
 reject mutable fields; accepted forms have explicit positive and TLC coverage.
+
+## M4 increment: eleven restricted-defer TLC checks
+
+`tests/defers_test.go` adds `TestTLCRestrictedDefers`: Unlock/Done success, invalid
+unlock/negative counter, blocked return expression, conditional registration,
+multiple returns, unselected select case, receiver capture, nested/repeated frames,
+and cleanup through synchronization fields. The semantic total is now 57 TLC
+cases, separate from four CLI integration cases.
+
+`TestDeferIRPreservesConditionalLIFO` explores every exact-flag path of a conditional,
+multiple-return model and checks registration order, reverse cleanup order and empty
+pending state at terminal. `TestRestrictedDeferRefusals` covers unsupported targets,
+method values, nil identity, panic/recover, loops, initializers and the explicit
+64-site budget. `internal/discovery/defers_test.go` checks that registration is a
+root, not an immediate unlock, and rejects an alternate SSA defer stack.
 
 ## Check workflow regressions (M2)
 
@@ -138,7 +153,7 @@ They assert unsupported extraction and failure to emit executable TLA+.
 
 | Test group | Cases |
 |---|---|
-| `TestUnsupportedIsNeverExecutable` | Dynamic capacity; loops/recursion; unavailable effects (including discarded results); dynamic calls; channel/goroutine/unknown initialization; defer/panic; mutable channel fields; changing captures; Mutex copying; WaitGroup reuse/concurrent Add; RWMutex |
+| `TestUnsupportedIsNeverExecutable` | Dynamic capacity; loops/recursion; unavailable effects (including discarded results); dynamic calls; channel/goroutine/unknown initialization; general defer/panic; mutable channel fields; changing captures; Mutex copying; WaitGroup reuse/concurrent Add; RWMutex |
 | `TestSynchronizationIdentityRequiresDominatingInitialization` | Future-store send/close, store after spawn/capture, conditional initialization; a dominating-store positive control remains supported |
 | `TestUnsafeSynchronizationMutationRejected` | Mutex/WaitGroup state mutation, casts, helper and initializer unsafe effects; an unused unsafe function positive control remains supported |
 
@@ -155,5 +170,5 @@ They assert unsupported extraction and failure to emit executable TLA+.
 - Complete trace/source replay and broader third-party effect-summary coverage
   remain follow-up work. M3's malformed-IR/source-path tests do not replace these.
 - M4 must add semantics-specific positive, deadlocking/error, and rejection cases
-  before admitting more field forms, defers, or proved finite loops. Existing
+  before admitting more field/defer forms or proved finite loops. Existing
   rejection tests must not simply be deleted without replacement evidence.

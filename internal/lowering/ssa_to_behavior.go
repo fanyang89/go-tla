@@ -49,6 +49,8 @@ type frame struct {
 	selects     map[*ssa.Select]string
 	process     string
 	fieldStores map[*ssa.Store]bool
+	defers      map[*ssa.Defer]deferredCall
+	cleanup     map[ssa.Instruction][]deferredCall
 }
 
 // Lower runs passes 3–8. Errors leave an inspectable partial IR, never an executable model.
@@ -130,7 +132,7 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 	}
 	b.stack[f] = true
 	defer delete(b.stack, f)
-	fr := &frame{f: f, plan: plan, ids: map[ssa.Value]string{}, nodes: map[ssa.Instruction]string{}, selects: map[*ssa.Select]string{}, process: process, fieldStores: map[*ssa.Store]bool{}}
+	fr := &frame{f: f, plan: plan, ids: map[ssa.Value]string{}, nodes: map[ssa.Instruction]string{}, selects: map[*ssa.Select]string{}, process: process, fieldStores: map[*ssa.Store]bool{}, defers: map[*ssa.Defer]deferredCall{}, cleanup: map[ssa.Instruction][]deferredCall{}}
 	for v, id := range bindings {
 		fr.ids[v] = id
 	}
@@ -155,6 +157,9 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 		}
 	}
 	b.allocateResources(fr)
+	if !b.prepareDefers(fr) {
+		return end
+	}
 	sl := plan.Slice
 	for _, bb := range f.Blocks {
 		for j, i := range bb.Instrs {
@@ -218,7 +223,7 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 			case *ssa.Jump:
 				e.to = fr.nodes[bb.Succs[0].Instrs[0]]
 			case *ssa.Return:
-				e.to = end
+				e.to = b.cleanupChain(fr, x, end)
 			case *ssa.Select:
 				for k, s := range x.States {
 					if !b.requireData(fr, s.Chan) {
@@ -257,8 +262,15 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 				} else {
 					b.diag("error", "exception-control", "explicit panic unsupported", i.Pos())
 				}
-			case *ssa.Defer, *ssa.RunDefers:
-				b.diag("error", "exception-control", "defer, panic and recover unsupported", i.Pos())
+			case *ssa.Defer:
+				d, ok := fr.defers[x]
+				if !ok {
+					b.diag("error", "unsupported-defer", "defer outside proved normal control flow unsupported", x.Pos())
+					continue
+				}
+				e.effects = []behavior.Effect{{Kind: behavior.AssignAbstractState, Variable: d.flag, Value: 1}}
+			case *ssa.RunDefers:
+				e.to = b.cleanupChain(fr, x, next)
 			case *ssa.UnOp:
 				if x.Op == token.MUL && (inlineSync(x.Type()) || channelAggregate(x.Type())) {
 					b.diag("error", "sync-copy", "loading synchronization aggregates by value unsupported", x.Pos())

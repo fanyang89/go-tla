@@ -74,8 +74,8 @@ synchronization errors** in a finite communication-oriented abstraction.
 
 This table describes the **target**, not today's support. Inline Mutex/WaitGroup
 fields, local immutable channel fields and direct pointer receivers have an initial
-implementation; mutable/global channel fields, pointer fields, `defer`, and proved
-finite loops are not available yet. The `check` workflow is
+implementation, as do direct deferred Unlock/Done on normal-return paths. Mutable/global
+channel fields, pointer fields, general defers and proved finite loops are not available yet. The `check` workflow is
 implemented within the current restricted frontend scope.
 
 ## 2. Current baseline
@@ -104,7 +104,7 @@ Implemented:
 
 Current restrictions include all reachable CFG cycles and recursion, mutable/global
 channel fields, pointer fields and synchronization containers, general aliasing,
-defer/recover/explicit panic, and dynamic
+general defers/recover/explicit panic, and dynamic
 process/resource topology. TLC is explicitly provisioned and can run through `check` or manually. Plain
 `go test ./...` skips actual TLC tests unless `TLC_JAR` is configured.
 
@@ -170,7 +170,7 @@ do not invent performance guarantees before measuring the target examples.
 | M1: Quality baseline | Implemented; local gate passed | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; strict gate cannot silently skip TLC; hosted run pending |
 | M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run pending |
 | M3: Analysis and IR contract | Implemented; local gate passed | Consumed graph/effect/discovery/slice plans; separated identity checks; versioned IR and common validation; explicit terminals and stable source naming | Malformed-IR/pass/round-trip/naming tests pass; eight size baselines unchanged; pinned TLC gate passed |
-| M4: Common Go patterns | In progress: inline synchronization fields, local immutable channel fields and direct pointer receivers | Static fields/direct receivers, restricted defers, then proved finite loops | Semantics and rejection boundaries documented and tested for each addition |
+| M4: Common Go patterns | In progress: static fields/direct receivers and restricted normal-return defers | Static fields/direct receivers, restricted defers, then proved finite loops | Semantics and rejection boundaries documented and tested for each addition |
 | M5: Component acceptance | Planned | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
 
 Implement milestones in this order. M2 should use existing abstractions rather
@@ -319,8 +319,31 @@ writing its plan or skipping its checker tests does not count as implementation.
 - Global channel-field access, returned object identities and general alias analysis
   are still outside this increment. See [SUPPORTED_GO.md](docs/SUPPORTED_GO.md) for
   exact accepted forms, including the current pointer-variable capture restriction.
-- M4 / step 6 remains incomplete until defers and proved finite loops meet their gates.
+- This increment alone does not complete M4 / step 6.
 
-**Next action:** restricted `defer mu.Unlock()` / `defer wg.Done()` with argument
-capture, registration timing, LIFO and all normal-return paths preserved; then proved
-finite loops. Do not mark M4 done before all acceptance gates pass.
+### M4 progress: restricted normal-return defers
+
+- Implemented direct `defer mu.Unlock()` and `defer wg.Done()` with static receiver
+  capture and exact per-invocation registration flags. Acyclic topological ordering
+  plus a may-pending analysis preserves conditional registration, LIFO and all
+  normal-return paths. Cleanup follows return-expression evaluation and cannot
+  run while the function is blocked before returning.
+- Nested/ repeated invocations own distinct flags. Executed cleanup clears its flag;
+  compiler drain points do not run registrations twice. More than 64 sites per
+  invocation is an explicit unsupported result, not silent truncation.
+- General function/closure/method-value defers, alternate stacks, initializer defers,
+  explicit panic/recover and cycles are still refused. Trusted contracts cannot
+  bypass the defer whitelist; implicit-panic assumptions are unchanged.
+- Eleven additional actual TLC cases cover Unlock/Done, synchronization faults,
+  blocked return expressions, conditional/unselected registration, multiple returns,
+  receiver capture, nested/repeated frames and field-based cleanup. An exhaustive
+  single-process IR-path test checks LIFO and complete draining on conditional paths.
+- The strict pinned-TLC/vet/test gate passed locally: 57 semantic TLC cases plus four
+  CLI integration cases, with zero skips. Full internal/CLI/integration race tests
+  passed; original snapshots and model-size baselines remain unchanged. Hosted CI
+  has not been run or claimed.
+- M4 / step 6 is still incomplete: proved finite loops are not implemented yet.
+
+**Next action:** narrowly proved finite loops, with distinct identities for repeated
+allocation/spawn and explicit expansion-budget rejection. No arbitrary truncation
+or admission of general worker receive loops/channel ranges.

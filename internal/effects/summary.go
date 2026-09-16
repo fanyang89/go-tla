@@ -47,6 +47,13 @@ func (a *Analyzer) Call(site ssa.CallInstruction) Summary {
 		return s
 	}
 	s := Summary{Kind: Unknown, Callee: a.program.CallTarget(site)}
+	if d, ok := site.(*ssa.Defer); ok {
+		if _, supported := discovery.Deferred(d); supported && s.Callee != nil {
+			s.Kind = Primitive
+		}
+		a.calls[site] = s
+		return s
+	}
 	switch {
 	case discovery.IsRoot(site):
 		s.Kind = Primitive

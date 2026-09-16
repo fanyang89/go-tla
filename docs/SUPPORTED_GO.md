@@ -31,6 +31,7 @@ program may deadlock. Successful extraction does not mean successful verificatio
 | Direct pointer-receiver methods on these objects | Supported with statically resolved receiver identities; closures can capture stable object pointers |
 | Immutable channel fields in local allocated objects | At most one allocation-frame initialization, dominating every read and object escape; omitted initialization means nil |
 | Mutex Lock / Unlock | Boolean lock availability, including unlock from another goroutine and invalid-unlock errors |
+| Direct `defer mu.Unlock()` / `defer wg.Done()` | Static receiver capture, conditional registration and LIFO cleanup at normal returns; at most 64 sites per invocation |
 | WaitGroup Add / Done / Wait | Single phase only; positive Add in main before any spawn or prior Wait; constant delta in -1024..1024 |
 | Local arithmetic / payload processing | Removed when irrelevant and otherwise within supported computation/call rules |
 | Nonconstant concurrency-controlling predicate | Abstract nondeterministic branch with explicit commitment before blocking |
@@ -83,7 +84,7 @@ Copying/loading whole synchronization-bearing aggregates, value receivers/argume
 whole-object resets and initializer copies are rejected, even for zero values.
 Pointer fields, array/slice elements, returned object identities, nil receivers
 and ambiguous object sources remain unsupported. Existing captured-cell dominance
-checks are not relaxed. No deferred cleanup is supported yet.
+checks are not relaxed. Restricted normal-return cleanup is described below.
 
 ### Immutable channel fields
 
@@ -118,6 +119,37 @@ objects remain unsupported. Capturing an addressable value object (`var e endpoi
 is supported after initialization; capturing a pointer variable through a `**endpoint`
 cell is currently rejected, even when a human can see it is immutable. Direct pointer
 receiver calls such as `go e.send()` do not require that pointer-cell capture.
+
+### Restricted deferred cleanup
+
+```go
+func (c *component) work(done chan int) {
+    c.mu.Lock()
+    defer c.mu.Unlock()
+    done <- 1
+}
+```
+
+Only direct `sync.Mutex.Unlock` and `sync.WaitGroup.Done` method calls are accepted
+as defers. Receivers are resolved from the values evaluated at registration, not
+from later variable assignments. Reaching a defer registers cleanup; it does not
+unlock or decrement immediately. Conditional/unselected registrations remain exact.
+Cleanup executes in LIFO order at normal returns, after return-expression evaluation.
+A function blocked before returning has not executed its deferred cleanup.
+
+Each inlined invocation has separate registration flags. Nested callees drain only
+their own registrations. Flags are cleared as calls execute; multiple compiler
+`RunDefers` points cannot run the same registration twice. Main's own cleanup precedes
+program termination; workers interrupted by main return are not guaranteed cleanup.
+
+Control remains acyclic, so every defer site executes at most once per invocation.
+The implementation accepts at most 64 sites; exceeding this is unsupported, never
+truncated cleanup or an assumed stack bound. Cleanup effects retain the defer site's
+source position. Plain helper-function/closure defers, bound method values, deferred
+Lock/Wait/Add/close, foreign defer stacks, initializer defers, panic/recover and loops
+remain unsupported. A trusted-call contract does not extend this whitelist. Implicit
+sequential panics remain excluded by the recorded domain assumption; this is not
+panic unwinding or exception-safety verification.
 
 ### Unknown predicates require effect analysis
 
@@ -156,7 +188,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 | Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |
 | Dynamic callbacks/interface dispatch | No safe resolved-call support for these sites |
-| `defer`, explicit panic/recover | No modeled deferred-execution/unwinding semantics |
+| General `defer`, explicit panic/recover | Only direct deferred Unlock/Done on normal-return paths are modeled; no panic unwinding |
 | RWMutex and other unsupported synchronization APIs | No corresponding implemented semantics |
 | WaitGroup reuse or concurrent positive enrollment | Counter-only representation does not model waiter generations |
 | Reachable unsafe pointer operations, including inspected helpers/init | Can bypass modeled resource identity/state |

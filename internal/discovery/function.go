@@ -30,7 +30,7 @@ func Scan(f *ssa.Function) Function {
 				}
 			case *ssa.Go:
 				r.Goroutines = append(r.Goroutines, x)
-			case *ssa.Select, *ssa.MakeChan:
+			case *ssa.Select, *ssa.MakeChan, *ssa.Defer, *ssa.RunDefers:
 				r.Roots[i] = true
 			}
 		}

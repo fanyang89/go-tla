@@ -63,7 +63,8 @@ cases** (four workflow cases plus seven component cases), with zero skips.
 The later bootstrap constructor, exact-interface and immutable-field increments
 plus static deferred helpers, finite data computations, pre-closed global channels
 and data-computation, owned-reference/value-copy, open-global and array-range proofs,
-plus eight independent program-exit IR/TLC cases, bring the local semantic total to **193**.
+plus eight independent program-exit IR/TLC cases and five nil-interface storage
+cases, bring the local semantic total to **198**.
 Production bootstrap adds seven CLI/TLC
 cases, bringing that total to **18**. The five logger cases cover immediate/released
 output passes and missing Unlock, blocked cancellation/output deadlocks, with eight

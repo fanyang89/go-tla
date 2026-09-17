@@ -41,6 +41,19 @@ func (a *Analyzer) ProveConstantDataCall(site *ssa.Call) (proved bool) {
 	return true
 }
 
+// Unlike general finite-data proofs, concrete evaluation can admit empty
+// interface slots: every admitted interface value is nil. MakeInterface,
+// ChangeInterface, TypeAssert and invoke remain unsupported.
+func constantDataType(t types.Type) bool {
+	remaining := 256
+	return dataTypeGraph(t, 0, map[types.Type]bool{}, &remaining, true)
+}
+
+func nilDataInterface(v dataValue) bool {
+	t, ok := v.typ.Underlying().(*types.Interface)
+	return ok && t.Empty() && v.scalar == nil && v.pointer == nil && v.elements == nil && v.view == nil
+}
+
 type dataRefusal struct{}
 
 func refuseData() { panic(dataRefusal{}) }
@@ -82,6 +95,9 @@ func (e *dataEval) cell(v dataValue) *dataCell {
 }
 func (e *dataEval) clone(v dataValue) dataValue {
 	e.step()
+	if _, ok := v.typ.Underlying().(*types.Interface); ok && !nilDataInterface(v) {
+		refuseData()
+	}
 	if v.elements != nil {
 		out := make([]*dataCell, len(v.elements))
 		for i, c := range v.elements {
@@ -109,10 +125,10 @@ func (e *dataEval) zero(t types.Type, depth int) dataValue {
 		default:
 			refuseData()
 		}
-	case *types.Pointer, *types.Slice, *types.Map:
-		// Nil references do not allocate pointees or backing storage. The entire
-		// type graph must still exclude synchronization, interfaces and callbacks.
-		if !finiteDataType(v.typ, 0) {
+	case *types.Pointer, *types.Slice, *types.Map, *types.Interface:
+		// Nil references do not allocate backing storage or carry capabilities.
+		// Synchronization and callback types remain excluded from this graph.
+		if !constantDataType(v.typ) {
 			refuseData()
 		}
 	case *types.Array:
@@ -132,8 +148,16 @@ func (e *dataEval) zero(t types.Type, depth int) dataValue {
 	return v
 }
 func (e *dataEval) literal(c *ssa.Const) dataValue {
-	if !finiteDataType(c.Type(), 0) {
+	if !constantDataType(c.Type()) {
 		refuseData()
+	}
+	if c.Value == nil {
+		switch c.Type().Underlying().(type) {
+		case *types.Struct, *types.Array:
+			// SSA represents zero aggregates with a nil constant payload, not
+			// nil storage. Materialize all fields so copies preserve value shape.
+			return e.zero(c.Type(), 0)
+		}
 	}
 	v := dataValue{typ: c.Type(), scalar: c.Value}
 	if c.Value != nil {
@@ -263,14 +287,14 @@ func (e *dataEval) function(f *ssa.Function, args []dataValue) []dataValue {
 	if f == nil || len(f.Blocks) == 0 || len(f.FreeVars) != 0 || len(args) != len(f.Params) || e.stack[f] || len(e.stack) >= 32 {
 		refuseData()
 	}
-	if !finiteDataType(f.Signature.Results(), 0) {
+	if !constantDataType(f.Signature.Results()) {
 		refuseData()
 	}
 	e.stack[f] = true
 	defer delete(e.stack, f)
 	values := map[ssa.Value]dataValue{}
 	for i, p := range f.Params {
-		if !finiteDataType(p.Type(), 0) || !types.Identical(p.Type(), args[i].typ) {
+		if !constantDataType(p.Type()) || !types.Identical(p.Type(), args[i].typ) {
 			refuseData()
 		}
 		values[p] = e.clone(args[i])
@@ -321,7 +345,7 @@ func (e *dataEval) function(f *ssa.Function, args []dataValue) []dataValue {
 				continue
 			case *ssa.Alloc:
 				t := x.Type().Underlying().(*types.Pointer).Elem()
-				if !finiteDataType(t, 0) {
+				if !constantDataType(t) {
 					refuseData()
 				}
 				out = dataValue{typ: x.Type(), pointer: e.cell(e.zero(t, 0))}
@@ -508,6 +532,11 @@ func (e *dataEval) function(f *ssa.Function, args []dataValue) []dataValue {
 
 func (e *dataEval) binary(x *ssa.BinOp, a, b dataValue) dataValue {
 	out := dataValue{typ: x.Type()}
+	if nilDataInterface(a) && nilDataInterface(b) && types.Identical(a.typ, b.typ) && (x.Op == token.EQL || x.Op == token.NEQ) {
+		out.scalar = constant.MakeBool(x.Op == token.EQL)
+		e.checkScalar(out)
+		return out
+	}
 	if a.scalar == nil || b.scalar == nil {
 		refuseData()
 	}

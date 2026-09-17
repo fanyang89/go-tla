@@ -119,13 +119,14 @@ func (p *finiteDataProof) function(f *ssa.Function) bool {
 
 func finiteDataType(t types.Type, depth int) bool {
 	remaining := 256
-	return dataTypeGraph(t, depth, map[types.Type]bool{}, &remaining)
+	return dataTypeGraph(t, depth, map[types.Type]bool{}, &remaining, false)
 }
 
 // Read-only data graphs may be recursive, but cannot conceal synchronization,
-// callbacks, interfaces or unsafe pointers. A visited type closes a type cycle;
-// every distinct field/type edge still has to pass the check.
-func dataTypeGraph(t types.Type, depth int, seen map[types.Type]bool, remaining *int) bool {
+// callbacks or unsafe pointers. General finite proofs also exclude interfaces;
+// only a concrete evaluator that enforces nil-only interface values may opt in.
+// A visited type closes a type cycle; every distinct edge must pass the check.
+func dataTypeGraph(t types.Type, depth int, seen map[types.Type]bool, remaining *int, nilInterfaces bool) bool {
 	if t == nil || depth > 64 {
 		return false
 	}
@@ -146,24 +147,28 @@ func dataTypeGraph(t types.Type, depth int, seen map[types.Type]bool, remaining 
 	switch t := t.Underlying().(type) {
 	case *types.Basic:
 		return t.Info()&(types.IsBoolean|types.IsInteger|types.IsFloat|types.IsComplex|types.IsString) != 0
+	case *types.Interface:
+		// Only the concrete evaluator may opt in: it cannot construct non-nil
+		// interface values and rejects boxing, assertion and dynamic dispatch.
+		return nilInterfaces && t.Empty()
 	case *types.Slice:
-		return dataTypeGraph(t.Elem(), depth+1, seen, remaining)
+		return dataTypeGraph(t.Elem(), depth+1, seen, remaining, nilInterfaces)
 	case *types.Array:
-		return dataTypeGraph(t.Elem(), depth+1, seen, remaining)
+		return dataTypeGraph(t.Elem(), depth+1, seen, remaining, nilInterfaces)
 	case *types.Pointer:
-		return dataTypeGraph(t.Elem(), depth+1, seen, remaining)
+		return dataTypeGraph(t.Elem(), depth+1, seen, remaining, nilInterfaces)
 	case *types.Map:
-		return dataTypeGraph(t.Key(), depth+1, seen, remaining) && dataTypeGraph(t.Elem(), depth+1, seen, remaining)
+		return dataTypeGraph(t.Key(), depth+1, seen, remaining, nilInterfaces) && dataTypeGraph(t.Elem(), depth+1, seen, remaining, nilInterfaces)
 	case *types.Struct:
 		for i := range t.NumFields() {
-			if !dataTypeGraph(t.Field(i).Type(), depth+1, seen, remaining) {
+			if !dataTypeGraph(t.Field(i).Type(), depth+1, seen, remaining, nilInterfaces) {
 				return false
 			}
 		}
 		return true
 	case *types.Tuple:
 		for i := range t.Len() {
-			if !dataTypeGraph(t.At(i).Type(), depth+1, seen, remaining) {
+			if !dataTypeGraph(t.At(i).Type(), depth+1, seen, remaining, nilInterfaces) {
 				return false
 			}
 		}

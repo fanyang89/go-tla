@@ -372,3 +372,33 @@ exception-control, 148 unknown-effect, 272 identity, 70 unsafe, 356 receive-loop
 of one exception and two unknown-effect diagnostics is not completion evidence.
 All full-goal acceptance boxes remain unproven; finite environment enforcement,
 dependency effects and the executable whole-self model still require implementation.
+
+## Nil-interface constant storage prerequisite
+
+The concrete literal-input evaluator now admits nil empty-interface fields,
+parameters and returns, with a nil-only invariant checked on copying. Boxing,
+including typed nil pointers, nonempty interfaces, interface conversion/assertion,
+dynamic dispatch, external memory and nonliteral inputs remain refused. General
+finite-data proofs still reject interfaces. SSA zero aggregate constants materialize
+real zero field/element values; resetting an aggregate preserves existing subobject
+addresses and restores scalar fields to zero.
+
+This proves the real `go/ast.NewIdent("_")` call in `go/doc/exports.go:27`, without
+an API allowlist or skipped initialization. Native comparison checks Name, NamePos
+and nil Obj. The real CLI regression requires this source proof. A consumed-proof
+mutation redirects a private nil-interface store to a global and must refuse.
+Five actual TLC cases cover communication after construction, nil inputs, aggregate
+reset aliases, package initialization and conservative abstract-result failure.
+
+The first focused run exposed missing materialization of SSA zero aggregates and
+fixtures that already used the ordinary pure-constructor path. The implementation
+now handles zero aggregates; those fixtures explicitly store nil so they exercise
+the intended concrete-proof boundary. The failed log remains retained.
+Strict gate and full race pass: **198 semantic TLC and 18 CLI/TLC cases**, no skips
+or failures, unchanged snapshots. Evidence is local under
+`$HOME/tmp/pi/gotla-self-bootstrap-nil-interfaces/`.
+
+Actual full self-analysis remains **unsupported / 5**, only `model.json`, no TLC.
+Initializer diagnostics fall from 232 to **231**; other error counts remain those
+of the preceding exit prerequisite. No complete-bootstrap requirement is declared
+done by this incremental constructor proof.

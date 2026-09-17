@@ -5,6 +5,19 @@ Paths and test names refer to the current implementation. Actual TLC tests are
 optional in a plain local test run but mandatory in the
 [strict gate](VERIFICATION.md#tests-and-required-ci-gate).
 
+## Literal nil-interface storage
+
+`TestConstantNilInterfaces` permits only nil empty-interface values in concrete
+SSA evaluation, checking fields, comparisons, arguments, source returns, named
+interfaces and aggregate reset aliases. Boxing (including typed nil pointers),
+nonempty interfaces, assertions, external reads/writes and nonliteral inputs refuse.
+General finite-data proofs stay unchanged. `TestActualConstantIdentConstructor`
+compares actual ast.NewIdent fields against native Go; the CLI refusal regression
+requires the go/doc initializer's source proof. `TestNilInterfaceProofRechecksOwnership`
+redirects a private nil store to a global and requires stale-proof rejection.
+Five TLC cases cover constructor communication, nil inputs, aggregate reset,
+initialization and a conservative abstract-result counterexample.
+
 ## Immediate program exit
 
 `tests/exit_ir_test.go` uses an independent IR producer and eight actual TLC runs:
@@ -21,7 +34,7 @@ These are not full-program TLC checks of a program importing `os`.
 
 ## Production-component bootstrap
 
-Current total: **193 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **198 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 

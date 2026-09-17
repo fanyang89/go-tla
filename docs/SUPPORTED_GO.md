@@ -311,12 +311,19 @@ are independent and overlapping `copy` snapshots its source. Only evaluator-owne
 storage can be written. Private views and fully inspected helper calls can therefore
 pass this rule even when the general private-address-use rule refuses them.
 Zero pointer/slice/map fields are permitted only after the complete type graph
-excludes synchronization, callbacks, interfaces and unsafe pointers. Nil fields do
-not create backing storage. Later pointer assignments must still derive from owned
+excludes synchronization, callbacks, nonempty interfaces and unsafe pointers.
+Empty-interface slots are admitted only as nil: the evaluator cannot box values,
+assert types, change interface types or invoke interface methods. Copies recheck
+this nil-only invariant. Nil fields do not create backing storage. Later pointer assignments must still derive from owned
 cells; nil dereferences and external/global addresses refuse. Recursive private data
 graphs are allowed, but map construction/mutation is not implemented by this rule.
 This proves the actual go/constant.newFloat constructor and its SetPrec call on a
 fresh zero big.Float, without modeling general floating-point operations.
+It also proves the actual ast.NewIdent constructor with its nil object/interface
+storage. SSA zero aggregate constants materialize correctly shaped zero values;
+resetting an aggregate preserves existing subobject addresses. General finite-data
+proofs still exclude all interfaces; nonliteral nil-producing calls do not become
+literal inputs.
 The whole result remains abstract in behavioral IR; these facts do not turn a
 computed integer into a proved channel capacity or establish payload correctness.
 

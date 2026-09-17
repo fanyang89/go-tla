@@ -687,3 +687,15 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   193 semantic and 18 CLI/TLC cases. Strict gate and full race pass, snapshots unchanged.
 - Full self-input remains unsupported / 5 with no executable artifacts or TLC run.
   Initialization and the enforceable full input/environment profile remain unfinished.
+
+### Full-self continuation: nil-interface constant storage
+
+- Admit nil empty-interface storage only in bounded concrete SSA evaluation;
+  retain boxing, invocation, assertion, external-memory and nonliteral-input refusals.
+  Keep general finite-data type rules unchanged and materialize SSA zero aggregates
+  with value-copy/alias-preserving reset semantics.
+- Prove the real go/doc ast.NewIdent initializer and compare its fields with native
+  Go; recheck ownership when consuming cached constructor proofs.
+- Five new TLC cases bring totals to 198 semantic and 18 CLI/TLC cases. Strict gate
+  and full race pass with unchanged snapshots. Initializer refusals fall to 231;
+  the full self-input still returns unsupported / 5 with diagnostic-only artifacts.

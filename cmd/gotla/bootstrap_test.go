@@ -119,6 +119,15 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if !statisticsProof {
 		t.Fatal("actual Statistics value-copy proof missing")
 	}
+	identProof := false
+	for _, d := range r.Diagnostics {
+		if d.Code == "constant-data-call" && d.File == "go/doc/exports.go" && d.Line > 0 && strings.Contains(d.Message, "go/ast.NewIdent;") {
+			identProof = true
+		}
+	}
+	if !identProof {
+		t.Fatal("actual ast.NewIdent nil-interface storage proof missing")
+	}
 	exit := false
 	for _, transition := range model.Transitions {
 		if transition.SourcePosition.File != "cmd/gotla/main.go" {

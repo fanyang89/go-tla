@@ -61,7 +61,7 @@ func TestConstantReferenceStorage(t *testing.T) {
 		{"nil-deref", `type T struct{P *int};func build(n int)*T{p:=new(T);*p.P=n;return p}`, false},
 		{"shared-pointer", `var shared int;type T struct{P *int};func build(n int)*T{p:=&T{&shared};*p.P=n;return p}`, false},
 		{"callback", `type T struct{F func()};func build(n int)*T{return new(T)}`, false},
-		{"interface", `type T struct{V any};func build(n int)*T{return new(T)}`, false},
+		{"boxed-interface", `type T struct{V any};func build(n int)*T{return &T{V:n}}`, false},
 		{"channel", `type T struct{C chan int};func build(n int)*T{return new(T)}`, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

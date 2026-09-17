@@ -119,6 +119,20 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if !statisticsProof {
 		t.Fatal("actual Statistics value-copy proof missing")
 	}
+	exit := false
+	for _, transition := range model.Transitions {
+		if transition.SourcePosition.File != "cmd/gotla/main.go" {
+			continue
+		}
+		for _, effect := range transition.Effects {
+			if effect.Kind == behavior.Exit {
+				exit = true
+			}
+		}
+	}
+	if !exit {
+		t.Fatal("actual CLI program-exit instruction missing")
+	}
 	// Require a diagnostic in our own entry point, not merely a dependency load error.
 	for _, d := range r.Diagnostics {
 		if d.Severity == "error" && strings.HasPrefix(d.File, "cmd/gotla/") && d.Line > 0 {

@@ -5,9 +5,23 @@ Paths and test names refer to the current implementation. Actual TLC tests are
 optional in a plain local test run but mandatory in the
 [strict gate](VERIFICATION.md#tests-and-required-ci-gate).
 
+## Immediate program exit
+
+`tests/exit_ir_test.go` uses an independent IR producer and eight actual TLC runs:
+main/worker exit, skipped cleanup and exit within a cleanup helper pass; prior and
+competing synchronization faults remain counterexamples; blocking before exit and
+removing a worker's Exit instruction deadlock. JSON round trips, standalone-effect,
+terminal-destination and unused-field refusals exercise the IR boundary.
+`internal/lowering/exit_test.go` separately checks actual `os.Exit` source lowering,
+helper/worker control, retained argument effects, skipped cleanup, current graph,
+signature and slice corruption, and refusal to drop `os` initialization. User-named
+Exit functions and pure-call trust cannot impersonate/override program termination.
+The real CLI refusal regression requires its source-located Exit instruction.
+These are not full-program TLC checks of a program importing `os`.
+
 ## Production-component bootstrap
 
-Current total: **185 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **193 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 

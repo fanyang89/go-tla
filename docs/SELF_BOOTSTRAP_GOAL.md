@@ -338,3 +338,37 @@ returned/dynamic callback and object identities, runtime synchronization primiti
 I/O/context/process lifecycle semantics and an enforceable finite input/environment
 profile. These are implementation tasks, not permission to weaken the acceptance
 contract or treat additional component fixtures as completion.
+
+## Immediate program exit prerequisite
+
+The actual `cmd/gotla/main.go:112` call now consumes the explicit `os.Exit(int)`
+operation and emits Exit instructions in the diagnostic IR. It is not classified
+as pure and cannot be overridden by trusted-call options. Current signature,
+call-graph target and argument-slice facts are rechecked. Ordinary process exit
+terminates all modeled processes and skips outstanding cleanup; status values
+remain abstract, argument effects remain scheduled, and Go test's panic-on-exit
+interception is outside this declared domain.
+
+The IR requires standalone Exit effects targeting the issuing process's terminal.
+The backend stops all processes and pending offers without clearing synchronization
+faults or releasing resources. Eight independent IR/TLC cases cover main/worker
+exit, skipped/deferred cleanup, prior/competing faults, blocking before exit, and
+removing the worker's exit (deadlock). Separate actual-source lowering tests cover
+helper/worker control, argument effects, user-name collisions, trusted-call overrides,
+and stale graph/signature/slice facts. They explicitly retain the whole-program
+refusal caused by `os` initialization: isolated function tests are not full-program
+TLC evidence. The real CLI regression requires its own source-located Exit effect.
+
+Strict gate and full race pass with unchanged snapshots: **193 semantic TLC and
+18 CLI/TLC cases**, zero skips/failures. Local evidence is under
+`$HOME/tmp/pi/gotla-self-bootstrap-exit/` (`gate.log`, `race.log`, focused tests,
+and `cli/{result,model}.json`). A diagnostic inspection initially tried iterating a
+JSON null effects list; that inspection was corrected, not an analysis/checker failure.
+
+The actual self-check is still **unsupported / 5**, listing only `model.json` and
+not invoking TLC. Remaining diagnostics include 232 initializer, 67 loop, 46
+exception-control, 148 unknown-effect, 272 identity, 70 unsafe, 356 receive-loop,
+230 sync-method, 9 topology, 9 defer and 1 channel-field-alias errors. The reduction
+of one exception and two unknown-effect diagnostics is not completion evidence.
+All full-goal acceptance boxes remain unproven; finite environment enforcement,
+dependency effects and the executable whole-self model still require implementation.

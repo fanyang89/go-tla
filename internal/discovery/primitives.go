@@ -11,6 +11,7 @@ type Primitive struct {
 	Kind     behavior.EffectKind
 	Resource ssa.Value
 	Delta    ssa.Value
+	Status   ssa.Value // Exit code: evaluate its expression, but abstract its value.
 }
 
 func SyncType(t types.Type) string {
@@ -39,6 +40,13 @@ func Recognize(i ssa.Instruction) (Primitive, bool) {
 			return Primitive{Kind: behavior.CloseChannel, Resource: c.Args[0]}, true
 		}
 		f := c.StaticCallee()
+		if f != nil && f.Pkg != nil && f.Pkg.Pkg.Path() == "os" && f.Name() == "Exit" &&
+			f.Signature.Recv() == nil && f.Signature.Params().Len() == 1 &&
+			f.Signature.Results().Len() == 0 && !f.Signature.Variadic() &&
+			types.Identical(f.Signature.Params().At(0).Type(), types.Typ[types.Int]) &&
+			len(c.Args) == 1 && types.Identical(c.Args[0].Type(), types.Typ[types.Int]) {
+			return Primitive{Kind: behavior.Exit, Status: c.Args[0]}, true
+		}
 		if f == nil || f.Signature.Recv() == nil || len(c.Args) == 0 {
 			break
 		}

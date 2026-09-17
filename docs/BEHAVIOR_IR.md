@@ -61,6 +61,12 @@ provenance with the IR. A valid IR header is not a completed verification result
 - `Spawn` activates a declared dormant instance at entry. A worker's terminal
   does not terminate other processes. Main reaching its explicit terminal ends
   the whole program; blocked workers afterward are not whole-program deadlock.
+- `Exit` immediately terminates the whole program, even when issued by a worker.
+  It is a standalone effect with no resource/process/variable/value payload and
+  must target the issuing process's terminal. It bypasses cleanup, stops all
+  processes and cancels pending offers without releasing locks, draining channels,
+  or clearing previously reached faults. Exit codes are outside this IR's domain.
+  It is an additive capability: older strict consumers reject the unknown effect.
 - Buffered `Send` needs space; `Receive` needs data or closure. Closed buffered
   channels can drain, and closed empty receives complete. Nil sends/receives block.
   Sending to a closed channel and closing a nil/already-closed channel are errors.

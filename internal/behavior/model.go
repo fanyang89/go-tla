@@ -102,6 +102,7 @@ const (
 type EffectKind string
 
 const (
+	Exit                EffectKind = "Exit" // Immediate whole-program termination; no cleanup.
 	Spawn               EffectKind = "Spawn"
 	Send                EffectKind = "Send"
 	Receive             EffectKind = "Receive"

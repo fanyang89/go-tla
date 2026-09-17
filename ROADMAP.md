@@ -674,3 +674,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   transformation comparisons, strict gate and race pass. Self-input remains unsupported:
   67 loop refusals, with additional underlying effects now exposed by expansion.
   Evidence and remaining requirements: docs/SELF_BOOTSTRAP_GOAL.md.
+
+### Full-self continuation: immediate program exit
+
+- Add an explicit backend-independent Exit instruction and ordinary-process
+  `os.Exit(int)` semantics, not an ignored/pure library call. Preserve argument
+  effects and stop every process without running remaining cleanup.
+- Consume current signature, call graph and data-slice facts; check standalone
+  terminal-only IR exits and prevent trusted-call overrides.
+- The real CLI refusal model contains its source-located Exit instruction. Eight
+  independent IR/TLC cases plus source-lowering/corruption tests pass; totals are
+  193 semantic and 18 CLI/TLC cases. Strict gate and full race pass, snapshots unchanged.
+- Full self-input remains unsupported / 5 with no executable artifacts or TLC run.
+  Initialization and the enforceable full input/environment profile remain unfinished.

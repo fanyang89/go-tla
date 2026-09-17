@@ -248,6 +248,10 @@ func Validate(m *Model) error {
 			resource, process, variable, value := false, false, false, false
 			kind := ""
 			switch e.Kind {
+			case Exit:
+				if len(t.Effects) != 1 || t.Destination != p.Terminal {
+					return fmt.Errorf("Exit must be standalone and target its process terminal")
+				}
 			case Send, Receive, CloseChannel:
 				kind, resource = "channel", true
 				if e.Kind == Receive && e.Variable != "" {

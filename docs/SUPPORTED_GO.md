@@ -15,12 +15,25 @@ This guide describes implemented behavior, not the target in
 These are extraction outcomes, not TLC results. In particular, a precisely modeled
 program may deadlock. Successful extraction does not mean successful verification.
 
+## Program exit boundary
+
+`os.Exit` is an explicit standard-library operation, not a trusted pure-call
+exemption. Discovery checks its package/function/signature; consumption rechecks
+that identity, the current call graph and retained argument operands. It models
+ordinary process execution, excluding Go test's panic-on-exit interception.
+Unknown dependency initialization (including `os` initialization) still refuses
+whole-program emission. Supporting this instruction alone does not make a program
+importing `os` executable by the analyzer. Direct deferred/dynamic exit targets are
+not newly supported; an otherwise supported source-defined cleanup helper may
+contain a direct exit. No deferred cleanup runs after that exit.
+
 ## Supported patterns and limits
 
 | Go pattern | Current treatment |
 |---|---|
 | One main package, direct nonrecursive helper calls | Supported bodies are lowered in the caller's process |
 | `go worker(ch)` / statically bound closure | One statically known process per reachable spawn context |
+| Direct `os.Exit(int)` calls | Immediate whole-program exit, including from a worker or source helper; no deferred cleanup; argument effects retained, status abstract |
 | `for range N` / `for _ = range N` | Main-module constant integer range; no live index, nested loops or branch statements; at most 16 iterations |
 | `make(chan T)` / constant capacity | Supported; capacity must be in 0..1024 |
 | Send / receive / close | Supported, including nil blocking, closed-channel receive and synchronization errors |

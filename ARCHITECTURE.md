@@ -120,7 +120,7 @@ capabilities, provenance and naming guarantees. Full trace decoding is not imple
 Guards are structured `true`, `choice`, `equal`, conjunction, and select-default
 predicates, not expression strings in TLA syntax. Effects include `Spawn`, `Send`,
 `Receive`, `CloseChannel`, `Lock`, `Unlock`, `WaitGroupAdd/Done/Wait`,
-`AssignAbstractState`, and `Assert`. A select's communication and index assignment
+`AssignAbstractState`, `Assert`, and whole-program `Exit`. A select's communication and index assignment
 are one atomic transition. `choiceGroup` associates communication alternatives with
 their default guard. The backend rejects unknown effects/guards instead of ignoring
 extensions. General shared-state and arbitrary assertion backends are not implemented.
@@ -160,8 +160,12 @@ extensions. General shared-state and arbitrary assertion backends are not implem
   prior Wait on the group. Concurrent enrollment and reuse are rejected, so a
   counter suffices without pretending to model waiter generations. All control is
   acyclic at counter-changing sites, so the finite number of Add effects bounds counters.
-* Main return terminates all goroutines, as in Go. Only main termination enables
-  terminal stuttering. While main is active, no enabled action means a TLC deadlock.
+* Main return terminates all goroutines, as in Go. Explicit `Exit` from any process
+  also terminates the whole program immediately, bypassing all cleanup. Direct
+  ordinary-process `os.Exit(int)` calls consume current signature/graph/slice facts;
+  status values are abstract, not argument effects. Dependency initialization is
+  not exempted. Either form of whole-program termination enables terminal
+  stuttering. While main is active, no enabled action means a TLC deadlock.
   No fairness or starvation/liveness property is asserted by the MVP.
 
 ## Exact receive completion status

@@ -186,7 +186,19 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 			}
 			e := edge{to: next, guard: behavior.Guard{Kind: behavior.True}, pos: b.position(i.Pos(), f)}
 			if p, ok := plan.Discovery.Primitives[i]; ok {
-				if g, ok := i.(*ssa.Go); ok {
+				if p.Kind == behavior.Exit {
+					call, ok := i.(*ssa.Call)
+					if !ok || !b.consumeExit(fr, call) {
+						continue
+					}
+					for _, proc := range b.m.Processes {
+						if proc.ID == process {
+							e.to = proc.Terminal
+							break
+						}
+					}
+					e.effects = []behavior.Effect{{Kind: behavior.Exit}}
+				} else if g, ok := i.(*ssa.Go); ok {
 					entry := plan.Entries[g]
 					callee, bind := b.callee(fr, g, entry.Callee, g.Pos())
 					if callee != nil {

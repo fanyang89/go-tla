@@ -233,6 +233,8 @@ func (o *output) single(t behavior.Transition) {
 	for _, e := range t.Effects {
 		r := quote(e.Resource)
 		switch e.Kind {
+		case behavior.Exit:
+			fault = "fault"
 		case behavior.Send:
 			if e.Resource == "nil" {
 				return
@@ -295,11 +297,15 @@ func (o *output) single(t behavior.Transition) {
 func (o *output) updates(ts []behavior.Transition, changes map[string]string) {
 	pc := []string{}
 	waiting := []string{}
+	exiting := false
 	local := []string{}
 	for _, t := range ts {
 		waiting = append(waiting, fmt.Sprintf("![%s] = FALSE", quote(t.Process)))
 		pc = append(pc, fmt.Sprintf("![%s] = %s", quote(t.Process), quote(t.Destination)))
 		for _, e := range t.Effects {
+			if e.Kind == behavior.Exit {
+				exiting = true
+			}
 			if e.Kind == behavior.Spawn {
 				for _, p := range o.m.Processes {
 					if p.ID == e.Process {
@@ -319,6 +325,13 @@ func (o *output) updates(ts []behavior.Transition, changes map[string]string) {
 				}
 				local = append(local, fmt.Sprintf("![%s] = %s", quote(e.Variable), status))
 			}
+		}
+	}
+	if exiting {
+		pc, waiting = nil, nil
+		for _, process := range o.m.Processes {
+			pc = append(pc, fmt.Sprintf("![%s] = %s", quote(process.ID), quote(process.Terminal)))
+			waiting = append(waiting, fmt.Sprintf("![%s] = FALSE", quote(process.ID)))
 		}
 	}
 	changes["pc"] = "[pc EXCEPT " + strings.Join(pc, ", ") + "]"

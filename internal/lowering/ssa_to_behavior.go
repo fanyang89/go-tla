@@ -124,6 +124,10 @@ func (b *builder) process(f *ssa.Function, bindings map[ssa.Value]string, id str
 	b.nodes[entry].edges = []edge{{to: start, guard: behavior.Guard{Kind: behavior.True}}}
 }
 func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, process, end string) string {
+	if b.effects.ProveFiniteData(f) {
+		b.recordFiniteData(f)
+		return end
+	}
 	if !b.recordLoops(f) {
 		return end
 	}
@@ -275,6 +279,9 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 					b.m.Assumptions = append(b.m.Assumptions, "Trusted call: "+name)
 				} else if summary.Kind == effects.Builtin { // discarded sequential computation
 				} else {
+					if summary.Kind == effects.FiniteData && !b.consumeFiniteData(fr, x, summary.Callee) {
+						continue
+					}
 					callee, bind := b.callee(fr, x, summary.Callee, x.Pos())
 					if callee != nil {
 						if discovery.SyncTypeReceiver(callee) != "" {

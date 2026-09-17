@@ -63,6 +63,10 @@ func (b *builder) initializers() {
 		if f.Pkg != nil && summarized[f.Pkg.Pkg.Path()] {
 			return
 		}
+		if b.effects.ProveFiniteData(f) {
+			b.recordFiniteData(f)
+			return
+		}
 		if !b.recordLoops(f) {
 			return
 		}
@@ -92,8 +96,12 @@ func (b *builder) initializers() {
 						check(callee)
 					} else if !b.effects.Call(x).IsPure() {
 						b.diag("error", "initializer", "effectful or unknown package initialization unsupported", i.Pos())
-					} else if summary := b.effects.Call(x); summary.Kind == effects.Pure {
-						check(summary.Callee)
+					} else if summary := b.effects.Call(x); summary.Kind == effects.Pure || summary.Kind == effects.FiniteData {
+						if summary.Kind == effects.FiniteData && !b.effects.ProveFiniteData(summary.Callee) {
+							b.diag("error", "finite-data-contract", "initializer computation lacks a current body/graph proof", x.Pos())
+						} else {
+							check(summary.Callee)
+						}
 					}
 				}
 			}

@@ -36,7 +36,7 @@ functional correctness or arbitrary Go executions.
 The full-CLI regression currently correctly requires unsupported / 5 and no executable
 artifacts. No completion is claimed until every item above has direct evidence.
 
-## Current implementation work
+## Static deferred helpers (first full-self prerequisite)
 
 Static, source-defined deferred helper/closure bodies are now analyzed at normal-return
 cleanup. Registration captures identities; LIFO cleanup enters the actual helper
@@ -67,7 +67,40 @@ caught a stale rejection expectation for an empty literal defer; that case is no
 positive TLC test and unresolved dynamic defers remain refusal tests. These results
 are local-only; no hosted pass is claimed.
 
-Remaining work includes dependency initialization/effects, non-receive control loops,
+## Length-bounded data computation (latest continuation)
+
+An independent typed-SSA proof now summarizes externally read-only helpers whose
+cycles advance an ordinary int index by one against a stable slice/string length.
+Each cycle must cross the dominating comparison header; changed bounds/counters,
+wraparound-prone forms and bypass cycles fail. All transitive call bodies and data
+types are checked without trusting external functions. Only proved private data
+writes are admitted. Shared writes, I/O, synchronization, unsafe code, unknown calls
+and recursion are not summarized. No iteration is unrolled or silently truncated.
+
+Lowering rechecks the body/call graph and consumes retained caller operands; argument
+evaluation still occurs. Scalar results remain abstract, including branch guards.
+Initializer helpers use the same proof. Search/type budgets fail closed. The original
+concurrency-loop and resource-identity restrictions remain in force.
+
+This proof is consumed on the **actual own-source** `toolinfo.fromBuildInfo` and
+`(*behavior.Model).HasErrors` methods in the complete CLI probe. There are two
+source-attributed `finite-data-loop` diagnostics; unsupported-loop diagnostics drop
+from 83 to 73, with other categories unchanged. This is a concrete proof result for
+these helper computations, not a whole-program coverage percentage. Full self-input
+still returns unsupported / 5 and emits no executable TLA+.
+
+Eight new TLC cases cover computation in critical sections, abstract predicate
+counterexamples, initialization, blocked argument evaluation, deferred computations,
+wrappers and value-struct copies. Tests also reject changing/narrow/overshooting
+counters, cycles bypassing progress, shared writes, unknown callbacks and missing
+cached graph/slice evidence. A unit test loads the real behavior package rather
+than copying HasErrors. Full strict gate and race tests pass with zero skips/failures:
+**139 semantic TLC and 18 TLC CLI cases**, plus the refusal regressions. Original
+snapshots are unchanged. Evidence is in
+`$HOME/tmp/pi/gotla-self-bootstrap-finite-data/{unit.log,focused.log,gate.log,race.log,self-check.log,cli/}`.
+No hosted pass or full-self completion is claimed.
+
+Remaining work includes dependency initialization/effects, other non-receive control loops,
 returned/dynamic callback and object identities, runtime synchronization primitives,
 I/O/context/process lifecycle semantics and an enforceable finite input/environment
 profile. These are implementation tasks, not permission to weaken the acceptance

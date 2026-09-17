@@ -30,6 +30,10 @@ The passes are explicit functions/packages:
    receiver/capture bindings prevent a candidate edge from becoming an alias guess.
 3. `effects.Analyzer` caches call-effect summaries using graph-checked SSA call
    targets. Unresolved/unsafe/recursive effects never receive pure summaries.
+   A separate finite-data proof checks monotone length-bounded SSA cycles, all
+   transitive call bodies, data-only types and private writes. Lowering freshly
+   rechecks this proof and caller operands before eliding computation; returned
+   data remains abstract and argument evaluation is preserved.
    Explicit trusted contracts remain visible; purity guides slicing, not permission
    to bypass reachable-body validation.
 4. `discovery.Scan` returns typed primitives, roots and goroutine sites. Cached

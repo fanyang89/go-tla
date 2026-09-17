@@ -201,11 +201,45 @@ source is type-checked first, then equivalent Go is expanded in memory and reloa
 before SSA construction; files on disk and import initialization are preserved.
 Proofs and refusal reasons are reported. Original source locations are retained.
 
-Classic `for i := ...` loops, live integer-range indices, nonconstant integer
-ranges and returned/dynamic resource topology remain unsupported. Channel ranges
-have a separate, non-unrolling acceptance rule below.
+Classic `for i := ...` loops, live indices and nonconstant integer ranges are not
+accepted by the expansion rule. Entirely read-only length-bounded computations have
+the separate proof below; channel ranges have their own non-unrolling rule.
+Returned/dynamic resource topology remains unsupported.
 Synchronization/alias rules still apply inside accepted loops, including WaitGroup's
 single enrollment phase and the per-invocation defer-site limit after expansion.
+
+### Length-bounded data computations
+
+A cyclic helper can be summarized without unrolling when its **entire transitive
+body** is externally read-only and provably finite. Examples include scanning a
+slice for a scalar condition or summing its elements. This does not infer the result;
+returned data stays abstract, including when it controls synchronization.
+
+Each cyclic SSA component needs a dominating header testing an ordinary Go int index
+against the length of a stable slice/string header. Every back edge advances exactly
+one from zero (or SSA range's pre-increment form starting at -1); the false branch
+exits. Removing the header must break every cycle. This proves progress without
+integer-wraparound on a taken back edge and without guessing a runtime trip count.
+Changed indices/bounds, narrow counters, inclusive tests, bypass subcycles and nested
+unproved cycles are refused. The concurrency expansion limit remains unchanged.
+
+All instructions and transitively called bodies are checked. Data types may be
+recursive read-only graphs, but not synchronization objects, channels, interfaces,
+callbacks or unsafe pointers. Private plain-data copies/initialization retain the
+existing complete-address-use proof; writes to caller/global data, container mutation,
+printing, unknown/unavailable calls, recursion, defers, panic and synchronization
+cannot acquire this summary. User trust flags cannot supply missing proof facts.
+The existing implicit-panic/resource-exhaustion domain assumption still applies.
+
+Cached call summaries are rechecked against the current graph and body; lowering also
+consumes the retained caller operands. Argument evaluation is not erased. Initialization
+helpers use the same proof, not a package allowlist. Proof search is capped at 4096
+function/instruction steps, with type-graph budgets of 256 nodes and depth 64;
+exhaustion refuses the proof. `finite-data-loop` diagnostics identify accepted source
+functions. A proof failure does not turn an otherwise unsupported loop into a model.
+
+This is a termination/effect proof for data computation, not a payload, memory-race,
+whole-program termination or analyzer-correctness theorem.
 
 ### Receive completion status
 
@@ -391,7 +425,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 
 | Pattern | Why it is currently rejected |
 |---|---|
-| Unproved/indexed/nested loop forms; recursion | Only documented integer expansion or close-driven receive SCCs discharge their respective proof obligations |
+| Unproved/indexed/nested loop forms; recursion | Only documented integer expansion, finite read-only computations or close-driven receive SCCs discharge their respective proof obligations |
 | Dynamic or over-budget spawning/channel topology | Only static sites, including accepted integer-range expansions, have finite identities |
 | Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |

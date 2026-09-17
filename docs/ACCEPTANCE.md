@@ -61,7 +61,8 @@ TLC does not prove arithmetic or general shared-memory race freedom.
 The delivered hosted baseline included **95 semantic TLC cases and 11 CLI integration
 cases** (four workflow cases plus seven component cases), with zero skips.
 The later bootstrap constructor, exact-interface and immutable-field increments
-plus static deferred helpers bring the local semantic total to **131**.
+plus static deferred helpers and finite data computations bring the local semantic
+total to **139**.
 Production bootstrap adds seven CLI/TLC
 cases, bringing that total to **18**. The five logger cases cover immediate/released
 output passes and missing Unlock, blocked cancellation/output deadlocks, with eight
@@ -96,7 +97,8 @@ proof. The owner configured the remote, pushed the initial revision, and authori
 subsequent repair pushes. No PR, workflow dispatch or branch-protection change was
 made here.
 
-Latest full-self prerequisite logs: `$HOME/tmp/pi/gotla-self-bootstrap-defer/{gate,race}.log`.
+Latest full-self prerequisite logs: `$HOME/tmp/pi/gotla-self-bootstrap-finite-data/{gate,race}.log`.
+Deferred-helper logs remain under `gotla-self-bootstrap-defer/`.
 Source-capture logs remain under `$HOME/tmp/pi/gotla-bootstrap-capture/`.
 The full objective remains unfulfilled; see [SELF_BOOTSTRAP_GOAL.md](SELF_BOOTSTRAP_GOAL.md).
 Earlier logger logs remain under `gotla-bootstrap-production/` and `gotla-bootstrap-io/`.

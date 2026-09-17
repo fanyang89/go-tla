@@ -12,7 +12,7 @@ have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **131 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current totals: **139 semantic TLC cases and 18 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -63,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 131 positive/negative semantic TLC cases and 18
+itself. It is separate from the 139 positive/negative semantic TLC cases and 18
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -369,6 +369,17 @@ returns unsupported / 5, with no executable self-model. Diagnostic growth is not
 regression-count or coverage metric. The strict local gate and full race suite pass
 with 131 semantic and 18 CLI/TLC cases and unchanged original snapshots. See
 [the full-goal audit](SELF_BOOTSTRAP_GOAL.md) for concrete remaining gates and evidence.
+
+## Full-self prerequisite: finite read-only data loops
+
+Length-bounded externally read-only computations now have a typed-SSA termination
+and effect proof, without unrolling or trusted-call shortcuts. It is consumed on the
+actual `toolinfo.fromBuildInfo` and `behavior.Model.HasErrors` bodies during CLI
+self-analysis. Results remain abstract; argument effects are still evaluated. Eight
+new real TLC cases and graph/slice/budget/refusal tests bring totals to 139 semantic
+and 18 CLI/TLC cases. Strict gate and full race tests pass with unchanged snapshots.
+The complete CLI still returns unsupported / 5: this is not the full goal. Details
+and evidence are in [SELF_BOOTSTRAP_GOAL.md](SELF_BOOTSTRAP_GOAL.md).
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **131 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **139 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -31,6 +31,17 @@ nil/empty inputs, independent copied storage, replacement and concurrent capture
 frontend/race regressions exercise its real integration. The production leaf uses
 slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
 bootstrap document for that dependency change's scope and evidence.
+
+## Full-self prerequisite: finite data computation
+
+`TestTLCFiniteDataComputations` adds eight actual TLC cases: critical-section
+computation, abstract predicate deadlock/synchronization errors, initializer helpers,
+blocked argument evaluation, deferred computation, wrappers and private value copies.
+`TestFiniteDataProof` and `TestFiniteDataRefusals` reject counter resets/overflow forms,
+changed bounds, progress-bypassing cycles, external writes and hidden effects.
+Graph/slice and budget tests enforce consumed proof contracts.
+`TestActualModelHasErrorsFiniteData` loads the actual production source. The full CLI
+probe consumes this proof and toolinfo.fromBuildInfo's proof but remains unsupported.
 
 ## Full-self prerequisite: static deferred helper bodies
 

@@ -554,3 +554,22 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   returns unsupported / 5 on deeper effects/identity/control. No executable full
   self-model or hosted pass is claimed. Continue toward the full goal; do not mark
   it complete from these prerequisite results.
+
+### Full-self continuation: length-bounded data computation
+
+- Added an independent typed-SSA termination/effect proof for externally read-only
+  helpers with monotone ordinary-int counters bounded by stable slice/string lengths.
+  Every cycle crosses the comparison header; transitive effects and data types are
+  checked. Private data writes retain their isolation proof. No unrolling, guessed
+  trip count or external trust replaces a missing proof.
+- Current graph/body and retained caller operands are rechecked during lowering.
+  Argument effects and abstract return predicates remain modeled. Counter resets,
+  narrow/overshooting indices, changing bounds, hidden cycles/effects and exhausted
+  proof budgets fail closed.
+- The real CLI self-input consumes proofs for `toolinfo.fromBuildInfo` and
+  `behavior.Model.HasErrors`; loop refusals drop from 83 to 73. The CLI is still
+  unsupported / 5 and has no executable full self-model.
+- Eight new actual TLC cases bring totals to 139 semantic and 18 CLI/TLC cases.
+  Strict pinned gate and full race suite pass with zero skips/failures; original
+  snapshots are unchanged. See [SELF_BOOTSTRAP_GOAL.md](docs/SELF_BOOTSTRAP_GOAL.md)
+  for the continuing goal, remaining gates and local-only evidence.

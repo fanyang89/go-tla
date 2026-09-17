@@ -12,12 +12,13 @@ import (
 type Kind string
 
 const (
-	Unknown   Kind = "unknown"
-	Primitive Kind = "synchronization"
-	Trusted   Kind = "trusted"
-	Builtin   Kind = "sequential-builtin"
-	Pure      Kind = "local-computation"
-	Inspect   Kind = "inspect-body"
+	Unknown    Kind = "unknown"
+	Primitive  Kind = "synchronization"
+	Trusted    Kind = "trusted"
+	Builtin    Kind = "sequential-builtin"
+	Pure       Kind = "local-computation"
+	Inspect    Kind = "inspect-body"
+	FiniteData Kind = "finite-read-only-computation"
 )
 
 type Summary struct {
@@ -25,7 +26,9 @@ type Summary struct {
 	Callee *ssa.Function
 }
 
-func (s Summary) IsPure() bool { return s.Kind == Trusted || s.Kind == Builtin || s.Kind == Pure }
+func (s Summary) IsPure() bool {
+	return s.Kind == Trusted || s.Kind == Builtin || s.Kind == Pure || s.Kind == FiniteData
+}
 
 type Analyzer struct {
 	program  *frontend.Program
@@ -33,10 +36,11 @@ type Analyzer struct {
 	calls    map[ssa.CallInstruction]Summary
 	pure     map[*ssa.Function]bool
 	visiting map[*ssa.Function]bool
+	finite   map[*ssa.Function]bool
 }
 
 func New(p *frontend.Program, trusted []string) *Analyzer {
-	a := &Analyzer{program: p, trusted: map[string]bool{}, calls: map[ssa.CallInstruction]Summary{}, pure: map[*ssa.Function]bool{}, visiting: map[*ssa.Function]bool{}}
+	a := &Analyzer{program: p, trusted: map[string]bool{}, calls: map[ssa.CallInstruction]Summary{}, pure: map[*ssa.Function]bool{}, visiting: map[*ssa.Function]bool{}, finite: map[*ssa.Function]bool{}}
 	for _, name := range trusted {
 		a.trusted[name] = true
 	}
@@ -65,6 +69,15 @@ func (a *Analyzer) Call(site ssa.CallInstruction) Summary {
 		s.Kind = Inspect
 		if a.pureFunction(s.Callee) {
 			s.Kind = Pure
+		} else {
+			proved, known := a.finite[s.Callee]
+			if !known {
+				proved = a.ProveFiniteData(s.Callee)
+				a.finite[s.Callee] = proved
+			}
+			if proved {
+				s.Kind = FiniteData
+			}
 		}
 	}
 	a.calls[site] = s

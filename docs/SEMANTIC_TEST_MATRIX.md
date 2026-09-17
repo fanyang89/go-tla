@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **173 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **178 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -31,6 +31,14 @@ nil/empty inputs, independent copied storage, replacement and concurrent capture
 frontend/race regressions exercise its real integration. The production leaf uses
 slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
 bootstrap document for that dependency change's scope and evidence.
+
+## Full-self prerequisite: read-only value copies
+
+Five `TestTLCFiniteDataCopies` cases cover slice/pointer copies, local header reset,
+abstract-result synchronization errors and blocked argument evaluation. Refusal tests
+reject borrowed storage writes and forbidden type graphs. Fresh-consumption mutation
+redirects a private copy into a global. The actual Model.Statistics source is proved,
+and full CLI refusal regression requires its proof record without claiming self-TLC.
 
 ## Full-self prerequisite: open global channels
 

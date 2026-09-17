@@ -251,7 +251,7 @@ Strict gate and race tests pass with **166 semantic TLC and 18 CLI/TLC cases**, 
 skips/failures and unchanged snapshots. Evidence is under
 `$HOME/tmp/pi/gotla-self-bootstrap-references/`. Results remain local, not hosted.
 
-## Fixed-capacity global I/O semaphores (latest increment)
+## Fixed-capacity global I/O semaphores
 
 A shared creation/identity proof now supports initially open global channels made
 with a constant capacity and a unique direct store. Complete SSA address inventory
@@ -276,6 +276,31 @@ initializer-send refusal remains. Initial focused/gate failures are retained.
 Strict gate and full race pass: **173 semantic TLC and 18 CLI/TLC cases**, zero
 skips/failures and unchanged original snapshots. Evidence is under
 `$HOME/tmp/pi/gotla-self-bootstrap-open-globals/`; it remains local-only.
+
+## Read-only reference-bearing value copies (latest increment)
+
+The finite-data proof now permits private value copies containing ordinary data
+references. The destination must still trace to this invocation's allocation with
+complete address-use proof. Tracing stops at a load: ownership of a copied slice
+header or pointer never grants ownership of its backing array or pointee. Resetting
+local headers is allowed; caller-header writes, publication and writes through
+borrowed references remain rejected. Full type, operation, transitive body and loop
+proofs remain mandatory; the general constructor rule is not widened.
+
+The actual Model.Statistics method is now proved, alongside HasErrors. The full CLI
+regression requires its source-located proof. Unsupported-loop diagnostics fall from
+73 to **70** (repeated call sites), while initializer refusals remain **232** and
+other counts are unchanged. The CLI still returns unsupported / 5, emitting no
+executable self-model and running no TLC self-check.
+
+Five new TLC cases cover slice/pointer value copies, private-header reset, abstract
+result synchronization errors and blocking argument evaluation. Unit/refusal tests
+cover shared backing arrays/pointees/headers, transitive writes, publication and
+forbidden type graphs. A cached-proof mutation redirects a private copy store into
+a global and must fail fresh consumption. Native Statistics tests remain unchanged.
+Strict gate and full race pass with **178 semantic TLC and 18 CLI/TLC cases**, zero
+skips/failures and unchanged snapshots. Evidence is local under
+`$HOME/tmp/pi/gotla-self-bootstrap-value-copies/`.
 
 Remaining work includes other dependency initialization/effects, other non-receive control loops,
 returned/dynamic callback and object identities, runtime synchronization primitives,

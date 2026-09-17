@@ -653,3 +653,13 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
 - Seven new TLC cases bring totals to 173 semantic and 18 CLI/TLC cases; strict gate
   and race pass. Full self-input still refuses with 232 initializer diagnostics.
   Evidence and remaining requirements: docs/SELF_BOOTSTRAP_GOAL.md.
+
+### Full-self continuation: read-only reference-bearing value copies
+
+- Permit local value copies inside the full finite-data proof, without extending
+  ownership through loaded references or widening general constructor purity.
+- Prove the real Model.Statistics helper; keep borrowed writes/publication rejected
+  and invalidate cached proofs when a private store becomes a global store.
+- Five new TLC cases bring totals to 178 semantic and 18 CLI/TLC cases. Strict gate
+  and race pass. Full self-input still refuses: 70 loop and 232 initializer diagnostics.
+  Evidence and remaining requirements: docs/SELF_BOOTSTRAP_GOAL.md.

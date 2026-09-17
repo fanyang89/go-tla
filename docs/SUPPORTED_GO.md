@@ -230,9 +230,15 @@ unproved cycles are refused. The concurrency expansion limit remains unchanged.
 
 All instructions and transitively called bodies are checked. Data types may be
 recursive read-only graphs, but not synchronization objects, channels, interfaces,
-callbacks or unsafe pointers. Private plain-data copies/initialization retain the
-existing complete-address-use proof, including fixed-array elements; writes to
-caller/global data, mutation through unproved container aliases,
+callbacks or unsafe pointers. Private value copies/initialization retain the
+complete-address-use proof, including fixed-array elements. Local copies may contain
+data references: copying a slice header or pointer does not write its backing storage
+or pointee. Ownership tracing stops at a load, so a copied reference cannot grant
+ownership of borrowed memory. Resetting a private header is permitted; modifying a
+caller element/header, a loaded pointer's pointee or a slice's backing array is not.
+This widened type rule is only used inside the complete finite-data proof, not as a
+general constructor-purity exemption. It proves the actual Model.Statistics helper.
+Writes to caller/global data, mutation through unproved container aliases,
 printing, unknown/unavailable calls, recursion, defers, panic and synchronization
 cannot acquire this summary. User trust flags cannot supply missing proof facts.
 The existing implicit-panic/resource-exhaustion domain assumption still applies.

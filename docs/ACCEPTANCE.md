@@ -62,7 +62,7 @@ The delivered hosted baseline included **95 semantic TLC cases and 11 CLI integr
 cases** (four workflow cases plus seven component cases), with zero skips.
 The later bootstrap constructor, exact-interface and immutable-field increments
 plus static deferred helpers, finite data computations, pre-closed global channels
-and private-array/literal-input/owned-reference computations plus open globals bring the local semantic total to **173**.
+and data-computation, owned-reference/value-copy and open-global proofs bring the local semantic total to **178**.
 Production bootstrap adds seven CLI/TLC
 cases, bringing that total to **18**. The five logger cases cover immediate/released
 output passes and missing Unlock, blocked cancellation/output deadlocks, with eight
@@ -97,7 +97,8 @@ proof. The owner configured the remote, pushed the initial revision, and authori
 subsequent repair pushes. No PR, workflow dispatch or branch-protection change was
 made here.
 
-Latest full-self prerequisite logs: `$HOME/tmp/pi/gotla-self-bootstrap-open-globals/{gate,race}.log`.
+Latest full-self prerequisite logs: `$HOME/tmp/pi/gotla-self-bootstrap-value-copies/{gate,race}.log`.
+Open-global logs remain under `gotla-self-bootstrap-open-globals/`.
 Owned-reference logs remain under `gotla-self-bootstrap-references/`.
 Literal-input logs remain under `gotla-self-bootstrap-constant-data/`.
 Private-array logs remain under `gotla-self-bootstrap-array-data/`.

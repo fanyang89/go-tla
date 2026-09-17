@@ -75,7 +75,7 @@ func (p *finiteDataProof) function(f *ssa.Function) bool {
 				// SSA may materialize a range's value-struct copy on the stack.
 				// Any writes still require complete private-address-use proof.
 			case *ssa.Store:
-				if !privateDataStore(x, private) {
+				if !privateFiniteDataStore(x, private) {
 					return false
 				}
 			case *ssa.Call:

@@ -101,6 +101,15 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 			t.Fatalf("actual global I/O semaphore proof/state missing: %s", file)
 		}
 	}
+	statisticsProof := false
+	for _, d := range r.Diagnostics {
+		if d.Code == "finite-data-loop" && d.File == "internal/behavior/statistics.go" && d.Line > 0 && strings.Contains(d.Message, ").Statistics;") {
+			statisticsProof = true
+		}
+	}
+	if !statisticsProof {
+		t.Fatal("actual Statistics value-copy proof missing")
+	}
 	// Require a diagnostic in our own entry point, not merely a dependency load error.
 	for _, d := range r.Diagnostics {
 		if d.Severity == "error" && strings.HasPrefix(d.File, "cmd/gotla/") && d.Line > 0 {

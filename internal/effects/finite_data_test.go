@@ -97,22 +97,25 @@ func TestFiniteDataProofBudget(t *testing.T) {
 	}
 }
 
-func TestActualModelHasErrorsFiniteData(t *testing.T) {
+func TestActualModelFiniteData(t *testing.T) {
 	loaded, err := frontend.Load("../..", "./internal/behavior")
 	if err != nil {
 		t.Fatal(err)
 	}
 	p := frontend.BuildSSA(loaded)
 	frontend.BuildCallGraph(p)
+	found := map[string]bool{}
 	for f := range p.Calls.Nodes {
-		if f != nil && f.Name() == "HasErrors" && f.Pkg != nil && f.Pkg.Pkg.Path() == "github.com/fanmi/go-tla/internal/behavior" {
+		if f != nil && (f.Name() == "HasErrors" || f.Name() == "Statistics") && f.Pkg != nil && f.Pkg.Pkg.Path() == "github.com/fanmi/go-tla/internal/behavior" {
 			if !New(p, nil).ProveFiniteData(f) {
 				var dump bytes.Buffer
 				f.WriteTo(&dump)
 				t.Fatalf("actual production helper not proved:\n%s", &dump)
 			}
-			return
+			found[f.Name()] = true
 		}
 	}
-	t.Fatal("production HasErrors method not found")
+	if len(found) != 2 {
+		t.Fatal("production HasErrors/Statistics methods not found")
+	}
 }

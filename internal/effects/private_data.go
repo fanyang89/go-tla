@@ -27,6 +27,19 @@ func readOnlyBuiltin(c *ssa.CallCommon) bool {
 // effect: Go's escape analysis also marks pointers returned to callers as heap.
 // Publication through anything other than a return is conservatively rejected.
 func privateDataStore(store *ssa.Store, cache map[*ssa.Alloc]bool) bool {
+	return privateTypedStore(store, cache, false)
+}
+
+// privateFiniteDataStore permits local value copies of reference-bearing data.
+// Walking the destination stops at a load: writing a copied pointer's pointee or
+// a copied slice's backing array cannot inherit ownership of its local header.
+// Its caller additionally checks every operand and transitive operation using
+// the finite-data whitelist; this is not a general constructor purity rule.
+func privateFiniteDataStore(store *ssa.Store, cache map[*ssa.Alloc]bool) bool {
+	return privateTypedStore(store, cache, true)
+}
+
+func privateTypedStore(store *ssa.Store, cache map[*ssa.Alloc]bool, referenceData bool) bool {
 	addr := store.Addr
 walk:
 	for {
@@ -47,7 +60,15 @@ walk:
 		return proved
 	}
 	p, ok := root.Type().Underlying().(*types.Pointer)
-	proved := ok && plainData(p.Elem(), 0) && privateAddressUses(root, map[ssa.Value]bool{})
+	data := false
+	if ok {
+		if referenceData {
+			data = finiteDataType(p.Elem(), 0)
+		} else {
+			data = plainData(p.Elem(), 0)
+		}
+	}
+	proved := data && privateAddressUses(root, map[ssa.Value]bool{})
 	cache[root] = proved
 	return proved
 }

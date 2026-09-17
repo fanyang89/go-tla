@@ -2,17 +2,17 @@
 package frontend
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+
+	"github.com/fanmi/go-tla/internal/sourcecapture"
 	"golang.org/x/tools/go/callgraph"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
-	"sync"
 )
 
 type Program struct {
@@ -31,21 +31,18 @@ func Load(dir string, patterns ...string) (*Loaded, error) {
 }
 
 func LoadContext(ctx context.Context, dir string, patterns ...string) (*Loaded, error) {
-	sources := map[string][]byte{}
-	var mu sync.Mutex
+	sources := &sourcecapture.Collector{Files: make(map[string][]byte)}
 	config := &packages.Config{Mode: packages.LoadAllSyntax | packages.NeedModule, Dir: dir, Context: ctx}
 	config.ParseFile = func(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
-		mu.Lock()
-		sources[filename] = bytes.Clone(src)
-		mu.Unlock()
+		sources.Record(filename, src)
 		return parser.ParseFile(fset, filename, src, parser.ParseComments|parser.SkipObjectResolution)
 	}
 	ps, err := loadPackages(config, patterns...)
 	if err != nil {
 		return nil, err
 	}
-	overlay, proofs := normalizeLoops(ps, sources)
-	clear(sources)
+	overlay, proofs := normalizeLoops(ps, sources.Files)
+	clear(sources.Files)
 	if len(overlay) > 0 {
 		config.Overlay = overlay
 		config.ParseFile = nil

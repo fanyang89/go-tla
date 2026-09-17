@@ -517,3 +517,22 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   and re-entry refusal regressions. Original snapshots and production/analyzer
   semantics are unchanged. Evidence is in [BOOTSTRAP.md](docs/BOOTSTRAP.md).
   No new hosted pass or whole-program self-verification is claimed.
+
+### B2: production source-capture protocol — locally complete
+
+- Extracted `internal/sourcecapture.Collector.Record`; the real frontend ParseFile
+  callback invokes it before parsing. Lock/copy/map-store/unlock order is preserved,
+  and map consumption/clear remains after package loading completes.
+- Changed the leaf's copy dependency from bytes.Clone to slices.Clone, not an analyzer
+  exemption. The unchanged bytes dependency probe still refuses errors-package
+  initialization. Native tests cover nil/empty/content behavior, ownership,
+  replacement and concurrent records; capacity/retention are outside the contract.
+- Two finite callers pass TLC; removing only the actual Record Unlock deadlocks.
+  Both cases contain production source-located locking, with no trust flags. This
+  verifies the synchronization projection, not map/byte values or general race freedom.
+- The full pinned gate/race suites pass: 119 semantic and 18 TLC CLI cases, zero
+  skips/failures, original snapshots unchanged. Full CLI self-analysis is still
+  unsupported / 5. Evidence and dependency-change limits are in
+  [BOOTSTRAP.md](docs/BOOTSTRAP.md); no hosted pass is claimed for these changes.
+- Actual go/packages callback scheduling, parsing and context/process lifecycles
+  remain outside this finite capture harness.

@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **119 semantic TLC cases and 16 TLC CLI cases**, plus separate
+Current total: **119 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -23,6 +23,14 @@ production synchronization and explicit data abstractions. The test requires rea
 TLC evidence, source-located production effects/dispatches, no trust flags and a
 mutation isolated from the working tree. Native policy/concurrency tests and race
 checking remain separate. See [BOOTSTRAP.md](BOOTSTRAP.md) for exact scope/results.
+
+`TestCheckProductionSourceCapture` adds the actual frontend collector's two-caller
+pass and a missing-Unlock mutation deadlock. These models have no abstracted control
+predicates but do not verify map contents or byte-copy semantics. Native tests cover
+nil/empty inputs, independent copied storage, replacement and concurrent captures;
+frontend/race regressions exercise its real integration. The production leaf uses
+slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
+bootstrap document for that dependency change's scope and evidence.
 
 ## Bootstrap prerequisite: immutable callable fields
 

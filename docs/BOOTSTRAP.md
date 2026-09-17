@@ -2,13 +2,13 @@
 
 ## Current status
 
-**First production-component bootstrap achieved under a finite environment.**
-The real logger used by `checker.Run` is now `internal/boundedlog.Writer`.
-Its two-caller harness passes TLC; deleting its actual deferred Unlock produces a
-deadlock, as does a deliberately blocking cancellation environment. No trusted calls
-are used. The complete CLI still returns **unsupported / 5**.
+**Two production synchronization components now have finite-environment bootstrap.**
+The logger used by `checker.Run` and source collector used by `frontend.LoadContext`
+have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
+Logger blocking environments have additional checks. No trusted calls are used.
+The complete CLI still returns **unsupported / 5**.
 
-Current totals: **119 semantic TLC cases and 16 TLC CLI cases**, plus separate
+Current totals: **119 semantic TLC cases and 18 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -59,7 +59,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 119 positive/negative semantic TLC cases and 16
+itself. It is separate from the 119 positive/negative semantic TLC cases and 18
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -302,6 +302,54 @@ the two refusal regressions. Logs and real CLI artifacts are in
 CLI is still unsupported; neither production nor analyzer semantics changed in this
 environment-coverage increment.
 
+## Second production component: source capture
+
+`frontend.LoadContext` now calls `internal/sourcecapture.Collector.Record` from its
+actual ParseFile callback. The collector preserves the original order: lock, clone
+source bytes, store by filename, unlock. Parsing remains outside the lock. The
+frontend reads and clears the captured map after package loading returns, as before.
+The collector is not a replacement for `parser.ParseFile` or `go/packages`.
+
+One sequential dependency deliberately changed: the leaf uses **slices.Clone** in
+place of bytes.Clone. An isolated bytes.Clone capture probe was refused by the
+unchanged initializer checker because the bytes dependency brings in reflection
+initialization from `errors/wrap.go`. No initializer or unsafe check was waived.
+The production leaf actually uses slices.Clone; the model inspects that installed
+source and its ordinary builtin append, not a trusted or overlay replacement.
+Native tests compare nil/empty/content behavior with bytes.Clone, verify independent
+nonempty storage, replacement by filename and 64 concurrent captures. Slice capacity
+and empty-slice backing-storage retention are explicitly not part of the capture
+contract; this is not a claim of identical allocation behavior between the two APIs.
+
+`examples/bootstrap/sourcecapture/main.go` supplies two finite concurrent callers to
+this same production collector. `TestCheckProductionSourceCapture` adds two real
+CLI/TLC cases, requiring no trusted calls, source-located production Lock/Unlock
+effects, checked artifact hashes and source candidates for the mutant:
+
+| Source | Status / exit | Locations / transitions | Generated / distinct states |
+|---|---|---|---|
+| Production Collector.Record | passed / 0 | 18 / 19 | 97 / 51 |
+| Same source with only Unlock removed | deadlock / 3 | 16 / 19 | 39 / 23 |
+
+Both models have three processes, one mutex, one waitgroup, no channels and no
+abstracted control predicates. Zero predicates does **not** mean map contents, byte
+copying or general race freedom are verified: these remain sequential data outside
+the synchronization projection. The harness does not establish real package-loader
+callback scheduling, parsing semantics, error recovery or the full frontend lifecycle.
+A mutation runs only in an isolated temporary module; the real source is unchanged.
+The initial test expectation counted one direct Unlock transition per caller; the
+IR has normal and error alternatives. The corrected assertion checks both, and the
+failed first focused log is retained.
+
+The full pinned gate and race suite passed locally with zero skips/failures, including
+native frontend/loop normalization and capture tests. Original snapshots are unchanged.
+There are now **119 semantic TLC cases and 18 TLC CLI cases**, plus full-CLI/re-entry
+refusals. The repeated CLI probe remains unsupported / 5 with 240 initializer errors
+and unchanged other categories. No analyzer acceptance rule was broadened.
+Evidence: `$HOME/tmp/pi/gotla-bootstrap-capture/`, including the refused `probe-result`,
+`production`, `missing-unlock`, `cli`, `mutation.json`, `gate.log` and `race.log`.
+These results are local-only; bootstrap changes have no claimed hosted pass.
+
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 
 1. **Done:** keep the complete CLI self-input refusal test and its actionable diagnostics.
@@ -313,8 +361,9 @@ environment-coverage increment.
    Require a nonempty synchronization model, actual TLC outcomes and source evidence.
    This still does not prove file bytes, cancellation semantics outside the stated
    environment, or every possible caller.
-4. **Not done:** expand to the parser callback and runner lifecycle only with independent effect,
-   initialization and callback proofs. Full CLI self-verification remains a separate,
+4. **Source-capture protocol done; full callback/lifecycle not done:** expand beyond
+   the capture operation to actual parser/package-loader and runner lifecycles only
+   with independent effect, initialization and callback proofs. Full CLI self-verification remains a separate,
    much larger milestone involving context, processes, I/O and dynamic control.
 
 Even a successful future self-check would only establish the selected modeled

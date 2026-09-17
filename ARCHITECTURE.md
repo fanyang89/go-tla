@@ -16,6 +16,10 @@ The passes are explicit functions/packages:
 1. `frontend.Load` loads and type-checks the original packages. A restricted typed
    integer-range proof may produce in-memory Go overlays; these are reloaded and
    type-checked before SSA construction. On-disk source is never rewritten.
+   Concurrent ParseFile calls record copied input through `sourcecapture.Collector`;
+   parsing follows outside its lock, and normalization consumes its map after loading.
+   Its finite bootstrap harness checks the capture lock protocol, not loader scheduling
+   or map/byte contents (see [BOOTSTRAP.md](docs/BOOTSTRAP.md)).
 2. `frontend.BuildSSA` constructs Go SSA; `BuildCallGraph` builds the static call graph
    and refines exact local interface boxes to their declared concrete methods. Receiver
    adaptation, promotion and unknown interface sources are not guessed. Call-target

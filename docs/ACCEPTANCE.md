@@ -6,7 +6,14 @@ M1–M5 have local acceptance evidence for the documented restricted profile.
 This is not verification of arbitrary Go programs. The first hosted push run for
 `c265c49` [failed workflow validation](https://github.com/fanyang89/go-tla/actions/runs/35171701731):
 job-level `env` cannot reference `runner.temp`, so no verification job started.
-The local fix sets `TLC_JAR` in a shell step through `GITHUB_ENV` instead.
+The fix sets `TLC_JAR` in a shell step through `GITHUB_ENV` instead.
+The [next hosted run](https://github.com/fanyang89/go-tla/actions/runs/35172916256)
+started correctly but rejected an upstream-replaced TLC asset before testing.
+With owner approval, the pin now uses official release asset `569238611`, SHA256
+`066cd246d87a388dfde0f04c3b506007f4c0cb4708a5b5396f0552a005eb75b5`, verified
+against the upstream release API. The strict local gate and full race suite pass
+with this asset; original snapshots remain unchanged. Historical component timing
+and state measurements retain their original checker hash, not the refreshed one.
 Branch protection, release publication and remote CI success are not claimed.
 The remaining release gate is an actual successful hosted run against the delivered
 revision, with its log retained.
@@ -70,11 +77,12 @@ The strict script verifies the upstream pinned JAR checksum, requires Java/TLC,
 clears ambient `GOFLAGS`, refuses snapshot regeneration and compares golden files.
 Plain `go test ./...` without TLC is insufficient. The checked-in workflow invokes
 this strict script and archives its log, but configuration is not hosted execution
-proof. The owner configured the remote and pushed the initial revision. No assistant
-push, PR, workflow dispatch or branch-protection change was made here.
+proof. The owner configured the remote, pushed the initial revision, and authorized
+subsequent repair pushes. No PR, workflow dispatch or branch-protection change was
+made here.
 
-Latest local logs: `$HOME/tmp/pi/gotla-m5-counter-gate.log` and
-`$HOME/tmp/pi/gotla-m5-counter-race.log`. Machine-specific logs/artifacts are not
+Latest local logs: `${TMPDIR:-$HOME/tmp}/pi/gotla-tlc-refresh-gate.log` and
+`${TMPDIR:-$HOME/tmp}/pi/gotla-tlc-refresh-race.log`. Machine-specific logs/artifacts are not
 committed. Historical evidence and atomic revisions are tracked in [ROADMAP.md](../ROADMAP.md).
 
 ## Interpretation and deferred work

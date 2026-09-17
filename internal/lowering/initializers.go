@@ -112,6 +112,8 @@ func (b *builder) initializers() {
 							target = "unresolved interface method " + x.Common().Method.FullName()
 						}
 						b.diag("error", "initializer", "effectful or unknown package initialization unsupported: "+target+" (in "+f.String()+")", i.Pos())
+					} else if summary.Kind == effects.ConstantData {
+						b.consumeConstantData(nil, x)
 					} else if summary.Kind == effects.Pure || summary.Kind == effects.FiniteData {
 						if summary.Kind == effects.FiniteData && !b.effects.ProveFiniteData(summary.Callee) {
 							b.diag("error", "finite-data-contract", "initializer computation lacks a current body/graph proof", x.Pos())

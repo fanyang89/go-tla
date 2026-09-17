@@ -279,6 +279,8 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 					b.diag("warning", "trusted-call", "trusted total side-effect-free contract for "+name+"; result is abstract", x.Pos())
 					b.m.Assumptions = append(b.m.Assumptions, "Trusted call: "+name)
 				} else if summary.Kind == effects.Builtin { // discarded sequential computation
+				} else if summary.Kind == effects.ConstantData {
+					b.consumeConstantData(fr, x)
 				} else {
 					if summary.Kind == effects.FiniteData && !b.consumeFiniteData(fr, x, summary.Callee) {
 						continue

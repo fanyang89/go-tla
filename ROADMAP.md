@@ -615,3 +615,20 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
 - This prerequisite does not remove an actual CLI refusal yet: self-input still
   returns unsupported / 5 with 238 initializer refusals. Library constructors needing
   copy, reflection or explicit panic-path reasoning are not silently admitted.
+
+### Full-self continuation: literal-input SSA data calls
+
+- Added bounded evaluation of selected SSA paths for constant-argument data calls.
+  All writes target owned storage; actual transitive bodies, validation branches,
+  copies and value/alias semantics are checked. Unknown/external operations and
+  exhausted limits refuse the proof. No application code is run on the host and
+  no function-name allowlist replaces body inspection.
+- Lowering rechecks arguments, graph/body and caller slices. The real base64 alphabet
+  initializers now pass this proof, reducing self-input initializer refusals to 236.
+  Native table comparison and invalid alphabet mutations verify the actual source.
+  Full self-input remains unsupported / 5; no executable whole-self model exists.
+- Nine new TLC cases bring totals to 163 semantic and 18 CLI/TLC cases. Updated
+  general-rule refusals whose empty/literal inputs now have per-call proofs, preserving
+  external/nonempty refusal coverage and adding positive cases. Strict gate and race
+  tests pass with zero skips/failures and unchanged snapshots. Evidence and remaining
+  full-goal obligations remain in SELF_BOOTSTRAP_GOAL.md.

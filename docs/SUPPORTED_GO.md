@@ -246,6 +246,38 @@ functions. A proof failure does not turn an otherwise unsupported loop into a mo
 This is a termination/effect proof for data computation, not a payload, memory-race,
 whole-program termination or analyzer-correctness theorem.
 
+### Literal-input data invocation proofs
+
+A separate bounded SSA evaluator can prove one call whose arguments are SSA constants
+(including typed nil). This is **not** a callee-wide purity annotation. It reads the
+actual current call graph and bodies, takes only exactly determined branches, and
+requires a normal return. It never calls application/native functions on the host or
+uses a library-name allowlist. User trust flags do not provide evaluator facts.
+
+Supported computation includes bounded-size bool/integer/string values, private
+plain-data structs/arrays, owned array-slice views, field/index access, copies,
+selected scalar operations and transitively inspected source calls. Go target type
+sizes bound integer values. Overflow, conversion wrap, unsupported operators, unknown
+values, external memory/global access, recursion, defer/recover, executed panic, unsafe operations,
+I/O and synchronization refuse this proof. Entirely unchosen effects do not execute:
+for example a literal nil slice proves a range has no iterations. Unknown/nonliteral
+arguments cannot borrow that proof.
+
+Aggregate assignment preserves existing element/field addresses; Go value copies
+are independent and overlapping `copy` snapshots its source. Only evaluator-owned
+storage can be written. Private views and fully inspected helper calls can therefore
+pass this rule even when the general private-address-use rule refuses them.
+The whole result remains abstract in behavioral IR; these facts do not turn a
+computed integer into a proved channel capacity or establish payload correctness.
+
+Limits are 100000 evaluation steps, 65536 allocated/cloned cells, 4096 elements per
+allocated array, 256 KiB strings, allocation depth 64 and call depth 32. Exhaustion
+fails, never truncates execution. Fresh lowering rechecks the call's literal arguments,
+body and graph; regular calls also consume retained caller operands. Initializer
+calls follow the same rule. `constant-data-call` records name the proved invocation.
+The installed base64.NewEncoding source is proved for its two valid standard-library
+alphabet literals; invalid length, duplicate and newline mutations are refused.
+
 ### Pre-closed global channels
 
 A narrow package-initialization pattern is supported without omitting its effects:
@@ -417,7 +449,8 @@ may also fill private arrays without unrolling the computation.
 Scalars include immutable strings. Array elements are recursively checked, so arrays
 of pointers, interfaces, channels or synchronization state cannot gain this proof.
 Pointer/interface/slice/map/function/channel fields and synchronization/atomic state
-do not qualify. Slicing an array creates an unproved alias and remains refused. Pointer phis, closure
+do not qualify. Slicing an array creates an unproved alias for this general rule; the separate
+literal-input evaluator can prove owned slices and inspected helper calls. Pointer phis, closure
 captures, address conversions, publication and even read-only address-taking helper
 calls remain outside this deliberately narrow proof.
 
@@ -470,7 +503,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 | Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |
 | Unproved callbacks/interface dispatch | Only exact local boxing or the documented immutable-field proof is admitted; ambiguous fields, parameters and other dynamic sources remain unsupported |
-| Unproved `defer`, explicit panic/recover | Normal-return Unlock/Done and static source helpers are modeled; no dynamic targets or panic unwinding |
+| Unproved `defer`, executed/unproved panic or recover | Normal-return cleanup is modeled; literal-input evaluation may prove a panic path unchosen, but no panic unwinding is modeled |
 | RWMutex and other unsupported synchronization APIs | No corresponding implemented semantics |
 | WaitGroup reuse or concurrent positive enrollment | Counter-only representation does not model waiter generations |
 | Reachable unsafe pointer operations, including inspected helpers/init | Can bypass modeled resource identity/state |

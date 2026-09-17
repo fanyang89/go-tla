@@ -12,13 +12,14 @@ import (
 type Kind string
 
 const (
-	Unknown    Kind = "unknown"
-	Primitive  Kind = "synchronization"
-	Trusted    Kind = "trusted"
-	Builtin    Kind = "sequential-builtin"
-	Pure       Kind = "local-computation"
-	Inspect    Kind = "inspect-body"
-	FiniteData Kind = "finite-read-only-computation"
+	Unknown      Kind = "unknown"
+	Primitive    Kind = "synchronization"
+	Trusted      Kind = "trusted"
+	Builtin      Kind = "sequential-builtin"
+	Pure         Kind = "local-computation"
+	Inspect      Kind = "inspect-body"
+	FiniteData   Kind = "finite-read-only-computation"
+	ConstantData Kind = "literal-input-data-computation"
 )
 
 type Summary struct {
@@ -27,7 +28,7 @@ type Summary struct {
 }
 
 func (s Summary) IsPure() bool {
-	return s.Kind == Trusted || s.Kind == Builtin || s.Kind == Pure || s.Kind == FiniteData
+	return s.Kind == Trusted || s.Kind == Builtin || s.Kind == Pure || s.Kind == FiniteData || s.Kind == ConstantData
 }
 
 type Analyzer struct {
@@ -77,6 +78,8 @@ func (a *Analyzer) Call(site ssa.CallInstruction) Summary {
 			}
 			if proved {
 				s.Kind = FiniteData
+			} else if call, ok := site.(*ssa.Call); ok && a.ProveConstantDataCall(call) {
+				s.Kind = ConstantData
 			}
 		}
 	}

@@ -34,7 +34,7 @@ func TestPrivateDataInitializerRefusals(t *testing.T) {
 		"shared-copy":      `p:=&record{value:1};copy(buffer,"x");return p`,
 		"shared-delete":    `p:=&record{value:1};delete(ledger,1);return p`,
 		"shared-clear":     `p:=&record{value:1};clear(buffer);return p`,
-		"escaping-address": `p:=&record{value:1};observe(p);return p`,
+		"escaping-address": `p:=&record{value:1};externalAddress(p);return p`,
 		"goroutine":        `p:=&record{value:1};go observe(p);return p`,
 		"defer":            `p:=&record{value:1};defer observe(p);return p`,
 		"unknown-call":     `p:=&record{value:1};external();return p`,
@@ -48,6 +48,7 @@ var ledger=map[int]int{}
 var buffer=make([]byte,2)
 func observe(p *record)int{return p.value}
 func external()
+func externalAddress(p *record)
 func construct()*record{`+body+`}
 var data=construct()
 func main(){ch:=make(chan int,1);ch<-1;<-ch}`)

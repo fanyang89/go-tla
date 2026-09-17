@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **154 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **163 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -31,6 +31,18 @@ nil/empty inputs, independent copied storage, replacement and concurrent capture
 frontend/race regressions exercise its real integration. The production leaf uses
 slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
 bootstrap document for that dependency change's scope and evidence.
+
+## Full-self prerequisite: literal-input data calls
+
+`TestTLCConstantDataCalls` adds nine actual TLC cases: initialization validation,
+private helpers/views/copies, checked loops, runtime calls, abstract result errors,
+unchosen effects and zero-iteration effects. Refusal/consumption tests reject changed
+arguments/body/graph/slice evidence, executed panic, shared/unknown memory and budget
+exhaustion. Evaluator tests cover value copies, alias-preserving aggregate reset,
+overlapping copy, simultaneous phi values and integer/bounds failures.
+`TestActualBase64EncodingConstantData` loads actual source, compares tables with native
+Go and rejects invalid alphabet mutations. Full CLI refusal regression now requires
+the two real initializer proofs but still requires no executable whole-self model.
 
 ## Data-table prerequisite: private arrays
 

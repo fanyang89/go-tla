@@ -66,6 +66,15 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if !closed || proofs != 2 {
 		t.Fatal("actual context.closedchan initialization proof/state missing")
 	}
+	constructors := 0
+	for _, d := range r.Diagnostics {
+		if d.Code == "constant-data-call" && strings.Contains(d.Message, "encoding/base64.NewEncoding") && d.File == "encoding/base64/base64.go" && d.Line > 0 {
+			constructors++
+		}
+	}
+	if constructors != 2 {
+		t.Fatal("actual base64 literal-input constructor proofs missing")
+	}
 	// Require a diagnostic in our own entry point, not merely a dependency load error.
 	for _, d := range r.Diagnostics {
 		if d.Severity == "error" && strings.HasPrefix(d.File, "cmd/gotla/") && d.Line > 0 {

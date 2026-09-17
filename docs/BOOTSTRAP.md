@@ -12,7 +12,7 @@ have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **154 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current totals: **163 semantic TLC cases and 18 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -63,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 154 positive/negative semantic TLC cases and 18
+itself. It is separate from the 163 positive/negative semantic TLC cases and 18
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -399,6 +399,17 @@ effects remain refused. Seven more TLC cases bring totals to 154 semantic and 18
 CLI/TLC cases; the strict gate and race suite pass. This increment does not yet remove
 an actual self-input refusal: complete CLI analysis remains unsupported / 5 with 238
 initializer errors. See the full-self contract for the remaining constructor obstacles.
+
+## Full-self prerequisite: literal-input invocation evaluation
+
+A bounded SSA evaluator now proves the two actual base64.NewEncoding initializer
+calls, including private array copies and selected validation paths, without a name
+allowlist. It only admits fully evaluated data-only invocations and rechecks the
+current source/graph/argument proof. Results remain abstract in behavioral IR.
+Nine new TLC cases bring totals to 163 semantic and 18 CLI/TLC cases; strict gate and
+race tests pass. Native array comparison and malformed alphabet mutations test the
+real constructor. The full CLI still returns unsupported / 5 with 236 initialization
+refusals. See SELF_BOOTSTRAP_GOAL.md for evidence and remaining requirements.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

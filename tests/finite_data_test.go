@@ -38,11 +38,11 @@ func TestTLCFiniteDataComputations(t *testing.T) {
 func TestFiniteDataRefusals(t *testing.T) {
 	for name, source := range map[string]string{
 		"writes":           `package main;func scan(s []int){for i:=range s{s[i]=1}};func main(){scan([]int{0})}`,
-		"print":            `package main;func scan(s []int){for _,v:=range s{println(v)}};func main(){scan(nil)}`,
+		"print":            `package main;func scan(s []int){for _,v:=range s{println(v)}};func main(){scan([]int{1})}`,
 		"callback":         `package main;func scan(s []int,f func()){for range s{f()}};func main(){scan(nil,func(){})}`,
 		"synchronization":  `package main;import "sync";func scan(s []int,m *sync.Mutex){for range s{m.Lock();m.Unlock()}};func main(){var m sync.Mutex;scan(nil,&m)}`,
-		"counter-reset":    `package main;func scan(s []int){for i:=0;i<len(s);i++{i=0}};func main(){scan(nil)}`,
-		"narrow-counter":   `package main;func scan(s []int){for i:=int8(0);int(i)<len(s);i++{}};func main(){scan(nil)}`,
+		"counter-reset":    `package main;func scan(s []int){for i:=0;i<len(s);i++{i=0}};func main(){scan([]int{1,2})}`,
+		"narrow-counter":   `package main;func scan(s []int){for i:=int8(0);int(i)<len(s);i++{}};func main(){scan(make([]int,128))}`,
 		"dynamic-capacity": `package main;` + dataScan + `func main(){c:=make(chan int,scan(nil));c<-1}`,
 	} {
 		t.Run(name, func(t *testing.T) {

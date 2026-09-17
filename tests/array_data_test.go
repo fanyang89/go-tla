@@ -30,7 +30,7 @@ func TestPrivateArrayDataRefusals(t *testing.T) {
 	for name, decl := range map[string]string{
 		"shared":             `var shared [128]int;func build()*[128]int{p:=new([128]int);for i:=range p{shared[i]=i};return p}`,
 		"published":          `var shared *[128]int;func build()*[128]int{p:=new([128]int);shared=p;for i:=range p{p[i]=i};return p}`,
-		"slice-alias":        `func build()*[2]int{p:=new([2]int);s:=p[:];s[0]=1;return p}`,
+		"slice-alias":        `var shared []int;func build()*[2]int{p:=new([2]int);s:=p[:];shared=s;s[0]=1;return p}`,
 		"reference-elements": `func build()*[2]*int{return &[2]*int{new(1),new(2)}}`,
 		"channel-elements":   `func build()*[2]chan int{p:=new([2]chan int);p[0]=make(chan int);return p}`,
 		"counter-reset":      `func build()*[128]int{p:=new([128]int);for i:=0;i<128;i++{i=0;p[i]=i};return p}`,

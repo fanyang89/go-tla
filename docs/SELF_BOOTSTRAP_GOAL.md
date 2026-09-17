@@ -155,7 +155,7 @@ Local evidence:
 `$HOME/tmp/pi/gotla-self-bootstrap-closed-globals/{focused.log,gate.log,race.log,self-check.log,cli/}`.
 This is one real dependency effect modeled, not full bootstrap or a hosted CI claim.
 
-## Private fixed-array computation (latest continuation)
+## Private fixed-array computation
 
 Private-data proofs now follow nested field/array-index addresses to a fresh allocation
 and inspect every address use. Fixed-array elements must themselves be plain data;
@@ -185,6 +185,45 @@ explicit validation panics: private-array support alone does not authorize that 
 No additional production initializer is claimed accepted by this increment.
 Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-array-data/` contains focused/gate/race
 logs, both failed gate attempts, self-check output and diagnostic CLI artifacts.
+
+## Literal-input SSA evaluation (latest continuation)
+
+A bounded evaluator now proves individual data calls with SSA-constant arguments.
+It executes the actual selected SSA path, including transitive source calls, private
+array/struct storage, owned slice views, overlapping copies and validation branches.
+It never executes application/native callees on the host. Unknown/external memory,
+unsafe operations, executed synchronization/I/O/panic, recursion and exhausted limits
+fail closed. Arithmetic wrap and unsupported operations are refused rather than
+approximated. Aggregate assignments retain existing field/element aliases; value
+copies remain independent and phi updates are simultaneous.
+
+This is a call-site proof, not a library allowlist or whole-function purity claim.
+Fresh consumption checks arguments, current graph/body and retained caller operands;
+returned values still stay abstract in the behavioral model. Limits and the supported
+operation set are documented in SUPPORTED_GO.md. Other checked effect rules remain
+independent alternatives; failed evaluation never produces a truncated proof.
+
+The actual two encoding/base64.NewEncoding initialization calls now have source-located
+proof records. A unit loads the installed constructor, compares its evaluated encoding
+and decoding arrays with native Go, and refuses malformed/duplicate/newline alphabet
+mutations. The complete CLI regression requires these two proofs while still requiring
+unsupported / 5 and no executable self-artifacts. Initializer refusals fall from 238
+to **236**; other refusal counts are unchanged. WithPadding/global-value propagation,
+reflection factories and other dependency effects remain unproved.
+
+Nine actual TLC cases cover validated initialization, owned copies/views/helpers,
+normal calls, abstract result errors and provably unchosen/zero-iteration effects.
+Additional tests invalidate arguments, graph, body and retained slices and exercise
+alias-preserving resets, phi swaps, bounds/overflow, unknown/shared operations and
+budget refusal. Earlier general-proof refusal tests now use genuinely external or
+nonempty/unknown inputs where the new per-invocation rule cannot discharge them;
+the newly proved cases have positive tests. Initial focused/gate failures are retained.
+Corrected full gate and race tests pass: **163 semantic TLC and 18 CLI/TLC cases**,
+zero skips/failures and unchanged original snapshots.
+
+Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-constant-data/` contains unit/focused/gate/
+race logs, initial failed attempts, self-check output and diagnostic CLI artifacts.
+Full bootstrap remains unproved; no hosted pass is claimed.
 
 Remaining work includes other dependency initialization/effects, other non-receive control loops,
 returned/dynamic callback and object identities, runtime synchronization primitives,

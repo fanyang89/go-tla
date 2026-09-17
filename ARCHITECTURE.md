@@ -34,6 +34,10 @@ The passes are explicit functions/packages:
    transitive call bodies, data-only types and private writes. Lowering freshly
    rechecks this proof and caller operands before eliding computation; returned
    data remains abstract and argument evaluation is preserved.
+   Literal-input invocation proofs separately evaluate a bounded selected SSA path
+   with owned private memory. They recheck arguments, graph/body and caller slices;
+   unchosen effects are excluded by concrete facts, not callee-wide trust. No host
+   application code is executed. Returned values still remain abstract in IR.
    Explicit trusted contracts remain visible; purity guides slicing, not permission
    to bypass reachable-body validation.
 4. `discovery.Scan` returns typed primitives, roots and goroutine sites. Cached

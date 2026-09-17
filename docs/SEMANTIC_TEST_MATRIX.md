@@ -75,7 +75,11 @@ closed-initial, prior-blocking and closed-send behavior. Native capacities at 1/
 agree. Current source/signature/graph/slice/profile and hidden-setter mutations refuse;
 other initialization is not exempted. Profiled full-self analysis still refuses.
 
-Current total: **212 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Builtin output now refuses instead of being silently elided. Two more semantic TLC
+cases admit a shadowed source-function name and a literal-proved zero-output execution.
+Executed output, builtin trust overrides and stale cached summaries are refusal tests.
+
+Current total: **214 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 

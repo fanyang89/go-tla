@@ -756,6 +756,15 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self I/O boundary audit
+
+- Stop silently eliding Go print/println: require an explicit output model, refresh
+  initializer/call checks, and reject builtin trust-name overrides.
+- Native/CLI/cached-proof tests preserve refusal and argument effects. Two TLC cases
+  cover shadowed source names and proved zero executions; totals 214 + 20.
+- Strict gate/full race pass with unchanged snapshots. This soundness correction
+  does not complete the missing I/O profile or full self-bootstrap proof.
+
 ### Full-self continuation: basic-scalar formatting
 
 - Admit source/graph-checked fmt.Sprintf only for nil or nonescaping local scalar

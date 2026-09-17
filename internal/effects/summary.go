@@ -134,13 +134,22 @@ func (a *Analyzer) pureFunction(f *ssa.Function) (pure bool) {
 	}
 	return true
 }
+
+// OutputBuiltin identifies language-level output, never a same-named source function.
+func OutputBuiltin(site ssa.CallInstruction) string {
+	if builtin, ok := site.Common().Value.(*ssa.Builtin); ok && (builtin.Name() == "print" || builtin.Name() == "println") {
+		return builtin.Name()
+	}
+	return ""
+}
+
 func sequentialBuiltin(c *ssa.CallCommon) bool {
 	b, ok := c.Value.(*ssa.Builtin)
 	if !ok {
 		return false
 	}
 	switch b.Name() {
-	case "len", "cap", "append", "copy", "delete", "clear", "min", "max", "complex", "real", "imag", "print", "println":
+	case "len", "cap", "append", "copy", "delete", "clear", "min", "max", "complex", "real", "imag":
 		return true
 	}
 	return false

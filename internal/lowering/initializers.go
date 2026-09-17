@@ -95,6 +95,10 @@ func (b *builder) initializers() {
 						b.diag("error", "initializer", "synchronization object copying in initializer unsupported", i.Pos())
 					}
 				case *ssa.Call:
+					if name := effects.OutputBuiltin(x); name != "" {
+						b.diag("error", "initializer", "output in package initialization unsupported: builtin "+name+" (in "+f.String()+")", x.Pos())
+						continue
+					}
 					if b.consumeRuntimeQuery(nil, x) {
 						continue
 					}

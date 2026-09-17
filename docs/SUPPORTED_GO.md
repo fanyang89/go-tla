@@ -396,6 +396,18 @@ reflection initialization is still checked and may refuse whole-program emission
 Native tests compare all 104 actual x/tools AST edge initializers plus direct-field
 layout/presence/tag results. Five direct encoding/json TypeFor initializers also pass.
 
+### Builtin output is not data-only computation
+
+The Go builtins `print` and `println` perform implementation-dependent output.
+They are not silently dropped as sequential computations: ordinary calls report
+`output-effects`, and initializer output is refused. Helper, goroutine and deferred
+forms also cannot authorize executable emission. Fresh call checks prevent a cached
+sequential-builtin summary from hiding current output. `-trust-call print,println`
+cannot override builtin semantics; source functions shadowing those names are distinct.
+Argument evaluation (including channel receives) remains represented in diagnostic IR.
+A literal-input proof that establishes zero executions of the output still qualifies;
+executed output requires an explicit I/O model, which is not yet provided here.
+
 ### Basic-scalar string formatting
 
 A source-bound operation model admits `fmt.Sprintf` only with unnamed basic scalar
@@ -662,8 +674,9 @@ calls remain outside this deliberately narrow proof.
 
 Every call and store in the helper is still checked. Shared writes, map updates,
 and potentially mutating/I/O builtins (`append`, `copy`, `delete`, `clear`, `print`,
-`println`) prevent a local-computation summary; existing ordinary communication
-lowering of sequential builtins is unchanged. No helper/package name is trusted by
+`println`) prevent a local-computation summary. Ordinary lowering also refuses
+`print`/`println` without an explicit I/O model; non-output sequential builtins retain
+their existing treatment. No helper/package name is trusted by
 this rule. It proves the body of the installed `errors.New`, but **does not** waive
 other initialization or dynamic-call restrictions when importing `errors`.
 

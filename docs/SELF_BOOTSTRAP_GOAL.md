@@ -632,3 +632,22 @@ The strict gate/full race pass without skips/failures and with unchanged snapsho
 TLC totals remain **212 semantic + 20 CLI**: there is no new positive full-fmt-import
 or full-self TLC result. Self-analysis still returns **unsupported / 5**, with only
 a diagnostic model. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-format/`.
+
+## Fail-closed builtin output boundary
+
+Audit found that ordinary Go `print`/`println` calls were classified as sequential
+builtins and dropped even though they perform output. That exception is removed:
+executed builtin output now refuses emission pending an explicit I/O model. Current
+call/initializer checks also reject output behind stale cached builtin summaries.
+Named source functions are distinguished from actual SSA builtins; trust-call names
+cannot override the language operation. Blocking argument evaluation is retained.
+
+Native execution demonstrates observable output. CLI tests verify unsupported / 5,
+no TLC invocation, and stale executable-artifact removal with and without attempted
+builtin trust. Direct/helper/initializer/constructor/go/defer cases refuse. Two TLC
+cases preserve legitimate source-name shadowing and literal-proved zero executions;
+executed output is not treated as a no-op. Totals: **214 semantic + 20 CLI/TLC**.
+Strict gate/full race pass without skips/failures or snapshot changes.
+
+This closes a soundness gap; it does not provide the missing finite I/O environment
+or a self-bootstrap proof. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-builtin-output/`.

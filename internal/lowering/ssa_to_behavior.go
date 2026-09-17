@@ -304,6 +304,10 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 				}
 				continue
 			case *ssa.Call:
+				if name := effects.OutputBuiltin(x); name != "" {
+					b.diag("error", "output-effects", "builtin "+name+" performs output; an explicit I/O model is required", x.Pos())
+					break
+				}
 				if b.consumeRuntimeQuery(fr, x) {
 					break
 				}

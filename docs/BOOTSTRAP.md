@@ -12,7 +12,7 @@ have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **212 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Current totals: **214 semantic TLC cases and 20 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -63,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 212 positive/negative semantic TLC cases and 20
+itself. It is separate from the 214 positive/negative semantic TLC cases and 20
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -497,6 +497,11 @@ Standard formatting/private-pool correctness is assumed, not implementation-prov
 Actual self-input consumes 25 such sites but still has no executable self-model.
 Native boundary and stale-proof tests pass; no whole-fmt-import TLC proof is claimed.
 Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-format/`.
+
+An I/O audit also removed silent elision of Go print/println. Executed builtin output
+now refuses unless an explicit I/O model exists, including after cached-summary changes;
+argument effects remain. Native/CLI refusal tests and two legitimate non-output TLC
+cases bring current totals to 214 + 20. This does not establish the full I/O environment.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

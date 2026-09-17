@@ -65,7 +65,8 @@ plus static deferred helpers, finite data computations, pre-closed global channe
 and data-computation, owned-reference/value-copy, open-global and array-range proofs,
 plus eight independent program-exit IR/TLC cases and five nil-interface storage
 cases, three bounded string-concatenation cases and five rotated range-over-len
-cases, plus six conditional startup-GOMAXPROCS cases, bring the local semantic total to **212**. Actual project lexical regexes are
+cases, six conditional startup-GOMAXPROCS cases and two builtin-output boundary
+cases bring the local semantic total to **214**. Actual project lexical regexes are
 replaced by equivalent ASCII scanning, with differential/fuzz oracles and unchanged
 TLC outcome classification. Rotated finite-data proofs preserve constant expansion
 limits and refuse altered progress/entry/bounds or stale consumed evidence.

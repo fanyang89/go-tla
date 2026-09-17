@@ -34,6 +34,7 @@ func runContext(ctx context.Context, args []string, stdout, stderr io.Writer) in
 	fs.SetOutput(stderr)
 	out := fs.String("out", ".", "output directory")
 	trust := fs.String("trust-call", "", "comma-separated total, side-effect-free call contracts")
+	runtimeProcs := fs.Int("runtime-procs", 0, "conditional startup GOMAXPROCS profile (linux/amd64, 1..1024; 0 unspecified)")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
 	}
@@ -41,9 +42,13 @@ func runContext(ctx context.Context, args []string, stdout, stderr io.Writer) in
 		fmt.Fprintln(stderr, "a Go package pattern is required")
 		return 2
 	}
-	opts := lowering.Options{}
+	opts := lowering.Options{RuntimeProcs: *runtimeProcs}
 	if *trust != "" {
 		opts.TrustedCalls = strings.Split(*trust, ",")
+	}
+	if err := opts.Validate(); err != nil {
+		fmt.Fprintln(stderr, "error:", err)
+		return 2
 	}
 	var dir *artifact.Directory
 	if args[0] == "analyze" {

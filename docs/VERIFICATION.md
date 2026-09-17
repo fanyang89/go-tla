@@ -111,6 +111,12 @@ of the checker itself. False trusted-call contracts invalidate conclusions.
   extraction outcome. `tlcExitCode` is the checker process exit, not gotla's exit.
 - Source directory, package patterns, trusted calls, assumptions, and diagnostics.
 - IR-size statistics and effective requested checker configuration.
+- Optional `runtimeProcs`: the explicit conditional target startup GOMAXPROCS value,
+  also stored as metadata option `startup.GOMAXPROCS` in the hashed model. This is
+  not the analyzer's observed host setting or a TLC worker limit. Run the target
+  with that startup environment when relying on the condition; setters/resets/escapes
+  and trusted-call combinations are refused. Other environment dimensions are not
+  established by this flag.
 - Go/tool build version (revision when available), resolved Java/JAR paths, Java/TLC
   versions when executed, JAR SHA-256, actual command arguments, and TLC exit code.
 - Checker duration in milliseconds, raw state-statistics text when available, and

@@ -17,7 +17,21 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-type Options struct{ TrustedCalls []string }
+type Options struct {
+	TrustedCalls []string
+	RuntimeProcs int // Zero leaves GOMAXPROCS unspecified; otherwise a startup environment contract.
+}
+
+func (o Options) Validate() error {
+	if o.RuntimeProcs < 0 || o.RuntimeProcs > 1024 {
+		return fmt.Errorf("runtime-procs must be in 0..1024 (0 means unspecified)")
+	}
+	if o.RuntimeProcs != 0 && len(o.TrustedCalls) != 0 {
+		return fmt.Errorf("runtime-procs cannot be combined with trusted-call contracts")
+	}
+	return nil
+}
+
 type edge struct {
 	boundary bool
 	group    string
@@ -60,6 +74,9 @@ type frame struct {
 
 // Lower runs passes 3–8. Errors leave an inspectable partial IR, never an executable model.
 func Lower(p *frontend.Program, opts Options) (*behavior.Model, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, err
+	}
 	if p.Calls == nil {
 		return nil, fmt.Errorf("call graph must be built before lowering")
 	}
@@ -71,6 +88,7 @@ func Lower(p *frontend.Program, opts Options) (*behavior.Model, error) {
 	b := &builder{p: p, m: m, opts: opts, nodes: map[string]*node{}, stack: map[*ssa.Function]bool{}, resources: map[string]bool{}, effects: effects.New(p, opts.TrustedCalls), plans: map[*ssa.Function]*functionPlan{}, names: map[string]int{}, globals: map[*ssa.Global]string{}, fields: map[string]string{}, channelFields: map[string]string{}, loopReported: map[*ssa.Function]bool{}}
 	m.Assumptions = append(m.Assumptions, "Communication-only analysis assumes no implicit sequential runtime panics or resource exhaustion; synchronization failures remain modeled.", "Go main return terminates the whole program, including blocked workers.", "Trusted-call contracts assert total, side-effect-free execution and no synchronization; return values are abstract.")
 	b.diag("info", "supported-domain", m.Assumptions[0], main.Pos())
+	b.prepareRuntimeProcs()
 	b.initializers()
 	b.process(main, nil, "main")
 	m.InitialState = behavior.InitialState{Main: "main", Active: []string{"main"}}
@@ -286,6 +304,9 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 				}
 				continue
 			case *ssa.Call:
+				if b.consumeRuntimeQuery(fr, x) {
+					break
+				}
 				summary := plan.Calls[x]
 				if summary.Kind == effects.Trusted {
 					name := summary.Callee.String()

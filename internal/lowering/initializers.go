@@ -95,6 +95,9 @@ func (b *builder) initializers() {
 						b.diag("error", "initializer", "synchronization object copying in initializer unsupported", i.Pos())
 					}
 				case *ssa.Call:
+					if b.consumeRuntimeQuery(nil, x) {
+						continue
+					}
 					summary := b.effects.Call(x)
 					if summary.Callee != nil && b.p.CallTarget(x) != summary.Callee {
 						b.diag("error", "call-contract", "initializer callee lacks a current matching call-graph proof: "+summary.Callee.String()+" (in "+f.String()+")", x.Pos())

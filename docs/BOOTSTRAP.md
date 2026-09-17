@@ -12,7 +12,7 @@ have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **206 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current totals: **212 semantic TLC cases and 20 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -63,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 206 positive/negative semantic TLC cases and 18
+itself. It is separate from the 212 positive/negative semantic TLC cases and 20
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -472,6 +472,16 @@ tests. Rotated range-over-len proof supports the actual finite lexical helpers w
 preserving constant expansion limits. Five new TLC cases bring totals to 206 + 18;
 strict gate/race pass with unchanged snapshots. Initializer refusals fall to 109;
 full self-check remains unsupported / 5 and emits no executable self-model.
+
+A conditional startup setting is now available through `-runtime-procs N`: an
+ordinary linux/amd64 process starts with GOMAXPROCS=N. It does not infer/change host
+settings; source inventory rejects setters, resets, API escapes and trust, and fresh
+proofs bind direct zero queries to local/global capacities. At N=2, the actual self
+input includes both x/tools CPU-limit channels and has 105 initializer refusals
+(109 without the profile). Both remain unsupported / 5, without executable self TLA+.
+Native capacity comparisons and six semantic/two CLI TLC additions bring totals to
+212 + 20, with strict gate/full race passing and snapshots unchanged. Other finite
+input/environment and process/I/O lifecycle requirements remain unresolved.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

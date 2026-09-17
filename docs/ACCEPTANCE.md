@@ -65,7 +65,7 @@ plus static deferred helpers, finite data computations, pre-closed global channe
 and data-computation, owned-reference/value-copy, open-global and array-range proofs,
 plus eight independent program-exit IR/TLC cases and five nil-interface storage
 cases, three bounded string-concatenation cases and five rotated range-over-len
-cases bring the local semantic total to **206**. Actual project lexical regexes are
+cases, plus six conditional startup-GOMAXPROCS cases, bring the local semantic total to **212**. Actual project lexical regexes are
 replaced by equivalent ASCII scanning, with differential/fuzz oracles and unchanged
 TLC outcome classification. Rotated finite-data proofs preserve constant expansion
 limits and refuse altered progress/entry/bounds or stale consumed evidence.
@@ -75,11 +75,14 @@ mutation tests. Five direct TypeFor initializers are also admitted. Runtime ABI 
 standard reflection correctness are explicit assumptions; other initialization and
 reflective values/methods/promoted search remain unsupported. These do not add a
 reflection-import TLC pass or complete self-bootstrap; actual self-analysis remains
-unsupported / 5; after production lexical scanning, 109 initializer refusals remain.
+unsupported / 5: 109 initializer refusals remain without a runtime profile, or 105
+with startup GOMAXPROCS=2. This target-specific condition is explicit and inventoried;
+setters, resets, API escapes, missing proofs and other effects still refuse. It is
+not a complete finite environment or an executable self-bootstrap proof.
 Byte-search/version native comparisons and operation-model assumption checks are
 separate evidence, not proofs of the standard-library assembly implementation.
 Production bootstrap adds seven CLI/TLC
-cases, bringing that total to **18**. The five logger cases cover immediate/released
+cases plus two startup-GOMAXPROCS CLI cases, bringing that total to **20**. The five logger cases cover immediate/released
 output passes and missing Unlock, blocked cancellation/output deadlocks, with eight
 explicit abstracted predicates. Two source-collector cases check the actual frontend
 capture protocol and its missing-Unlock mutant, with no abstracted control predicates.

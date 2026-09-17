@@ -61,6 +61,11 @@ The passes are explicit functions/packages:
    conservative predecessor slicing, not precise postdominator analysis.
 6. `lowering/identity.go` separates static allocation/binding and dominating-store
    identity checks; `initializers.go` checks initialization and summary assumptions.
+   An optional startup-GOMAXPROCS contract inventories all current SSA references,
+   rejects mutation/escape/trust, and binds checked zero queries to exact direct
+   channel capacities. Target/environment conditions are explicit provenance and
+   assumptions, not executable Go-specific IR syntax or a host-setting inference.
+   Unknown initialization and other environment effects remain independently checked.
    `abstract.Predicate` preserves constants/select dispatch and abstracts other
    conditions. Unknown effects are still inspected or rejected.
 7. `lowering.regions` epsilon-closes sequential instruction paths, combining guards

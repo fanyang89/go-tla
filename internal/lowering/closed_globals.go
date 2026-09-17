@@ -4,7 +4,6 @@ import (
 	"go/ast"
 	"go/token"
 
-	"github.com/fanmi/go-tla/internal/abstract"
 	"github.com/fanmi/go-tla/internal/behavior"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
@@ -29,7 +28,7 @@ func (b *builder) proveGlobalCreation(makeChan *ssa.MakeChan) *globalChannelProo
 	if root == nil || root.Pkg == nil || root != root.Pkg.Func("init") || root.Synthetic != "package initializer" {
 		return nil
 	}
-	capacity, ok := abstract.Integer(makeChan.Size)
+	capacity, ok := b.channelCapacity(makeChan.Size)
 	if !ok || capacity < 0 || capacity > 1024 {
 		return nil
 	}

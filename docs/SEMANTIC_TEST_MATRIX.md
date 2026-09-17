@@ -69,7 +69,13 @@ and decimalDigits source bodies pass finite-data proof. Production lexical scann
 is compared with its old regex grammars through fixed/randomized and fuzz tests;
 protocol classification and source-trace CLI tests continue to run.
 
-Current total: **206 semantic TLC cases and 18 TLC CLI cases**, plus separate
+The conditional startup GOMAXPROCS profile adds six semantic and two CLI/TLC cases:
+capacity two passes while capacity one deadlocks for the same source, plus local,
+closed-initial, prior-blocking and closed-send behavior. Native capacities at 1/2/3
+agree. Current source/signature/graph/slice/profile and hidden-setter mutations refuse;
+other initialization is not exempted. Profiled full-self analysis still refuses.
+
+Current total: **212 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 

@@ -44,6 +44,7 @@ type checkResult struct {
 	SourceDirectory    string                  `json:"sourceDirectory"`
 	Patterns           []string                `json:"patterns"`
 	TrustedCalls       []string                `json:"trustedCalls,omitempty"`
+	RuntimeProcs       int                     `json:"runtimeProcs,omitzero"`
 	Config             checker.Config          `json:"config"`
 	GoVersion          string                  `json:"goVersion"`
 	ToolVersion        string                  `json:"toolVersion"`
@@ -65,6 +66,7 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	fs.SetOutput(stderr)
 	out := fs.String("out", ".", "output directory (one writer per directory)")
 	trust := fs.String("trust-call", "", "comma-separated total, side-effect-free call contracts")
+	runtimeProcs := fs.Int("runtime-procs", 0, "conditional startup GOMAXPROCS profile (linux/amd64, 1..1024; 0 unspecified)")
 	cfg := checker.DefaultConfig()
 	fs.StringVar(&cfg.JAR, "tlc-jar", "", "TLC JAR; overrides TLC_JAR and ./tla2tools.jar")
 	fs.StringVar(&cfg.Java, "java", cfg.Java, "Java executable path or name")
@@ -77,6 +79,14 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 	}
 	if fs.NArg() == 0 {
 		fmt.Fprintln(stderr, "a Go package pattern is required")
+		return 2
+	}
+	opts := lowering.Options{RuntimeProcs: *runtimeProcs}
+	if *trust != "" {
+		opts.TrustedCalls = strings.Split(*trust, ",")
+	}
+	if err := opts.Validate(); err != nil {
+		fmt.Fprintln(stderr, "error:", err)
 		return 2
 	}
 	if err := cfg.Validate(); err != nil {
@@ -110,10 +120,7 @@ func runCheck(ctx context.Context, args []string, stdout, stderr io.Writer) int 
 		SourceDirectory: cwd, Patterns: fs.Args(), Config: cfg, GoVersion: info.GoVersion, ToolVersion: info.Version,
 		ToolRevision: info.Revision, ToolModified: info.Modified,
 	}
-	opts := lowering.Options{}
-	if *trust != "" {
-		opts.TrustedCalls = strings.Split(*trust, ",")
-	}
+	result.RuntimeProcs = opts.RuntimeProcs
 	result.TrustedCalls = opts.TrustedCalls
 	if err := writeJSON(dir, "result.json", result); err != nil {
 		fmt.Fprintln(stderr, "error: cannot record current run:", err)

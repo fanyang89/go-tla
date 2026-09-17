@@ -741,3 +741,17 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
 - Five new TLC cases bring totals to 206 semantic + 18 CLI/TLC; strict gate/race
   pass, snapshots unchanged. Self-input remains unsupported / 5, with initializer
   refusals reduced from 112 to 109. No executable self-model or self TLC yet.
+
+### Full-self continuation: conditional startup processor setting
+
+- Add `-runtime-procs N`, an explicit linux/amd64 startup GOMAXPROCS condition,
+  not a host-setting inference or a general environment sandbox. Record the
+  condition and standard-runtime assumption in model/result provenance.
+- Inventory all current SSA references and refuse setters/resets/escapes/trust;
+  freshly consume source/signature/graph/slice proofs for zero queries and exact
+  local/global channel capacities. Preserve other initializer/effect refusals.
+- Native capacities at 1/2/3 agree. Six new semantic + two CLI/TLC cases bring
+  totals to 212 + 20; strict gate/full race pass with unchanged snapshots.
+- Actual N=2 self-input consumes both x/tools CPU-limit channels. It remains
+  unsupported / 5 with 105 initializer refusals (109 without the profile), no
+  executable self-model or self TLC proof. The full finite environment is not done.

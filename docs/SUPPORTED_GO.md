@@ -396,6 +396,40 @@ reflection initialization is still checked and may refuse whole-program emission
 Native tests compare all 104 actual x/tools AST edge initializers plus direct-field
 layout/presence/tag results. Five direct encoding/json TypeFor initializers also pass.
 
+### Conditional startup GOMAXPROCS profile
+
+`analyze`, `inspect` and `check` accept `-runtime-procs N` (1..1024; zero/default
+means unspecified). This is a conditional target environment: an ordinary
+**linux/amd64** Go executable starts with `GOMAXPROCS=N`, which disables automatic
+updates under standard-runtime semantics. The flag does not change or infer the
+analyzer host's setting, constrain goroutine count, or set TLC's worker count.
+Executions checked against the condition must actually use that startup environment.
+Runtime implementation correctness is explicitly assumed, not source-proved.
+
+Admission requires the current typed runtime declaration/signature, GOROOT source
+ownership and target constants. A complete SSA inventory, including graph-omitted
+functions, permits only direct `runtime.GOMAXPROCS(0)` references outside the
+standard-runtime boundary. Setters, SetDefaultGOMAXPROCS, API escapes, deferred/
+spawned calls and nonliteral/nonzero arguments refuse. The inventory has a one-million
+instruction budget; exhaustion refuses. Trusted-call contracts cannot be combined
+with this profile. Other initialization, unknown effects, native/unsafe operations
+and input/environment queries still require their independent checks.
+
+Consumed calls freshly recheck the environment inventory, current/cached call graph
+and retained operands. Direct query results may supply local/global channel capacities;
+arithmetic/wrapped capacities remain refused and other data results remain abstract.
+Global creation/identity/capacity proofs are still rechecked, including closed globals.
+Profile/argument/graph/slice/signature/source mutations cannot reuse old evidence.
+The selected value is recorded in `model.json` metadata option `startup.GOMAXPROCS`
+and `check` result field `runtimeProcs`, plus a conditional environment assumption.
+No Go-specific executable expression is added to the backend-independent IR.
+
+Native startup comparisons cover values 1, 2 and 3. Six semantic TLC and two CLI/TLC
+cases cover capacity-sensitive pass/deadlock, local/global/closed state and retained
+blocking/error behavior. The real self-input at N=2 consumes both x/tools CPU-limit
+initializers, but remains unsupported; this is only one dimension of the full finite
+environment needed for self-bootstrap.
+
 ### Initially open global channels
 
 A direct package variable `var limit = make(chan T, N)` is supported when N is a

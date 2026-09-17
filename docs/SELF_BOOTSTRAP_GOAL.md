@@ -512,3 +512,41 @@ Self-analysis remains **unsupported / 5**. Project lexical initializer errors ar
 gone; total initializer refusals fall from 112 to **109**. Only diagnostic model.json
 is emitted; no executable self TLA+ or self TLC proof exists. The full goal and
 finite-environment requirements remain active and incomplete.
+
+## Conditional startup processor-setting contract
+
+`-runtime-procs N` now provides a small, explicit environment boundary for an ordinary
+linux/amd64 Go executable started with `GOMAXPROCS=N` (1..1024). It is conditional:
+the flag neither sets nor infers the analyzer host environment. Standard runtime
+semantics, including startup disabling of automatic updates and read-only zero
+queries, are assumed rather than source-proved. The value is recorded in hashed
+model metadata, result provenance and a clearly conditional assumption.
+
+The analyzer checks current standard-source/signature/target identity and inventories
+all SSA references, not just graph-reachable functions. Only direct zero queries
+are admitted outside the standard-runtime boundary. Setters, resets, escaped API
+values and trusted-call combinations refuse, including unused/graph-omitted setters.
+Budget exhaustion refuses. Consumed queries freshly check current and cached graph
+facts and all retained operands; global capacity/identity proofs also refresh.
+Unknown effects and all other initialization remain independently checked. Arithmetic
+or wrapped capacities are not guessed. Other query results remain abstract.
+
+Native executable comparisons confirm channel capacities at startup values 1, 2
+and 3. Six new semantic TLC cases and two actual CLI/TLC cases show capacity-sensitive
+pass/deadlock outcomes, local/global/closed channels and preserved blocking/errors.
+Mutation tests cover arguments, graph, slices, profile metadata, runtime declaration,
+source ownership, hidden setters and cached global capacities. Strict gate/full race
+pass with no skips/failures and unchanged snapshots: **212 semantic + 20 CLI/TLC**.
+
+The actual CLI at N=2 now consumes both x/tools CPU semaphores at capacity two, with
+two source-attributed runtime query records. Initializer refusals are **105** under
+this profile, versus **109** without it. The new production option/contract paths
+also expose more other unsupported behavior; raw diagnostic counts are not coverage.
+Both self-inputs remain **unsupported / 5**, diagnostic-only, with no checker command
+or executable self TLA+. The full finite input/I/O/lifecycle environment and bootstrap
+acceptance checklist remain incomplete.
+
+Evidence is local under `$HOME/tmp/pi/gotla-self-bootstrap-runtime-procs/`. The first
+probe exposed a nil-frame argument-slice check during initialization; it was fixed
+and the original panic log retained. Subsequent complete CLI probes terminate with
+the intended unsupported result. This prerequisite does not authorize completion.

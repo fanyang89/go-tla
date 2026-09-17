@@ -4,7 +4,6 @@ import (
 	"go/token"
 	"go/types"
 
-	"github.com/fanmi/go-tla/internal/abstract"
 	"github.com/fanmi/go-tla/internal/behavior"
 	"github.com/fanmi/go-tla/internal/discovery"
 	"golang.org/x/tools/go/ssa"
@@ -20,7 +19,7 @@ func (b *builder) allocateResources(fr *frame) {
 				if !b.requireData(fr, x.Size) {
 					continue
 				}
-				n, ok := abstract.Integer(x.Size)
+				n, ok := b.channelCapacity(x.Size)
 				if !ok || n < 0 || n > 1024 {
 					b.diag("error", "dynamic-topology", "channel capacity must be a static integer in 0..1024", x.Pos())
 					continue

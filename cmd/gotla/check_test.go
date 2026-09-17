@@ -120,7 +120,7 @@ func TestCheckCancelledAndInvalidOptions(t *testing.T) {
 		t.Fatalf("cancelled analysis produced a result: %+v", r)
 	}
 	before, _ := os.ReadFile(filepath.Join(out, "result.json"))
-	for _, flag := range []string{"-timeout=0", "-workers=0", "-memory-mib=0", "-max-log-mib=0", "-java="} {
+	for _, flag := range []string{"-timeout=0", "-workers=0", "-memory-mib=0", "-max-log-mib=0", "-java=", "-runtime-procs=-1", "-runtime-procs=1025"} {
 		if code := run([]string{"check", "-out", out, flag, "../../examples/unbuffered"}, &stdout, &stderr); code != 2 {
 			t.Fatalf("bad option accepted: %s, %d", flag, code)
 		}

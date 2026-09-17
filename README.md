@@ -72,6 +72,13 @@ JAR lookup order is `-tlc-jar`, `TLC_JAR`, then `./tla2tools.jar`. Java defaults
 analysis; the memory option limits JVM heap, not total process memory. Output is
 capped at 16 MiB by default (`-max-log-mib`). No tool is downloaded implicitly.
 
+`-runtime-procs N` (1..1024, linux/amd64) optionally models a target process started
+with `GOMAXPROCS=N`. It does not set or infer the host environment. The analyzer
+rejects setting changes, resets, API escapes and trusted-call combinations; checked
+`runtime.GOMAXPROCS(0)` calls can supply direct channel capacities. The condition is
+recorded in model/result provenance. Zero/default leaves the setting unknown. This
+is not a complete finite environment or sandbox; see [supported Go](docs/SUPPORTED_GO.md).
+
 | Exit | Check result |
 |---|---|
 | 0 | `passed`: no modeled violation found under recorded assumptions |

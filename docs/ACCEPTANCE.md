@@ -1,8 +1,12 @@
-# Local acceptance and release boundary
+# Acceptance evidence and release boundary
 
 ## Status
 
-M1–M5 have local acceptance evidence for the documented restricted profile.
+M1–M5 have local and hosted acceptance evidence for the documented restricted profile.
+Revision `f19df4d` passed [hosted run 35173519428](https://github.com/fanyang89/go-tla/actions/runs/35173519428).
+Its retained `verification-log` artifact was downloaded and checked: zero skips,
+zero failed tests, with all three component groups passing. The run used Go 1.26.2,
+Temurin Java 25.0.4.1 and the refreshed pinned TLC hash below.
 This is not verification of arbitrary Go programs. The first hosted push run for
 `c265c49` [failed workflow validation](https://github.com/fanyang89/go-tla/actions/runs/35171701731):
 job-level `env` cannot reference `runner.temp`, so no verification job started.
@@ -14,9 +18,11 @@ With owner approval, the pin now uses official release asset `569238611`, SHA256
 against the upstream release API. The strict local gate and full race suite pass
 with this asset; original snapshots remain unchanged. Historical component timing
 and state measurements retain their original checker hash, not the refreshed one.
-Branch protection, release publication and remote CI success are not claimed.
-The remaining release gate is an actual successful hosted run against the delivered
-revision, with its log retained.
+The hosted verification gate is now satisfied for `f19df4d`; subsequent revisions
+must pass their own runs. Branch protection and release publication are not claimed.
+The workflow retains logs for 14 days; a local copy is saved under
+`${TMPDIR:-$HOME/tmp}/pi/gotla-hosted-35173519428/verification.log`.
+Non-failing action-runtime/setup-java deprecation warnings remain maintenance work.
 
 ## Component matrix
 

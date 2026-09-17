@@ -21,7 +21,7 @@ are not supported features until implemented and tested.
 - [Verification workflow and result interpretation](docs/VERIFICATION.md)
 - [Semantic test coverage and gaps](docs/SEMANTIC_TEST_MATRIX.md)
 - [Component harnesses and measurements](docs/COMPONENTS.md)
-- [Local acceptance and outstanding hosted release gate](docs/ACCEPTANCE.md)
+- [Local and hosted acceptance evidence](docs/ACCEPTANCE.md)
 - [Versioned behavioral IR contract](docs/BEHAVIOR_IR.md)
 
 ## Quick start

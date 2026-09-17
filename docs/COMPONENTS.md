@@ -176,4 +176,4 @@ WaitGroup.Go is not supported.
 Raw local artifacts are under `$HOME/tmp/pi/gotla-m5-counter/`. The same measurement
 limitations apply. The seven variants across three component families now have
 real CLI/TLC acceptance checks; [ACCEPTANCE.md](ACCEPTANCE.md) consolidates evidence
-and distinguishes local completion from the outstanding hosted-CI release gate.
+and records the later hosted-CI pass separately from these local measurements.

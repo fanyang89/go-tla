@@ -3,8 +3,8 @@
 ## Status and document ownership
 
 The implementation has local M1–M5 acceptance evidence for small, explicitly scoped
-Go concurrency components, **not** arbitrary Go verification. The hosted-CI release
-gate remains pending. This roadmap records the target and evidence; only the
+Go concurrency components, **not** arbitrary Go verification. The hosted-CI verification
+gate passed for `f19df4d` (run `35173519428`); future revisions need their own passes. This roadmap records the target and evidence; only the
 supported-domain guide defines the admitted language.
 
 - [README.md](README.md): current installation and command usage.
@@ -16,7 +16,7 @@ Current companion guides:
 - [docs/SUPPORTED_GO.md](docs/SUPPORTED_GO.md): supported, abstracted, and rejected Go patterns.
 - [docs/VERIFICATION.md](docs/VERIFICATION.md): results, assumptions, false positives, and incomplete checks.
 - [docs/SEMANTIC_TEST_MATRIX.md](docs/SEMANTIC_TEST_MATRIX.md): regression evidence and coverage gaps.
-- [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md): local acceptance matrix and outstanding hosted release gate.
+- [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md): local/hosted acceptance matrix and release boundaries.
 
 ## 1. What “basically usable” means
 
@@ -107,7 +107,7 @@ Implemented:
 - An explicit checksum-pinned TLC provisioning script and required verification
   workflow; missing/mismatched checker and snapshot regeneration fail the gate.
 
-Current restrictions include all reachable CFG cycles and recursion, mutable/global
+Current restrictions include unproved CFG cycles and recursion, mutable/global
 channel fields, pointer fields and synchronization containers, general aliasing,
 general defers/recover/explicit panic, and dynamic
 process/resource topology. TLC is explicitly provisioned and can run through `check` or manually. Plain
@@ -143,7 +143,7 @@ errors. See [ARCHITECTURE.md](ARCHITECTURE.md) for the authoritative full contra
 The basically usable milestone is complete only when all of these are satisfied:
 
 - [x] M1–M5 local acceptance gates pass, with evidence recorded per change; the
-      separate hosted-CI gate below remains outstanding.
+      hosted gate also passed for `f19df4d` (run `35173519428`).
 - [x] A user can build the CLI, provision the documented TLC version, and run a
       component check using documented non-interactive commands.
 - [x] Successful, deadlocking, synchronization-error, unsupported, tool-failure,
@@ -158,7 +158,7 @@ The basically usable milestone is complete only when all of these are satisfied:
       tests assert the expected checker outcome, not just successful TLA parsing.
 - [x] Supported loop forms, defers, and field identities each have positive,
       negative, and blocking/synchronization-error regression coverage.
-- [ ] CI runs real TLC and fails if the required checker is unavailable; plain unit
+- [x] CI runs real TLC and fails if the required checker is unavailable; plain unit
       test success alone cannot satisfy the release gate.
 - [x] Documentation lists remaining restrictions and explains that completed
       abstract checking is neither arbitrary Go correctness nor leak/starvation
@@ -173,8 +173,8 @@ do not invent performance guarantees before measuring the target examples.
 | Milestone | Status | Deliverables | Acceptance gate |
 |---|---|---|---|
 | Scope definition | Done (documentation) | Target users/workflow, supported-domain boundary, non-goals, definition of done | This roadmap separates current capabilities from planned ones |
-| M1: Quality baseline | Implemented; local gate passed | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; strict gate cannot silently skip TLC; hosted run pending |
-| M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run pending |
+| M1: Quality baseline | Implemented; local gate passed | Semantic test matrix; Go/vet/snapshot/TLC CI; pinned checker provisioning; model statistics | Reproducible models and expected outcomes; strict gate cannot silently skip TLC; hosted run 35173519428 passed |
+| M2: Check workflow | Implemented; local gate passed | `gotla check`; JAR/timeout/memory/worker/log settings; raw log and structured result; source candidates; stale-output handling | Real TLC pass/deadlock/invariant CLI tests and bounded subprocess/failed-output tests pass; hosted run 35173519428 passed |
 | M3: Analysis and IR contract | Implemented; local gate passed | Consumed graph/effect/discovery/slice plans; separated identity checks; versioned IR and common validation; explicit terminals and stable source naming | Malformed-IR/pass/round-trip/naming tests pass; eight size baselines unchanged; pinned TLC gate passed |
 | M4: Common Go patterns | Complete within the documented restricted profile | Static fields/direct receivers, restricted defers, proved constant integer ranges | Positive, refusal, identity, deadlock and synchronization-error regressions pass |
 | M5: Component acceptance | Complete locally: three component families, seven correct/faulty CLI/TLC checks | Three realistic correct/faulty components, harness guidance, measured verification reports | Expected checker outcomes without rewriting the component as a DSL or removing its concurrency |
@@ -466,6 +466,20 @@ writing its plan or skipping its checker tests does not count as implementation.
 - M5 / step 7 is complete locally. This does not claim hosted CI or full release
   acceptance; the unchecked hosted gate above still requires execution evidence.
 
-**Next action:** run the checked-in hosted CI job against the delivered revision
-and retain its verification log before declaring the release gate complete. No
-push, PR, workflow dispatch or branch-protection changes are authorized by this record.
+### Delivery acceptance — step 8
+
+- The owner configured/pushed the remote and authorized repair pushes. Hosted
+  validation exposed an unavailable job-level runner context, then a replaced
+  upstream TLC release asset. Both failures were fixed without bypassing the gate.
+- The refreshed pin was checked against the official asset digest and passed the
+  strict local gate plus full race suite; historical measurements retain their
+  original checker identity. Hosted run `35173519428` passed on `f19df4d`.
+- Downloaded the retained verification log: zero skips/failures, all component
+  groups passing. [ACCEPTANCE.md](docs/ACCEPTANCE.md) records exact evidence.
+- Steps 1–8 now have the required implementation/planning and verification evidence
+  for the explicitly restricted basically-usable target. Delivery order and deferred
+  scope remain in sections 5–6; this is not arbitrary Go correctness or a claim of
+  published release artifacts, configured branch protection, or indefinite log retention.
+
+**Next action:** require fresh CI for subsequent changes. Address action deprecation
+warnings as maintenance; expand semantic scope only with explicit proofs and tests.

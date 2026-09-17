@@ -58,9 +58,12 @@ TLC does not prove arithmetic or general shared-memory race freedom.
 | M4 patterns | Positive/refusal/semantic coverage for fields, normal-return defers and proved integer ranges; no silent expansion truncation |
 | M5 components | Three component families and seven actual CLI/TLC outcomes above; close-driven receive SCCs and immutable inline-sync pointer captures have independent semantic/refusal tests |
 
-The current local gate includes **95 semantic TLC cases and 11 CLI integration
-cases** (four workflow cases plus seven component cases), with zero skips when run
-through the strict script. Existing snapshots/model-size baselines remain unchanged.
+The delivered hosted baseline included **95 semantic TLC cases and 11 CLI integration
+cases** (four workflow cases plus seven component cases), with zero skips.
+The later bootstrap constructor increment brings the local semantic total to **99**
+and leaves those 11 TLC CLI cases unchanged; its separate self-input test still
+expects unsupported. See [BOOTSTRAP.md](BOOTSTRAP.md) for that increment's local-only
+evidence and remaining self-verification blockers. Existing snapshots/model-size baselines remain unchanged.
 Full internal/CLI/integration/component race tests also pass locally.
 
 ## Reproduce the local gate

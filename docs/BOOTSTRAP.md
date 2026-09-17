@@ -47,14 +47,15 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 95 positive/negative semantic TLC cases and 11
+itself. It is separate from the 99 positive/negative semantic TLC cases and 11
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
 The checksum-pinned strict local gate passed with zero skips/failures after adding
 this regression. The self-analysis test also passed under `-race`. Logs are in
-`$HOME/tmp/pi/gotla-bootstrap/{gate,race}.log`. No production semantics or supported
-syntax changed; a hosted run for this new regression has not yet been claimed.
+`$HOME/tmp/pi/gotla-bootstrap/{gate,race}.log`. That initial self-input-test commit
+did not change production semantics or supported syntax; the constructor increment
+below is a separate capability change. Neither increment has a claimed hosted pass.
 
 ## Best first production target
 
@@ -77,7 +78,34 @@ concurrency is not an explicit `go` statement in our wrapper. Mutable maps, call
 resolution and library initialization still need contracts. The current models do
 not prove map contents or general race freedom.
 
-## Incremental acceptance plan (not implemented)
+## Bootstrap prerequisite: private data constructor proofs
+
+The next increment admits acyclic helpers that initialize fresh scalar/value-struct
+allocations and only expose their addresses on return. The proof follows all SSA
+address uses, never a package/function allowlist. It rejects reference-bearing or
+synchronization data, early publication, closure capture and address-taking calls.
+Helper summaries also reject shared map updates and mutating/I/O builtins: a private
+allocation elsewhere must not excuse an external write. Initializer traversal,
+unsafe checks, call-graph consumption and synchronization identity rules remain.
+
+This proves the real installed `errors.New` body from source, with no trust flag.
+It does not accept the entire `errors` package: reflective initialization in
+`errors/wrap.go` still has unsupported calls. On Go 1.26.2, repeating the real CLI
+probe reduced initializer errors from **324 to 240**; other error categories remained.
+These are diagnostic observations, not a coverage metric. The CLI still returns
+**unsupported / 5**, writes only diagnostic artifacts and does not run TLC.
+`boundedLog.Write` has not yet been formally checked.
+
+New tests cover data/boxed-error constructors, isolation/escape refusals, actual
+standard-library source and four real TLC outcomes (two passes, a deadlock and a
+synchronization error). The total is 99 semantic TLC cases plus 11 TLC CLI cases;
+the full CLI refusal regression remains separate. The strict pinned gate and full
+internal/CLI/integration/component race suite passed locally with zero skips/failures,
+without changing original snapshots. Evidence is in
+`$HOME/tmp/pi/gotla-bootstrap-data/{gate.log,race.log,self-check.log,cli/result.json}`.
+This increment has not been pushed or claimed as a hosted CI pass.
+
+## Incremental acceptance plan (partial; full self-verification remains unsupported)
 
 1. Keep the complete CLI self-input refusal test and its actionable diagnostics.
 2. Establish a real, restricted production-component entry/harness mechanism without

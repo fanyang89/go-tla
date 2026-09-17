@@ -84,6 +84,7 @@ func (a *Analyzer) pureFunction(f *ssa.Function) (pure bool) {
 	}
 	a.visiting[f] = true
 	defer func() { delete(a.visiting, f); a.pure[f] = pure }()
+	private := map[*ssa.Alloc]bool{}
 	for _, bb := range f.Blocks {
 		for _, i := range bb.Instrs {
 			if discovery.IsRoot(i) || frontend.UsesUnsafePointer(i) {
@@ -93,13 +94,19 @@ func (a *Analyzer) pureFunction(f *ssa.Function) (pure bool) {
 			case *ssa.Defer, *ssa.Panic:
 				return false
 			case *ssa.Call:
-				if !a.Call(x).IsPure() {
+				summary := a.Call(x)
+				if !summary.IsPure() || summary.Kind == Builtin && !readOnlyBuiltin(x.Common()) {
 					return false
 				}
 			case *ssa.Store:
 				if alloc, ok := x.Addr.(*ssa.Alloc); !ok || alloc.Heap {
-					return false
+					if !privateDataStore(x, private) {
+						return false
+					}
 				}
+			case *ssa.MapUpdate:
+				// A private allocation elsewhere does not excuse a shared map write.
+				return false
 			}
 		}
 	}

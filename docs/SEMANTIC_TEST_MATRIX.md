@@ -5,6 +5,21 @@ Paths and test names refer to the current implementation. Actual TLC tests are
 optional in a plain local test run but mandatory in the
 [strict gate](VERIFICATION.md#tests-and-required-ci-gate).
 
+## Bootstrap prerequisite: private data constructors
+
+`TestPrivateDataConstructorSummaries` and `TestStandardErrorConstructorIsPrivateData`
+exercise fresh scalar/value-struct allocation stores, return-only escape and the
+installed `errors.New` source. Shared writes, map mutations, mutating/I/O builtins,
+unsafe conversions, reference/synchronization fields, phis and escaping addresses
+remain outside the proof. This is not a package initializer allowlist.
+
+`TestPrivateDataInitializerRefusals` checks that unsafe helper effects still prevent
+executable models. `TestTLCPrivateDataInitializers` adds four actual TLC cases:
+record/rendezvous and scalar/buffered pass; a boxed-error initializer does not hide
+a deadlock; nested data construction does not hide a double close. The semantic
+total is now **99**; the **11** TLC CLI cases are unchanged. The separate
+`TestCheckSelfAnalysisBoundary` still expects unsupported, not a self-verification pass.
+
 ## Frontend, abstraction, and artifact contracts
 
 | Contract | Evidence | Expected result |

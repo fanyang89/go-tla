@@ -247,6 +247,36 @@ Pure/sequential cycles and status-ignoring receive loops are still refused. Save
 receives an independent backend finite-state check, not a trusted frontend annotation.
 See [the real pipeline harnesses](COMPONENTS.md#close-driven-pipeline).
 
+### Private data construction in initialization helpers
+
+```go
+type settings struct { label string; count int }
+func defaults() *settings {
+    return &settings{label: "ready", count: 2}
+}
+var config = defaults()
+```
+
+Acyclic helpers can initialize fresh heap-allocated scalar/value-struct data when
+SSA proves the allocation remains private until return. Direct field paths, data
+loads, returned field addresses and pointer boxing solely for return are admitted.
+Scalars include immutable strings; pointer/interface/container/function/channel
+fields and synchronization/atomic state do not qualify. Pointer phis, closure
+captures, address conversions, publication and even read-only address-taking helper
+calls remain outside this deliberately narrow proof.
+
+Every call and store in the helper is still checked. Shared writes, map updates,
+and potentially mutating/I/O builtins (`append`, `copy`, `delete`, `clear`, `print`,
+`println`) prevent a local-computation summary; existing ordinary communication
+lowering of sequential builtins is unchanged. No helper/package name is trusted by
+this rule. It proves the body of the installed `errors.New`, but **does not** waive
+other initialization or dynamic-call restrictions when importing `errors`.
+
+Returning ordinary data is not returning a proved synchronization identity. Scalar
+values/payloads remain abstract and the existing implicit-panic/resource-exhaustion
+assumption still applies. This does not admit general heap alias analysis, recursive
+constructors or synchronization construction during initialization.
+
 ### Unknown predicates require effect analysis
 
 ```go

@@ -12,9 +12,11 @@ import (
 const maxDeferSites = 64
 
 type deferredCall struct {
-	flag   string
-	effect behavior.Effect
-	source behavior.Position
+	flag     string
+	effect   behavior.Effect
+	source   behavior.Position
+	callee   *ssa.Function
+	bindings map[ssa.Value]string
 }
 
 // Registration/drain sites must be acyclic, even when receive-only SCCs exist.
@@ -36,21 +38,44 @@ func (b *builder) prepareDefers(fr *frame) bool {
 		return false
 	}
 	for _, d := range order {
-		primitive, ok := discovery.Deferred(d)
-		if !ok || fr.plan.Calls[d].Callee == nil {
-			b.diag("error", "unsupported-defer", "only direct defer Mutex.Unlock/WaitGroup.Done on this invocation's stack is supported", d.Pos())
-			return false
-		}
-		if !b.requireData(fr, primitive.Resource) {
-			return false
-		}
-		resource := b.identity(fr, primitive.Resource, map[ssa.Value]bool{})
-		if resource == "nil" || resource == "invalid" {
-			b.diag("error", "sync-identity", "deferred cleanup requires a static non-nil synchronization identity", d.Pos())
-			return false
+		call := deferredCall{source: b.position(d.Pos(), fr.f)}
+		target := fr.plan.Calls[d].Callee
+		if primitive, ok := discovery.Deferred(d); ok {
+			if target == nil || b.p.CallTarget(d) != target {
+				b.diag("error", "call-contract", "deferred primitive lacks a matching call-graph proof", d.Pos())
+				return false
+			}
+			if !b.requireData(fr, primitive.Resource) {
+				return false
+			}
+			resource := b.identity(fr, primitive.Resource, map[ssa.Value]bool{})
+			if resource == "nil" || resource == "invalid" {
+				b.diag("error", "sync-identity", "deferred cleanup requires a static non-nil synchronization identity", d.Pos())
+				return false
+			}
+			call.effect = behavior.Effect{Kind: primitive.Kind, Resource: resource}
+		} else {
+			// Only source-defined, direct calls/closures are admitted here. No
+			// primitive, wrapper, dynamic target or trusted-body shortcut is added.
+			if d.DeferStack != nil || d.Common().IsInvoke() || target == nil ||
+				d.Common().StaticCallee() != target || target.Synthetic != "" ||
+				discovery.SyncTypeReceiver(target) != "" {
+				b.diag("error", "unsupported-defer", "defer requires direct Unlock/Done or a source-defined static helper on this invocation's stack", d.Pos())
+				return false
+			}
+			for _, operand := range d.Operands(nil) {
+				if operand != nil && !b.requireData(fr, *operand) {
+					return false
+				}
+			}
+			call.callee, call.bindings = b.callee(fr, d, target, d.Pos())
+			if call.callee == nil {
+				return false
+			}
 		}
 		flag := b.fresh(fr.process + "_defer_registered")
-		fr.defers[d] = deferredCall{flag, behavior.Effect{Kind: primitive.Kind, Resource: resource}, b.position(d.Pos(), fr.f)}
+		call.flag = flag
+		fr.defers[d] = call
 		for pi := range b.m.Processes {
 			if b.m.Processes[pi].ID == fr.process {
 				b.m.Processes[pi].Locals = append(b.m.Processes[pi].Locals, behavior.Variable{Name: flag, Domain: []int{0, 1}, Initial: 0})
@@ -122,9 +147,18 @@ func (b *builder) cleanupChain(fr *frame, site ssa.Instruction, next string) str
 	// Prepending in registration order executes the latest pending registration first.
 	for _, d := range fr.cleanup[site] {
 		id := b.fresh(fr.process + "_defer_cleanup")
+		target := next
+		effects := []behavior.Effect{{Kind: behavior.AssignAbstractState, Variable: d.flag, Value: 0}}
+		if d.callee != nil {
+			// The caller cannot drain earlier defers until this body returns.
+			// Arguments/captured identities were bound at registration, not here.
+			target = b.function(d.callee, d.bindings, fr.process, next)
+		} else {
+			effects = append([]behavior.Effect{d.effect}, effects...)
+		}
 		b.nodes[id] = &node{edges: []edge{
-			{to: next, guard: behavior.Guard{Kind: behavior.Equal, Variable: d.flag, Value: 1},
-				effects: []behavior.Effect{d.effect, {Kind: behavior.AssignAbstractState, Variable: d.flag, Value: 0}}, pos: d.source},
+			{to: target, guard: behavior.Guard{Kind: behavior.Equal, Variable: d.flag, Value: 1},
+				effects: effects, pos: d.source},
 			{to: next, guard: behavior.Guard{Kind: behavior.Equal, Variable: d.flag, Value: 0}, pos: d.source},
 		}}
 		next = id

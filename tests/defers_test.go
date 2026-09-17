@@ -12,7 +12,6 @@ import (
 
 func TestRestrictedDeferRefusals(t *testing.T) {
 	for name, source := range map[string]string{
-		"closure":      `package main;import "sync";func main(){var mu sync.Mutex;defer func(){mu.Unlock()}()}`,
 		"lock":         `package main;import "sync";func main(){var mu sync.Mutex;defer mu.Lock()}`,
 		"wait":         `package main;import "sync";func main(){var wg sync.WaitGroup;defer wg.Wait()}`,
 		"add":          `package main;import "sync";func main(){var wg sync.WaitGroup;defer wg.Add(-1)}`,

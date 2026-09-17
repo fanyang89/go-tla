@@ -2,13 +2,17 @@
 
 ## Current status
 
+The active full-self-bootstrap objective and its still-unmet end-to-end gates are
+recorded in [SELF_BOOTSTRAP_GOAL.md](SELF_BOOTSTRAP_GOAL.md). Component passes below
+are prerequisites, not completion of that objective.
+
 **Two production synchronization components now have finite-environment bootstrap.**
 The logger used by `checker.Run` and source collector used by `frontend.LoadContext`
 have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **119 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current totals: **131 semantic TLC cases and 18 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -59,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 119 positive/negative semantic TLC cases and 18
+itself. It is separate from the 131 positive/negative semantic TLC cases and 18
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -349,6 +353,22 @@ and unchanged other categories. No analyzer acceptance rule was broadened.
 Evidence: `$HOME/tmp/pi/gotla-bootstrap-capture/`, including the refused `probe-result`,
 `production`, `missing-unlock`, `cli`, `mutation.json`, `gate.log` and `race.log`.
 These results are local-only; bootstrap changes have no claimed hosted pass.
+
+## Full-self prerequisite: static deferred helpers
+
+Normal-return cleanup now supports source-defined static functions/methods and
+literal closures, with inspected bodies, registration-time resource bindings,
+LIFO flags and ordinary nested frames. A blocking helper prevents earlier cleanup;
+missing graph/slice proofs still reject. Twelve new TLC cases exercise these effects,
+including bad LIFO order and blocked cleanup. Dynamic/interface/field targets,
+wrappers, initializer defers and panic/recover remain unsupported.
+
+The complete CLI now gets past its original `defer dir.Close()` rejection and exposes
+more downstream loop, runtime synchronization and effect restrictions. It still
+returns unsupported / 5, with no executable self-model. Diagnostic growth is not a
+regression-count or coverage metric. The strict local gate and full race suite pass
+with 131 semantic and 18 CLI/TLC cases and unchanged original snapshots. See
+[the full-goal audit](SELF_BOOTSTRAP_GOAL.md) for concrete remaining gates and evidence.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

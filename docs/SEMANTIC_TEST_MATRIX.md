@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **119 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **131 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -31,6 +31,18 @@ nil/empty inputs, independent copied storage, replacement and concurrent capture
 frontend/race regressions exercise its real integration. The production leaf uses
 slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
 bootstrap document for that dependency change's scope and evidence.
+
+## Full-self prerequisite: static deferred helper bodies
+
+`TestTLCDeferredHelpers` adds twelve checks for direct source functions/methods and
+literal closures: LIFO close/send order, helper blocking, nested cleanup, invalid
+unlock, captured argument identities, conditional registration and multiple returns.
+`TestDeferredHelperRefusals` retains dynamic/recursive/unavailable/panicking and
+unstable-capture boundaries. `TestDeferredHelperConsumesGraphAndSlice` corrupts cached
+graph/slice facts to ensure they cannot be ignored. The former empty-closure defer
+refusal is now a positive TLC case; unknown dynamic defers remain rejected.
+These are prerequisites, not a complete CLI self-proof; see
+[SELF_BOOTSTRAP_GOAL.md](SELF_BOOTSTRAP_GOAL.md).
 
 ## Bootstrap prerequisite: immutable callable fields
 

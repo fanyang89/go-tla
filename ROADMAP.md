@@ -536,3 +536,21 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   [BOOTSTRAP.md](docs/BOOTSTRAP.md); no hosted pass is claimed for these changes.
 - Actual go/packages callback scheduling, parsing and context/process lifecycles
   remain outside this finite capture harness.
+
+### Full-self goal: not complete; static deferred helper prerequisite implemented
+
+- The objective is the actual CLI's executable self-model and real TLC evidence,
+  not a relabeled component pass. [SELF_BOOTSTRAP_GOAL.md](docs/SELF_BOOTSTRAP_GOAL.md)
+  records the explicit unfulfilled acceptance gates and remaining implementation work.
+- Source-defined direct function/method/closure defers now enter their inspected
+  bodies during LIFO cleanup. Bindings are captured at registration; blocking, nested
+  defers and normal-return ordering are preserved. Graph/slice loss fails closed.
+  Dynamic targets, wrappers, foreign stacks and panic/recover remain unsupported.
+- Twelve new TLC semantic checks bring the local total to 131, with 18 CLI/TLC cases.
+  The strict gate and full race suite pass with zero skips/failures and unchanged
+  snapshots. The stale empty-closure rejection became a positive test; dynamic
+  deferred calls retain negative coverage.
+- The real self-input now gets beyond the former main.go defer refusal but still
+  returns unsupported / 5 on deeper effects/identity/control. No executable full
+  self-model or hosted pass is claimed. Continue toward the full goal; do not mark
+  it complete from these prerequisite results.

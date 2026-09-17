@@ -139,12 +139,17 @@ func (c *component) work(done chan int) {
 }
 ```
 
-Only direct `sync.Mutex.Unlock` and `sync.WaitGroup.Done` method calls are accepted
-as defers. Receivers are resolved from the values evaluated at registration, not
+Direct `sync.Mutex.Unlock` / `sync.WaitGroup.Done` and source-defined static
+helper functions, methods and literal closures are accepted as defers. Helper bodies
+are inspected, not treated as pure cleanup. Receivers and resource arguments are
+resolved from the values evaluated at registration, not
 from later variable assignments. Reaching a defer registers cleanup; it does not
 unlock or decrement immediately. Conditional/unselected registrations remain exact.
 Cleanup executes in LIFO order at normal returns, after return-expression evaluation.
-A function blocked before returning has not executed its deferred cleanup.
+A function blocked before returning has not executed its deferred cleanup. A deferred
+helper may itself block; earlier registered cleanup cannot execute until it returns.
+Captured resource cells retain their existing single-store/dominance requirements;
+this does not permit future initialization or reassignment of captured identities.
 
 Each inlined invocation has separate registration flags. Nested callees drain only
 their own registrations. Flags are cleared as calls execute; multiple compiler
@@ -156,10 +161,13 @@ expansion. Each expanded registration executes at most once per invocation.
 Cleanup registered outside a supported receive cycle runs only after return, not
 while the function is blocked in that cycle.
 The implementation accepts at most 64 sites; exceeding this is unsupported, never
-truncated cleanup or an assumed stack bound. Cleanup effects retain the defer site's
-source position. Plain helper-function/closure defers, bound method values, deferred
-Lock/Wait/Add/close, foreign defer stacks, initializer defers, panic/recover and unproved loop forms
-remain unsupported. A trusted-call contract does not extend this whitelist. Implicit
+truncated cleanup or an assumed stack bound. Primitive cleanup retains the defer
+site's source position; helper effects retain their actual body locations. Graph
+and retained-operand proofs are required even for a side-effect-free helper.
+Dynamic/interface/field defer targets, synthetic/bound method wrappers, direct deferred
+Lock/Wait/Add/close, foreign defer stacks, initializer defers, panic/recover and unproved
+loop forms remain unsupported. A trusted-call contract does not extend this whitelist
+or allow skipping a deferred helper's body. Implicit
 sequential panics remain excluded by the recorded domain assumption; this is not
 panic unwinding or exception-safety verification.
 
@@ -388,7 +396,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 | Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |
 | Unproved callbacks/interface dispatch | Only exact local boxing or the documented immutable-field proof is admitted; ambiguous fields, parameters and other dynamic sources remain unsupported |
-| General `defer`, explicit panic/recover | Only direct deferred Unlock/Done on normal-return paths are modeled; no panic unwinding |
+| Unproved `defer`, explicit panic/recover | Normal-return Unlock/Done and static source helpers are modeled; no dynamic targets or panic unwinding |
 | RWMutex and other unsupported synchronization APIs | No corresponding implemented semantics |
 | WaitGroup reuse or concurrent positive enrollment | Counter-only representation does not model waiter generations |
 | Reachable unsafe pointer operations, including inspected helpers/init | Can bypass modeled resource identity/state |

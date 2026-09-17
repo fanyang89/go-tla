@@ -109,7 +109,7 @@ func TestUnsupportedIsNeverExecutable(t *testing.T) {
 		{"init-channel", `package main;var ch=make(chan int);func main(){}`},
 		{"init-goroutine", `package main;func init(){go func(){}()};func main(){}`},
 		{"init-unknown", `package main;func external();func init(){external()};func main(){}`},
-		{"defer", `package main;func main(){defer func(){}()}`},
+		{"dynamic-defer", `package main;func f(g func()){defer g()};func main(){f(func(){})}`},
 		{"panic", `package main;func main(){panic("bad")}`},
 		{"mutable-channel-field", `package main;type box struct{ch chan int};func main(){b:=box{make(chan int)};b.ch=make(chan int);b.ch<-1}`},
 		{"changing-capture", `package main;func main(){ch:=make(chan int);go func(){ch=make(chan int);ch<-1}();<-ch}`},

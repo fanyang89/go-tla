@@ -247,6 +247,43 @@ Pure/sequential cycles and status-ignoring receive loops are still refused. Save
 receives an independent backend finite-state check, not a trusted frontend annotation.
 See [the real pipeline harnesses](COMPONENTS.md#close-driven-pipeline).
 
+### Direct, proved interface calls
+
+```go
+type sender interface { Send(chan int) }
+type worker struct{}
+func (worker) Send(ch chan int) { ch <- 1 }
+func main() {
+    var s sender = worker{}
+    ch := make(chan int)
+    go s.Send(ch)
+    <-ch
+}
+```
+
+The SSA interface value must be a direct `MakeInterface` in the calling function,
+optionally reached through interface widening (`ChangeInterface`). Its concrete
+non-generic named type and exact declared receiver identify the method. The refined
+call graph must contain that same target; lowering also consumes the receiver's
+retained data dependencies. This is not a guess based on the number of implementers.
+
+Ordinary calls and goroutine entries inspect the real method body. Channel arguments
+retain their positions after the concrete receiver is bound; inline synchronization
+fields retain their existing object identities. Source-located
+`resolved-interface-call` diagnostics record the proof. Data returns remain abstract.
+
+Interface parameters, interface fields/loads, phis, returned interfaces, type
+assertions and method-value callbacks are not covered. Nor are promoted methods,
+implicit pointer/value receiver adaptation, generic receivers or explicit nil boxes.
+Synchronization-bearing value copies and channel-object escapes still fail their
+existing checks. Interface dispatch directly to `sync` / `sync/atomic` primitives
+(including `sync.Locker`) is refused, even with a trust flag; direct primitive calls
+inside an ordinary supported method keep their existing semantics. General deferred
+interface calls and helper calls inside receive cycles remain unsupported.
+
+This does **not** resolve `boundedLog`'s stored `io.Writer` or cancellation callback:
+proving those field bindings and effects remains separate bootstrap work.
+
 ### Private data construction in initialization helpers
 
 ```go
@@ -313,7 +350,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 | Dynamic or over-budget spawning/channel topology | Only static sites, including accepted integer-range expansions, have finite identities |
 | Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |
-| Dynamic callbacks/interface dispatch | No safe resolved-call support for these sites |
+| Unproved callbacks/interface dispatch | Only direct local boxing with an exact receiver/graph proof is admitted; fields, parameters and other dynamic sources remain unsupported |
 | General `defer`, explicit panic/recover | Only direct deferred Unlock/Done on normal-return paths are modeled; no panic unwinding |
 | RWMutex and other unsupported synchronization APIs | No corresponding implemented semantics |
 | WaitGroup reuse or concurrent positive enrollment | Counter-only representation does not model waiter generations |

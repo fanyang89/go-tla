@@ -42,6 +42,40 @@ func TestFunctionPlanDependenciesAreConsumed(t *testing.T) {
 	t.Fatal("receive missing")
 }
 
+func TestInterfaceProofConsumesGraphAndSlice(t *testing.T) {
+	p := testutil.Load(t, `package main;type I interface{Value()int};type number int;func(n number)Value()int{return int(n)};func main(){var i I=number(1);_ = i.Value()}`)
+	main, _ := p.Main()
+	b := &builder{p: p, m: &behavior.Model{Outcome: "precisely-modeled"}, effects: effects.New(p, nil), plans: map[*ssa.Function]*functionPlan{}}
+	plan := b.plan(main)
+	for site, summary := range plan.Calls {
+		if !site.Common().IsInvoke() {
+			continue
+		}
+		receiver := p.InvokeReceiver(site)
+		if summary.Kind != effects.Pure || receiver == nil || !plan.Discovery.Roots[site] || !plan.Slice.Data[receiver] || !plan.Slice.Data[site.Common().Value] {
+			t.Fatal("pure interface target lost its receiver proof slice")
+		}
+		fr := &frame{f: main, plan: plan}
+		if f, _ := b.callee(fr, site, summary.Callee, site.Pos()); f == nil || b.m.HasErrors() {
+			t.Fatal("valid invoke proof rejected")
+		}
+		delete(plan.Slice.Data, receiver)
+		if f, _ := b.callee(fr, site, summary.Callee, site.Pos()); f != nil || !b.m.HasErrors() {
+			t.Fatal("missing receiver slice was ignored")
+		}
+		plan.Slice.Data[receiver] = true
+		p.Calls.Nodes[main].Out = nil
+		if f, _ := b.callee(fr, site, summary.Callee, site.Pos()); f != nil {
+			t.Fatal("cached summary bypassed broken call graph")
+		}
+		if d := b.m.Diagnostics[len(b.m.Diagnostics)-1]; d.Code != "call-contract" {
+			t.Fatalf("missing graph contract diagnostic: %+v", d)
+		}
+		return
+	}
+	t.Fatal("missing invoke")
+}
+
 func TestLowerRequiresCallGraph(t *testing.T) {
 	p := testutil.Load(t, `package main;func main(){}`)
 	p.Calls = nil

@@ -9,7 +9,6 @@ import (
 	"go/parser"
 	"go/token"
 	"golang.org/x/tools/go/callgraph"
-	"golang.org/x/tools/go/callgraph/static"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
@@ -86,8 +85,6 @@ func BuildSSA(loaded *Loaded) *Program {
 	return &Program{Packages: ps, SSA: prog, Roots: roots, Fset: prog.Fset, Sources: sourceIndex(ps), loops: loaded.loops}
 }
 
-// BuildCallGraph is pass 2. Unresolved dynamic sites are rejected during reachable lowering.
-func BuildCallGraph(p *Program) { p.Calls = static.CallGraph(p.SSA) }
 func (p *Program) Main() (*ssa.Function, error) {
 	var main *ssa.Function
 	for _, pkg := range p.Roots {

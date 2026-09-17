@@ -68,7 +68,8 @@ func relevantType(t types.Type) bool {
 
 // callee consumes the call summary's graph-checked target and binds only statically
 // resolvable synchronization identities. It never performs general alias analysis.
-func (b *builder) callee(fr *frame, c *ssa.CallCommon, f *ssa.Function, pos token.Pos) (*ssa.Function, map[ssa.Value]string) {
+func (b *builder) callee(fr *frame, site ssa.CallInstruction, f *ssa.Function, pos token.Pos) (*ssa.Function, map[ssa.Value]string) {
+	c := site.Common()
 	if f == nil {
 		b.diag("error", "unknown-effects", "dynamic/interface call may synchronize or diverge; unsupported", pos)
 		return nil, nil
@@ -77,6 +78,19 @@ func (b *builder) callee(fr *frame, c *ssa.CallCommon, f *ssa.Function, pos toke
 		b.diag("error", "unknown-effects", "unavailable body for "+f.String()+"; requires explicit total side-effect-free trust contract", pos)
 		return nil, nil
 	}
+	args := c.Args
+	if c.IsInvoke() {
+		receiver := b.p.InvokeReceiver(site)
+		if receiver == nil || b.p.CallTarget(site) != f {
+			b.diag("error", "call-contract", "interface target lacks a matching receiver and call-graph proof", pos)
+			return nil, nil
+		}
+		if !b.requireData(fr, c.Value) || !b.requireData(fr, receiver) {
+			return nil, nil
+		}
+		args = append([]ssa.Value{receiver}, c.Args...)
+		b.diag("info", "resolved-interface-call", "proved local interface target: "+f.String(), pos)
+	}
 	bind := map[ssa.Value]string{}
 	for j, p := range f.Params {
 		if discovery.SyncType(p.Type()) != "" || inlineSync(p.Type()) || channelAggregate(p.Type()) {
@@ -84,8 +98,8 @@ func (b *builder) callee(fr *frame, c *ssa.CallCommon, f *ssa.Function, pos toke
 				b.diag("error", "sync-copy", "passing synchronization objects by value unsupported", pos)
 			}
 		}
-		if j < len(c.Args) && relevantType(p.Type()) {
-			bind[p] = b.identity(fr, c.Args[j], map[ssa.Value]bool{})
+		if j < len(args) && relevantType(p.Type()) {
+			bind[p] = b.identity(fr, args[j], map[ssa.Value]bool{})
 		}
 	}
 	if mc, ok := c.Value.(*ssa.MakeClosure); ok {

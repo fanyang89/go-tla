@@ -47,7 +47,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 99 positive/negative semantic TLC cases and 11
+itself. It is separate from the 109 positive/negative semantic TLC cases and 11
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -104,6 +104,38 @@ internal/CLI/integration/component race suite passed locally with zero skips/fai
 without changing original snapshots. Evidence is in
 `$HOME/tmp/pi/gotla-bootstrap-data/{gate.log,race.log,self-check.log,cli/result.json}`.
 This increment has not been pushed or claimed as a hosted CI pass.
+
+## Bootstrap prerequisite: exact local interface dispatch
+
+The next increment refines the explicit call graph for SSA interface values boxed
+in the calling function with a proved concrete non-generic named receiver. The
+implementation inspects the actual method body, binds its concrete receiver before
+ordinary arguments and retains the box/receiver in the consumed slice even for a
+pure method. No methods are trusted merely because their names resemble `Write`.
+Deleted or incorrect graph edges and missing receiver dependencies fail closed.
+
+Ten real TLC cases exercise channel argument positions, shared/distinct mutexes,
+cross-worker unlock, invalid unlock, joined workers, named-channel receivers,
+interface widening, pure methods and blocked method cleanup. Refusal coverage
+includes interface parameters/fields/phis, returned/nil interfaces, promotions,
+pointer/value adaptation, generics, recursive/effectful bodies, copies, channel
+object escapes and primitive trust bypass. The total is now **109** semantic TLC
+cases plus the unchanged **11** TLC CLI cases and separate self-input refusal test.
+Original snapshots/sizes, the strict local gate and the full race suite pass, with
+zero skipped/failing tests. This increment has no claimed hosted run.
+
+This is a prerequisite, **not resolution of stored writer/cancellation callbacks**.
+The repeated CLI self-check still returns `unsupported / 5` with 240 initializer
+errors and the same other error counts; it emits no resolved-interface diagnostic
+on its currently lowered path and does not run TLC. It would be misleading to
+claim improved CLI coverage from the fixture results alone. `boundedLog.Write`
+remains unverified. Evidence:
+`$HOME/tmp/pi/gotla-bootstrap-interface/{gate.log,race.log,self-check.log,cli/result.json}`.
+
+Next work must prove finite receiver/callback bindings through the component's
+actual fields or choose another explicit component-entry contract without erasing
+I/O, cancellation or re-entry behavior. The direct-box proof does not authorize
+such an extension by itself.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

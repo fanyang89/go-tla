@@ -181,7 +181,7 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 			if p, ok := plan.Discovery.Primitives[i]; ok {
 				if g, ok := i.(*ssa.Go); ok {
 					entry := plan.Entries[g]
-					callee, bind := b.callee(fr, g.Common(), entry.Callee, g.Pos())
+					callee, bind := b.callee(fr, g, entry.Callee, g.Pos())
 					if callee != nil {
 						id := b.fresh(callee.Name() + "_goroutine")
 						b.process(callee, bind, id)
@@ -274,7 +274,7 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 					b.m.Assumptions = append(b.m.Assumptions, "Trusted call: "+name)
 				} else if summary.Kind == effects.Builtin { // discarded sequential computation
 				} else {
-					callee, bind := b.callee(fr, x.Common(), summary.Callee, x.Pos())
+					callee, bind := b.callee(fr, x, summary.Callee, x.Pos())
 					if callee != nil {
 						if discovery.SyncTypeReceiver(callee) != "" {
 							b.diag("error", "sync-method", "unsupported synchronization method "+callee.String(), x.Pos())

@@ -16,9 +16,12 @@ The passes are explicit functions/packages:
 1. `frontend.Load` loads and type-checks the original packages. A restricted typed
    integer-range proof may produce in-memory Go overlays; these are reloaded and
    type-checked before SSA construction. On-disk source is never rewritten.
-2. `frontend.BuildSSA` constructs Go SSA; `BuildCallGraph` builds the static call graph.
+2. `frontend.BuildSSA` constructs Go SSA; `BuildCallGraph` builds the static call graph
+   and refines exact local interface boxes to their declared concrete methods. Receiver
+   adaptation, promotion and unknown interface sources are not guessed. Call-target
+   queries require agreement between the SSA proof and an explicit graph edge.
 3. `effects.Analyzer` caches call-effect summaries using graph-checked SSA call
-   targets. Unknown/dynamic/unsafe/recursive effects never receive pure summaries.
+   targets. Unresolved/unsafe/recursive effects never receive pure summaries.
    Explicit trusted contracts remain visible; purity guides slicing, not permission
    to bypass reachable-body validation.
 4. `discovery.Scan` returns typed primitives, roots and goroutine sites. Cached
@@ -252,7 +255,7 @@ slice; only individually proved stores can be discarded. Callees may read, but n
 initialize or mutate, these bindings. No field-specific state or syntax enters the IR.
 Global/mutable channel fields, pointer fields and unproved object-pointer cells,
 containers, changing captured
-channel cells, indirect shared identity stores, dynamic callbacks/interface dispatch,
+channel cells, indirect shared identity stores, unproved callbacks/interface dispatch,
 returned channel topology and different-identity phis are rejected when relevant.
 Synchronization objects cannot be passed by value or copied/reset. Reachable SSA
 operations consuming or producing `unsafe.Pointer` (including casts and indirect

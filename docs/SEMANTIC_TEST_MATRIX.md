@@ -5,6 +5,21 @@ Paths and test names refer to the current implementation. Actual TLC tests are
 optional in a plain local test run but mandatory in the
 [strict gate](VERIFICATION.md#tests-and-required-ci-gate).
 
+## Bootstrap prerequisite: exact local interface dispatch
+
+`TestTLCDirectInterfaceCalls` adds ten real TLC cases: relay argument binding,
+shared-mutex deadlock, distinct mutexes, cross-worker unlock, invalid unlock,
+joined workers, a named-channel receiver, interface widening, pure receiver proof
+retention and deferred cleanup blocked inside a method. The total is **109**
+semantic TLC cases, plus **11** unchanged TLC CLI cases.
+
+`TestDirectInterfaceRefusals` exercises unresolved receiver sources, adaptations,
+copies/escapes, recursive/unknown effects, unsupported defers and primitive trust
+bypass. `TestDirectInterfaceGraphAndReceiverAgreement`,
+`TestUnknownInterfaceParameterHasNoGraphTarget` and
+`TestInterfaceProofConsumesGraphAndSlice` verify exact target/receiver agreement
+and fail-closed pass consumption. Self-analysis of the full CLI remains unsupported.
+
 ## Bootstrap prerequisite: private data constructors
 
 `TestPrivateDataConstructorSummaries` and `TestStandardErrorConstructorIsPrivateData`

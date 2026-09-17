@@ -477,11 +477,17 @@ A conditional startup setting is now available through `-runtime-procs N`: an
 ordinary linux/amd64 process starts with GOMAXPROCS=N. It does not infer/change host
 settings; source inventory rejects setters, resets, API escapes and trust, and fresh
 proofs bind direct zero queries to local/global capacities. At N=2, the actual self
-input includes both x/tools CPU-limit channels and has 105 initializer refusals
-(109 without the profile). Both remain unsupported / 5, without executable self TLA+.
+input includes both x/tools CPU-limit channels. After the three guarded reflect.rtypeOf
+literal metadata initializers it has 102 initializer refusals (106 without the profile). Both remain unsupported / 5, without executable self TLA+.
 Native capacity comparisons and six semantic/two CLI TLC additions bring totals to
 212 + 20, with strict gate/full race passing and snapshots unchanged. Other finite
 input/environment and process/I/O lifecycle requirements remain unresolved.
+
+The literal metadata model checks the actual standard wrapper/ABI chain, current
+graph, source ownership, dominating box and retained literal operand. It records
+runtime ABI correctness as an assumption; native type/layout comparisons are not
+an implementation proof. General interface boxing and other reflection initialization
+remain refused. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-reflection-literals/`.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

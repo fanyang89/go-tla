@@ -156,7 +156,7 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 			t.Fatalf("project lexical initialization regressed: %+v", d)
 		}
 	}
-	edgeProofs, typeProofs := 0, 0
+	edgeProofs, typeProofs, literalTypeProofs := 0, 0, 0
 	for _, d := range r.Diagnostics {
 		if d.Code != "constant-data-call" || d.Line == 0 {
 			continue
@@ -166,6 +166,9 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 		}
 		if strings.Contains(d.Message, "reflect.TypeFor[") {
 			typeProofs++
+		}
+		if strings.Contains(d.Message, "reflect.rtypeOf") && (d.File == "reflect/map.go" || d.File == "reflect/value.go") {
+			literalTypeProofs++
 		}
 	}
 	if edgeProofs != 104 || typeProofs != 5 {
@@ -177,7 +180,10 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 			reflectionAssumptions++
 		}
 	}
-	if reflectionAssumptions != 2 {
+	if literalTypeProofs != 3 {
+		t.Fatalf("actual reflect literal metadata proofs: %d", literalTypeProofs)
+	}
+	if reflectionAssumptions != 3 {
 		t.Fatal("reflection model assumptions missing or duplicated")
 	}
 	exit := false

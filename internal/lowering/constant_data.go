@@ -11,8 +11,13 @@ func (b *builder) consumeConstantData(fr *frame, site *ssa.Call) bool {
 	valid := summary.Callee != nil && b.p.CallTarget(site) == summary.Callee && proof != nil
 	if fr != nil {
 		for _, operand := range site.Operands(nil) {
-			if operand != nil && !b.requireData(fr, *operand) {
-				valid = false
+			if operand != nil {
+				if !b.requireData(fr, *operand) {
+					valid = false
+				}
+				if box, ok := (*operand).(*ssa.MakeInterface); ok && !b.requireData(fr, box.X) {
+					valid = false
+				}
 			}
 		}
 	}

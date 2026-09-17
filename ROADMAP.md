@@ -755,3 +755,13 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
 - Actual N=2 self-input consumes both x/tools CPU-limit channels. It remains
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
+
+### Full-self continuation: literal type metadata
+
+- Guard the actual three reflect.rtypeOf initializers by current standard wrapper,
+  ABI chain, graph, dominating literal box and budgets; record the explicit runtime
+  metadata assumption without admitting general boxing or reflective execution.
+- Native type/layout comparisons and stale source/graph/argument/ABI/slice mutations
+  pass. Strict gate/full race pass; snapshots and TLC totals (212 + 20) are unchanged.
+- Actual self-input remains unsupported / 5: 102 initializer refusals under startup
+  GOMAXPROCS=2, or 106 without a profile. No executable self TLA+ or self TLC yet.

@@ -34,6 +34,9 @@ func (a *Analyzer) ProveConstantData(site *ssa.Call) (proof *ConstantDataProof) 
 		return nil
 	}
 	e := &dataEval{program: a.program, sizes: a.program.Packages[0].TypesSizes, steps: 100000, cells: 65536, owned: map[*dataCell]bool{}, stack: map[*ssa.Function]bool{}}
+	if _, ok := e.literalRuntimeType(site); ok {
+		return &ConstantDataProof{ModeledOperations: []string{ReflectionLiteralTypeModel}}
+	}
 	args := []dataValue{}
 	for _, arg := range site.Common().Args {
 		c, ok := arg.(*ssa.Const)

@@ -550,3 +550,28 @@ Evidence is local under `$HOME/tmp/pi/gotla-self-bootstrap-runtime-procs/`. The 
 probe exposed a nil-frame argument-slice check during initialization; it was fixed
 and the original panic log retained. Subsequent complete CLI probes terminate with
 the intended unsupported result. This prerequisite does not authorize completion.
+
+## Boxed-literal runtime type metadata
+
+The three actual `reflect.rtypeOf` initializers (`string`, `[]byte`, `uint8`) now
+have a narrowly guarded immutable-metadata operation model. Admission checks the
+standard declaration, source ownership, exact wrapper, current ABI TypeOf/NoEscape
+chain, caller graph, dominating literal box and existing literal/type budgets.
+The unsafe runtime representation remains an explicit correctness assumption,
+not an implementation proof. No interpreter-level application interface or runtime
+pointer is created, and the returned metadata remains abstract.
+
+Native public type metadata agrees with the three source argument types/layouts.
+Mutation tests reject changed arguments (including nested interface boxes), graph,
+wrapper, ABI, source, ordering and oversized literals. Consumption rechecks both
+the retained box and its literal operand. General boxing and other reflection
+initialization remain refused; the real CLI boundary regression requires exactly
+three source-attributed proofs and the additional deduplicated assumption.
+
+Strict gate/full race pass, without skips/failures or snapshot changes. Existing
+TLC totals stay **212 semantic + 20 CLI**; this change adds no independently executable
+reflection-import model. Actual self-analysis remains **unsupported / 5**, with
+**102** initializer refusals under startup GOMAXPROCS=2, or **106** without the profile.
+Only a diagnostic model is emitted; there is still no full self TLA+ or self TLC run.
+Evidence and initial failed attempts are retained under
+`$HOME/tmp/pi/gotla-self-bootstrap-reflection-literals/`.

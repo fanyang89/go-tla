@@ -396,6 +396,19 @@ reflection initialization is still checked and may refuse whole-program emission
 Native tests compare all 104 actual x/tools AST edge initializers plus direct-field
 layout/presence/tag results. Five direct encoding/json TypeFor initializers also pass.
 
+### Boxed-literal runtime type metadata
+
+Three standard `reflect.rtypeOf` initializers are admitted through an explicit
+immutable ABI metadata model, not general interface evaluation. The exact current
+standard wrapper and ABI TypeOf/NoEscape chain, call graph and dominating literal
+box must match. Existing literal/type budgets apply; nested interface boxes,
+nonliteral values and stale source/graph/SSA facts refuse. Lowering also retains
+both the box and its literal operand. Runtime ABI correctness is assumed and
+recorded separately; returned metadata remains abstract, with no executable runtime
+pointer or application interface value. Native public type metadata comparisons
+cover the real `string`, `[]byte` and `uint8` inputs. Other package initialization
+and reflection execution remain independently checked and may refuse emission.
+
 ### Conditional startup GOMAXPROCS profile
 
 `analyze`, `inspect` and `check` accept `-runtime-procs N` (1..1024; zero/default

@@ -30,6 +30,7 @@ type loopOwner struct {
 type LoopProof struct {
 	Source       behavior.Position
 	Count        int
+	ArrayRange   bool   // Snapshot-based scalar array expansion.
 	ChannelRange bool   // Candidate only: SSA must prove finite-state receive control.
 	Reason       string // Nonempty means the loop was retained and must be refused if reached.
 }
@@ -80,6 +81,13 @@ func normalizeLoops(ps []*packages.Package, sources map[string][]byte) (map[stri
 					}
 				}
 			}
+			names := map[string]bool{}
+			ast.Inspect(file, func(n ast.Node) bool {
+				if id, ok := n.(*ast.Ident); ok {
+					names[id.Name] = true
+				}
+				return true
+			})
 			var edits []loopEdit
 			expandedBytes := 0
 			var inspectFunction func(ast.Node, token.Pos)
@@ -102,6 +110,11 @@ func normalizeLoops(ps []*packages.Package, sources map[string][]byte) (map[stri
 						return false
 					}
 					count, reason := rangeCount(p.TypesInfo, loop)
+					_, arrayRange := p.TypesInfo.TypeOf(loop.X).Underlying().(*types.Array)
+					if arrayRange {
+						count, reason = arrayRangeCount(p.TypesInfo, file, loop)
+					}
+					proof.ArrayRange = arrayRange
 					proof.Count, proof.Reason = count, reason
 					if reason == "" {
 						ast.Inspect(loop.Body, func(n ast.Node) bool {
@@ -129,20 +142,40 @@ func normalizeLoops(ps []*packages.Package, sources map[string][]byte) (map[stri
 							proof.Reason = "constant range exceeds the 256 KiB per-file expansion budget; not truncated"
 						} else {
 							var text bytes.Buffer
-							text.WriteString("{\n_ = ")
+							temporary := fmt.Sprintf("__gotla_array_%d", start)
+							for names[temporary] {
+								temporary += "_"
+							}
+							names[temporary] = true
+							text.WriteString("{\n")
+							if arrayRange {
+								fmt.Fprintf(&text, "%s := ", temporary)
+							} else {
+								text.WriteString("_ = ")
+							}
 							exprStart := p.Fset.PositionFor(loop.X.Pos(), false)
 							exprEnd := p.Fset.PositionFor(loop.X.End(), false).Offset
 							fmt.Fprintf(&text, "/*line %s:%d:%d*/", filename, exprStart.Line, exprStart.Column)
 							text.Write(src[exprStart.Offset:exprEnd])
 							text.WriteByte('\n')
-							for range copies {
+							if arrayRange {
+								fmt.Fprintf(&text, "_ = %s\n", temporary)
+							}
+							for iteration := range copies {
 								if count == 0 {
 									text.WriteString("if false ")
+								}
+								if arrayRange {
+									text.WriteString("{\n")
+									arrayRangeBindings(&text, loop, temporary, iteration)
 								}
 								// A block comment directive preserves the opening brace's exact column.
 								fmt.Fprintf(&text, "/*line %s:%d:%d*/", filename, bodyStart.Line, bodyStart.Column)
 								text.Write(bodyText)
 								text.WriteByte('\n')
+								if arrayRange {
+									text.WriteString("}\n")
+								}
 							}
 							text.WriteString("}\n")
 							after := p.Fset.PositionFor(loop.End(), false)

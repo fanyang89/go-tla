@@ -190,7 +190,7 @@ func main() {
 
 With `import "sync"`, the two goroutines above are distinct static instances. The
 range bound must be a Go compile-time integer constant, not a variable that happens
-to contain a small value. No iteration variable is currently supported except `_`.
+to contain a small value. No integer-range iteration variable is currently supported except `_`.
 The body may return or register supported defers: return exits the original function,
 and defers execute at its normal return, **not** at the end of each iteration.
 Nonpositive bounds execute no body operations.
@@ -209,6 +209,29 @@ the separate proof below; channel ranges have their own non-unrolling rule.
 Returned/dynamic resource topology remains unsupported.
 Synchronization/alias rules still apply inside accepted loops, including WaitGroup's
 single enrollment phase and the per-invocation defer-site limit after expansion.
+
+### Proved scalar-array value ranges
+
+`for i, value := range array` (including a blank index) is expanded when `array` has
+a by-value fixed-array type of at most 16 scalar elements and the effective source
+language version is Go 1.22 or newer. The value identifier must be nonblank and
+bindings must use `:=`. Pointer arrays, key-only ranges, assignment bindings and
+reference/resource-bearing elements are not supported by this rule.
+
+The array expression is evaluated once into a fresh, collision-free local snapshot.
+Each iteration declares its own index/value in a distinct lexical block; no helper
+function is introduced. Returns and defers retain their original function scope.
+Even a zero-length two-value range evaluates the expression, while its body stays
+nonexecuting but type-checked. Native differential tests cover snapshot mutation,
+evaluation count, zero length, closure/defer capture, return and name collisions.
+Source locations and on-disk input remain unchanged; the generated Go is re-type-checked.
+The existing nested-control restrictions and 256 KiB per-file budget still apply.
+
+Index/value data is still abstract in the synchronization model. A conditional return
+based on an index may therefore yield a conservative counterexample; normalization
+does not introduce a payload/constant-folding correctness claim.
+The production artifact managed-file table is now a fixed array, so its two actual
+five-file loops use this proof. File operations and error paths are not omitted.
 
 ### Length/constant-bounded data computations
 

@@ -43,7 +43,11 @@ func (b *builder) recordLoops(f *ssa.Function) bool {
 			b.diagAt("error", "unsupported-loop", proof.Reason, pos)
 			valid = false
 		} else if !b.loopReported[f] {
-			message := fmt.Sprintf("Proved integer range bound: %d iterations at %s:%d:%d; expanded without truncation", proof.Count, pos.File, pos.Line, pos.Column)
+			kind := "integer"
+			if proof.ArrayRange {
+				kind = "scalar array"
+			}
+			message := fmt.Sprintf("Proved %s range bound: %d iterations at %s:%d:%d; expanded without truncation", kind, proof.Count, pos.File, pos.Line, pos.Column)
 			b.diagAt("info", "proved-loop", message, pos)
 			b.m.Assumptions = append(b.m.Assumptions, message)
 		}

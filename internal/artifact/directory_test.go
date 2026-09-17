@@ -8,7 +8,7 @@ import (
 
 func TestDirectoryOwnershipAndInvalidation(t *testing.T) {
 	out := t.TempDir()
-	for _, name := range append(append([]string{}, managedFiles...), "notes.txt") {
+	for _, name := range append(append([]string{}, managedFiles[:]...), "notes.txt") {
 		if err := os.WriteFile(filepath.Join(out, name), []byte("old"), 0600); err != nil {
 			t.Fatal(err)
 		}

@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **178 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **185 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -31,6 +31,15 @@ nil/empty inputs, independent copied storage, replacement and concurrent capture
 frontend/race regressions exercise its real integration. The production leaf uses
 slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
 bootstrap document for that dependency change's scope and evidence.
+
+## Full-self prerequisite: scalar-array ranges
+
+Seven `TestTLCScalarArrayRanges` cases cover topology, workers, zero iterations,
+saturation, return, abstract index guards and defer scope. Native differential
+execution covers array snapshots, single/zero-count evaluation, per-iteration
+captures, return and generated-name collisions. Source-position/input-preservation
+and old-language refusal tests protect normalization. The actual artifact file table
+is a fixed array; full CLI refusal regression requires its two five-iteration proofs.
 
 ## Full-self prerequisite: read-only value copies
 

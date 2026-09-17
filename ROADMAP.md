@@ -663,3 +663,14 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
 - Five new TLC cases bring totals to 178 semantic and 18 CLI/TLC cases. Strict gate
   and race pass. Full self-input still refuses: 70 loop and 232 initializer diagnostics.
   Evidence and remaining requirements: docs/SELF_BOOTSTRAP_GOAL.md.
+
+### Full-self continuation: scalar-array range normalization
+
+- Expand small by-value scalar arrays with Go 1.22+ declared index/value semantics,
+  retaining snapshot/evaluation count, lexical bindings, return/defer and source locations.
+- Use a fixed array for the actual managed artifact file table; consume both real
+  five-iteration proofs without dropping I/O or error paths.
+- Seven new TLC cases bring totals to 185 semantic and 18 CLI/TLC cases; native
+  transformation comparisons, strict gate and race pass. Self-input remains unsupported:
+  67 loop refusals, with additional underlying effects now exposed by expansion.
+  Evidence and remaining requirements: docs/SELF_BOOTSTRAP_GOAL.md.

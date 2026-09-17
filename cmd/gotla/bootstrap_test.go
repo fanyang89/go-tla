@@ -101,6 +101,15 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 			t.Fatalf("actual global I/O semaphore proof/state missing: %s", file)
 		}
 	}
+	arrayProofs := 0
+	for _, d := range r.Diagnostics {
+		if d.Code == "proved-loop" && d.File == "internal/artifact/directory.go" && d.Line > 0 && strings.Contains(d.Message, "scalar array range bound: 5 iterations") {
+			arrayProofs++
+		}
+	}
+	if arrayProofs != 2 {
+		t.Fatal("actual artifact file-table loop proofs missing")
+	}
 	statisticsProof := false
 	for _, d := range r.Diagnostics {
 		if d.Code == "finite-data-loop" && d.File == "internal/behavior/statistics.go" && d.Line > 0 && strings.Contains(d.Message, ").Statistics;") {

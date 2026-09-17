@@ -277,7 +277,7 @@ Strict gate and full race pass: **173 semantic TLC and 18 CLI/TLC cases**, zero
 skips/failures and unchanged original snapshots. Evidence is under
 `$HOME/tmp/pi/gotla-self-bootstrap-open-globals/`; it remains local-only.
 
-## Read-only reference-bearing value copies (latest increment)
+## Read-only reference-bearing value copies
 
 The finite-data proof now permits private value copies containing ordinary data
 references. The destination must still trace to this invocation's allocation with
@@ -301,6 +301,37 @@ a global and must fail fresh consumption. Native Statistics tests remain unchang
 Strict gate and full race pass with **178 semantic TLC and 18 CLI/TLC cases**, zero
 skips/failures and unchanged snapshots. Evidence is local under
 `$HOME/tmp/pi/gotla-self-bootstrap-value-copies/`.
+
+## Scalar-array range normalization (latest increment)
+
+The source normalizer now expands small by-value scalar-array ranges with declared
+index/value bindings. It requires effective Go 1.22+ semantics, snapshots/evaluates
+the array once, preserves per-iteration bindings, and retains function-level return
+and defer behavior. Zero-length two-value ranges still evaluate their expression.
+Name collisions, source locations and re-type-checking are covered. Key-only/pointer
+arrays, assignment bindings, resource/reference elements, oversized arrays and
+unsupported nested control are refused; existing expansion budgets still apply.
+
+The actual artifact managedFiles table changed from an unexported, never-mutated
+slice to a fixed five-element array. Begin and Write now have consumed five-iteration
+proofs. No file operations, errors, dependencies or initializers are skipped. Native
+artifact tests remain in force. The real CLI regression requires both source-located
+proofs while retaining unsupported / 5 and diagnostic-only artifacts.
+
+Loop refusals fall from 70 to **67**, but expansion reaches more previously hidden
+operations: initializer 232, exception 47, unknown-effect 150, identity 272, unsafe 70,
+receive-loop 356, sync-method 230, topology 9, defer 9 and channel-field-alias 1.
+These counts are diagnostics, not coverage/completion metrics. Full bootstrap remains
+unproved. Seven new TLC cases cover static topology/workers, zero count, saturation,
+return, abstract index guards and deferred scope. Six native original-versus-expanded
+execution cases cover snapshot/capture/evaluation behavior; old-language and source
+position tests protect the transformation boundary.
+
+The first focused run incorrectly expected precise evaluation of an index guard;
+its log is retained. The corrected matrix separately tests unconditional return and
+the conservative abstract-index counterexample. Strict gate and full race pass:
+**185 semantic TLC and 18 CLI/TLC cases**, zero skips/failures, unchanged snapshots.
+Evidence is local under `$HOME/tmp/pi/gotla-self-bootstrap-array-ranges/`.
 
 Remaining work includes other dependency initialization/effects, other non-receive control loops,
 returned/dynamic callback and object identities, runtime synchronization primitives,

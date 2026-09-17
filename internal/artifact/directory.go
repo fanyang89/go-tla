@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-var managedFiles = []string{"result.json", "model.tla", "model.cfg", "model.json", "tlc.log"}
+var managedFiles = [...]string{"result.json", "model.tla", "model.cfg", "model.json", "tlc.log"}
 
 type Directory struct {
 	Path string

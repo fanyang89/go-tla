@@ -651,3 +651,24 @@ Strict gate/full race pass without skips/failures or snapshot changes.
 
 This closes a soundness gap; it does not provide the missing finite I/O environment
 or a self-bootstrap proof. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-builtin-output/`.
+
+## Scalar Sprint/Sprintln prerequisite
+
+The source-bound formatting model now checks all three string-returning variants:
+Sprintf/doPrintf, Sprint/doPrint and Sprintln/doPrintln. Exact standard wrapper,
+method identity, graph, signature/arity, private-array and fresh slice/store proofs
+are still required. No output-I/O function, named-value callback or shared/escaping
+argument slice is admitted. The explicit standard-formatting/runtime assumption
+covers these variants; returned strings remain abstract.
+
+Native tests check spacing/newlines and demonstrate the rejected String callbacks.
+Changed wrapper methods, graph, arity, escapes and missing retained store roots
+refuse; receive arguments and independent fmt initialization errors remain present.
+An actual-source unit test proves checker.Run's fmt.Sprint(cfg.Workers) call, but the
+full-self probe does **not** yet consume that site. It still reports 25 existing scalar
+formatting sites, 101 initializer refusals under N=2, and unsupported / 5 with no
+executable self TLA+ or checker invocation. This distinction is an acceptance boundary,
+not a reason to weaken the full objective.
+
+Strict gate/full race pass without skips/failures or snapshot changes. TLC totals
+remain 214 semantic + 20 CLI. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-sprint/`.

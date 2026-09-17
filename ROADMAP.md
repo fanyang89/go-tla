@@ -756,6 +756,15 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: checker argument formatting
+
+- Extend guarded scalar formatting to Sprint/Sprintln, preserving exact variant
+  methods, arity, source/graph, nonescaping arguments and consumed store roots.
+- Native and mutation tests pass; an actual-source unit proof covers checker.Run's
+  worker argument. The whole-self probe does not yet consume that site.
+- Strict gate/full race pass, 214 + 20 TLC totals and snapshots unchanged. Whole-self
+  remains unsupported / 5 with 101 N=2 initializer refusals; no completion claimed.
+
 ### Full-self I/O boundary audit
 
 - Stop silently eliding Go print/println: require an explicit output model, refresh

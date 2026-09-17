@@ -34,6 +34,6 @@ func (b *builder) consumeScalarFormat(fr *frame, site *ssa.Call) bool {
 		b.m.Assumptions = append(b.m.Assumptions, effects.ScalarFormatModel)
 	}
 	b.diag("info", "modeled-data-operation", effects.ScalarFormatModel, site.Pos())
-	b.diag("info", "scalar-format-call", "modeled basic-scalar fmt.Sprintf; arguments evaluated and result remains abstract", site.Pos())
+	b.diag("info", "scalar-format-call", "modeled basic-scalar "+summary.Callee.String()+"; arguments evaluated and result remains abstract", site.Pos())
 	return true
 }

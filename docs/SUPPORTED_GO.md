@@ -410,9 +410,11 @@ executed output requires an explicit I/O model, which is not yet provided here.
 
 ### Basic-scalar string formatting
 
-A source-bound operation model admits `fmt.Sprintf` only with unnamed basic scalar
-or nil interface arguments. It checks the current standard declaration/signature,
-exact newPrinter/doPrintf/buffer-copy/free wrapper and graph edges. Correctness of
+A source-bound operation model admits `fmt.Sprintf`, `fmt.Sprint` and `fmt.Sprintln`
+only with unnamed basic scalar or nil interface arguments. It checks the current
+standard declaration/signature, exact newPrinter/format-method/buffer-copy/free
+wrapper and graph edges. Each variant must call its own doPrintf/doPrint/doPrintln
+method with the exact parameters; method or call-arity substitutions refuse. Correctness of
 standard formatting, its private pool/runtime and normal resource availability is
 an explicit assumption—not a proof of fmt's implementation. Format strings/results
 remain abstract; this establishes no finite payload bound and performs no host formatting.
@@ -429,6 +431,9 @@ Consumption rechecks the source/graph/private-array proof and every retained
 operand/store root, recording the assumption once. Native checks cover scalar
 formatting while holding a mutex and a named-value callback that must be refused.
 Actual own-source formatting and go/types' version initializer consume the model.
+A separate actual-source unit proof checks checker.Run's fmt.Sprint worker argument;
+the current full-self probe does not yet reach/consume that site. Native tests cover
+Sprint/Sprintln spacing/newline behavior and refused named-value callbacks.
 Other package initialization still refuses executable emission; this adds no positive
 whole-fmt-import TLC proof or whole-self proof.
 

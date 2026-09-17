@@ -10,7 +10,7 @@ import (
 	"golang.org/x/tools/go/ssa"
 )
 
-const ScalarFormatModel = "Standard Go fmt.Sprintf with only unnamed basic scalar or nil arguments performs no application callbacks, I/O or application synchronization. Standard formatting/private-pool/runtime correctness and normal resource availability are assumed, not proved. Format contents and returned strings remain abstract; no finite payload bound is established."
+const ScalarFormatModel = "Standard Go fmt.Sprintf/Sprint/Sprintln with only unnamed basic scalar or nil arguments performs no application callbacks, I/O or application synchronization. Standard formatting/private-pool/runtime correctness and normal resource availability are assumed, not proved. Format contents and returned strings remain abstract; no finite payload bound is established."
 
 type ScalarFormatProof struct {
 	Operands []ssa.Value
@@ -46,15 +46,29 @@ func (e *dataEval) formatMethod(site *ssa.Call, name string, receiver ssa.Value,
 	return true
 }
 
-func (e *dataEval) sprintfShape(f *ssa.Function) bool {
-	if f == nil || f.Pkg == nil || f.Pkg.Pkg.Path() != "fmt" || f.Name() != "Sprintf" || f.Object() == nil || f.Pkg.Pkg.Scope().Lookup("Sprintf") != f.Object() {
+func (e *dataEval) scalarFormatShape(f *ssa.Function) bool {
+	if f == nil || f.Pkg == nil || f.Pkg.Pkg.Path() != "fmt" || f.Object() == nil || f.Pkg.Pkg.Scope().Lookup(f.Name()) != f.Object() {
+		return false
+	}
+	params, method := 1, ""
+	switch f.Name() {
+	case "Sprintf":
+		params, method = 2, "doPrintf"
+	case "Sprint":
+		method = "doPrint"
+	case "Sprintln":
+		method = "doPrintln"
+	default:
 		return false
 	}
 	sig := f.Signature
-	if sig == nil || sig.Recv() != nil || !sig.Variadic() || sig.Params().Len() != 2 || sig.Results().Len() != 1 || !types.Identical(sig, f.Object().Type()) || !types.Identical(sig.Params().At(0).Type(), types.Typ[types.String]) || !types.Identical(sig.Results().At(0).Type(), types.Typ[types.String]) {
+	if sig == nil || sig.Recv() != nil || !sig.Variadic() || sig.Params().Len() != params || sig.Results().Len() != 1 || !types.Identical(sig, f.Object().Type()) || !types.Identical(sig.Results().At(0).Type(), types.Typ[types.String]) {
 		return false
 	}
-	slice, ok := sig.Params().At(1).Type().Underlying().(*types.Slice)
+	if params == 2 && !types.Identical(sig.Params().At(0).Type(), types.Typ[types.String]) {
+		return false
+	}
+	slice, ok := sig.Params().At(params - 1).Type().Underlying().(*types.Slice)
 	if !ok {
 		return false
 	}
@@ -79,7 +93,11 @@ func (e *dataEval) sprintfShape(f *ssa.Function) bool {
 		return false
 	}
 	call, ok := is[1].(*ssa.Call)
-	if !ok || !e.formatMethod(call, "doPrintf", printer, f.Params[0], f.Params[1]) {
+	args := make([]ssa.Value, len(f.Params))
+	for n, param := range f.Params {
+		args[n] = param
+	}
+	if !ok || !e.formatMethod(call, method, printer, args...) {
 		return false
 	}
 	addr := fieldAddress(is[2], printer, 0, "buf")
@@ -101,12 +119,12 @@ func (e *dataEval) sprintfShape(f *ssa.Function) bool {
 // ProveScalarFormat verifies a current standard wrapper and a nonescaping local
 // argument array. It is an explicit operation model, not a proof of fmt's body.
 func (a *Analyzer) ProveScalarFormat(site *ssa.Call) *ScalarFormatProof {
-	if site == nil || site.Common().IsInvoke() || len(site.Common().Args) != 2 {
+	if site == nil || site.Common().IsInvoke() || len(site.Common().Args) < 1 || len(site.Common().Args) > 2 {
 		return nil
 	}
 	f := a.program.CallTarget(site)
 	e := &dataEval{program: a.program}
-	if f != site.Common().StaticCallee() || !e.sprintfShape(f) || !types.Identical(site.Type(), types.Typ[types.String]) {
+	if f != site.Common().StaticCallee() || !e.scalarFormatShape(f) || len(site.Common().Args) != f.Signature.Params().Len() || !types.Identical(site.Type(), types.Typ[types.String]) {
 		return nil
 	}
 	for n, arg := range site.Common().Args {
@@ -114,8 +132,9 @@ func (a *Analyzer) ProveScalarFormat(site *ssa.Call) *ScalarFormatProof {
 			return nil
 		}
 	}
-	proof := &ScalarFormatProof{Operands: []ssa.Value{site.Common().Value, site.Common().Args[0], site.Common().Args[1]}}
-	args := site.Common().Args[1]
+	proof := &ScalarFormatProof{Operands: append([]ssa.Value{site.Common().Value}, site.Common().Args...)}
+	argIndex := len(site.Common().Args) - 1
+	args := site.Common().Args[argIndex]
 	if c, ok := args.(*ssa.Const); ok && c.IsNil() {
 		return proof
 	}
@@ -132,7 +151,7 @@ func (a *Analyzer) ProveScalarFormat(site *ssa.Call) *ScalarFormatProof {
 		return nil
 	}
 	array, ok := ptr.Elem().Underlying().(*types.Array)
-	if !ok || array.Len() > 64 || !types.Identical(array.Elem(), f.Signature.Params().At(1).Type().Underlying().(*types.Slice).Elem()) {
+	if !ok || array.Len() > 64 || !types.Identical(array.Elem(), f.Signature.Params().At(argIndex).Type().Underlying().(*types.Slice).Elem()) {
 		return nil
 	}
 	caller := site.Parent()

@@ -12,7 +12,7 @@ have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **163 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current totals: **166 semantic TLC cases and 18 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -63,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 163 positive/negative semantic TLC cases and 18
+itself. It is separate from the 166 positive/negative semantic TLC cases and 18
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -410,6 +410,12 @@ Nine new TLC cases bring totals to 163 semantic and 18 CLI/TLC cases; strict gat
 race tests pass. Native array comparison and malformed alphabet mutations test the
 real constructor. The full CLI still returns unsupported / 5 with 236 initialization
 refusals. See SELF_BOOTSTRAP_GOAL.md for evidence and remaining requirements.
+
+A subsequent owned-reference increment proves the actual go/constant.newFloat
+initializer with nil slice storage and SetPrec, reducing initializer refusals to 235.
+Three additional TLC cases bring current totals to 166 semantic and 18 CLI/TLC cases.
+Nil references never authorize external memory or synchronization-bearing type graphs.
+Full self-input still refuses; see SELF_BOOTSTRAP_GOAL.md for the latest evidence.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

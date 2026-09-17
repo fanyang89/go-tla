@@ -255,7 +255,7 @@ requires a normal return. It never calls application/native functions on the hos
 uses a library-name allowlist. User trust flags do not provide evaluator facts.
 
 Supported computation includes bounded-size bool/integer/string values, private
-plain-data structs/arrays, owned array-slice views, field/index access, copies,
+data-only structs/arrays, owned array-slice views, field/index access, copies,
 selected scalar operations and transitively inspected source calls. Go target type
 sizes bound integer values. Overflow, conversion wrap, unsupported operators, unknown
 values, external memory/global access, recursion, defer/recover, executed panic, unsafe operations,
@@ -267,6 +267,13 @@ Aggregate assignment preserves existing element/field addresses; Go value copies
 are independent and overlapping `copy` snapshots its source. Only evaluator-owned
 storage can be written. Private views and fully inspected helper calls can therefore
 pass this rule even when the general private-address-use rule refuses them.
+Zero pointer/slice/map fields are permitted only after the complete type graph
+excludes synchronization, callbacks, interfaces and unsafe pointers. Nil fields do
+not create backing storage. Later pointer assignments must still derive from owned
+cells; nil dereferences and external/global addresses refuse. Recursive private data
+graphs are allowed, but map construction/mutation is not implemented by this rule.
+This proves the actual go/constant.newFloat constructor and its SetPrec call on a
+fresh zero big.Float, without modeling general floating-point operations.
 The whole result remains abstract in behavioral IR; these facts do not turn a
 computed integer into a proved channel capacity or establish payload correctness.
 

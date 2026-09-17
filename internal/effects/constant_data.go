@@ -109,6 +109,12 @@ func (e *dataEval) zero(t types.Type, depth int) dataValue {
 		default:
 			refuseData()
 		}
+	case *types.Pointer, *types.Slice, *types.Map:
+		// Nil references do not allocate pointees or backing storage. The entire
+		// type graph must still exclude synchronization, interfaces and callbacks.
+		if !finiteDataType(v.typ, 0) {
+			refuseData()
+		}
 	case *types.Array:
 		if t.Len() > 4096 {
 			refuseData()
@@ -315,7 +321,7 @@ func (e *dataEval) function(f *ssa.Function, args []dataValue) []dataValue {
 				continue
 			case *ssa.Alloc:
 				t := x.Type().Underlying().(*types.Pointer).Elem()
-				if !plainData(t, 0) {
+				if !finiteDataType(t, 0) {
 					refuseData()
 				}
 				out = dataValue{typ: x.Type(), pointer: e.cell(e.zero(t, 0))}

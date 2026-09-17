@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **163 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **166 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -31,6 +31,15 @@ nil/empty inputs, independent copied storage, replacement and concurrent capture
 frontend/race regressions exercise its real integration. The production leaf uses
 slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
 bootstrap document for that dependency change's scope and evidence.
+
+## Full-self prerequisite: owned reference storage
+
+Three additional `TestTLCConstantDataCalls` cases cover zero slice fields, owned
+pointer fields and pointer arrays. Refusal tests retain external-pointer coverage;
+unit tests cover private cycles, nil dereferences and nested forbidden type graphs.
+`TestActualConstantFloatConstructor` checks the installed go/constant.newFloat source
+and compares the resulting precision with native Go. Full CLI regression requires
+this proof while retaining the unsupported whole-self boundary.
 
 ## Full-self prerequisite: literal-input data calls
 

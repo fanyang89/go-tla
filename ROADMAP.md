@@ -632,3 +632,13 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   external/nonempty refusal coverage and adding positive cases. Strict gate and race
   tests pass with zero skips/failures and unchanged snapshots. Evidence and remaining
   full-goal obligations remain in SELF_BOOTSTRAP_GOAL.md.
+
+### Full-self continuation: owned data references
+
+- Bounded invocation evaluation now supports zero data references and owned pointer
+  graphs, retaining full type-graph exclusions and cell ownership checks.
+- The actual go/constant.newFloat initializer is proved; native precision comparison
+  and full-CLI proof-consumption regression cover the production source.
+- Three new TLC cases bring totals to 166 semantic and 18 CLI/TLC cases. Strict gate
+  and race pass; full self-input still refuses with 235 initializer diagnostics.
+  See docs/SELF_BOOTSTRAP_GOAL.md for reproducible evidence and remaining scope.

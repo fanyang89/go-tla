@@ -8,6 +8,9 @@ import (
 
 func TestTLCConstantDataCalls(t *testing.T) {
 	for _, tc := range []struct{ name, decl, body, want string }{
+		{"owned-reference-array", `func build()*[2]*int{return &[2]*int{new(1),new(2)}};var data=build()`, `c:=make(chan int);close(c)`, "No error has been found"},
+		{"nil-data-field", `type T struct{S []int};func build(n int)*T{p:=new(T);if len(p.S)!=0{panic("bad")};return p};var data=build(2)`, `c:=make(chan int);close(c)`, "No error has been found"},
+		{"owned-reference-field", `type T struct{P *int};func build(n int)*T{p:=&T{new(n)};a:=&p.P;*p=T{new(3)};if **a!=3{panic("bad")};return p};var data=build(2)`, `c:=make(chan int);close(c)`, "No error has been found"},
 		{"initializer-validation", `func build(n int)int{if n!=2{panic("bad")};return n};var data=build(2)`, `c:=make(chan int,1);c<-data;<-c`, "No error has been found"},
 		{"private-helper", `type T struct{N int};func observe(p *T)int{return p.N};func build()*T{p:=&T{1};observe(p);return p};var data=build()`, `c:=make(chan int);close(c)`, "No error has been found"},
 		{"private-slice", `func build()*[2]int{p:=new([2]int);s:=p[:];s[1]=2;return p};var data=build()`, `c:=make(chan int);close(c)`, "No error has been found"},
@@ -38,11 +41,12 @@ func TestTLCConstantDataCalls(t *testing.T) {
 }
 func TestConstantDataRefusals(t *testing.T) {
 	for name, source := range map[string]string{
-		"bad-input":     `func build(n int)int{if n!=2{panic("bad")};return n};var data=build(1)`,
-		"unknown-input": `var input=2;func build(n int)int{if n!=2{panic("bad")};return n};var data=build(input)`,
-		"shared":        `var buffer [4]byte;func build(s string)int{return copy(buffer[:],s)};var data=build("abc")`,
-		"global-read":   `var flag=true;func build(n int)int{if flag{panic("bad")};return n};var data=build(1)`,
-		"bad-copy":      `func build(s string)*[4]byte{p:=new([4]byte);copy(p[:],s);if p[0]!='a'{panic("bad")};return p};var data=build("bcd")`,
+		"shared-reference": `var shared int;type T struct{P *int};func build(n int)*T{p:=&T{&shared};*p.P=n;return p};var data=build(2)`,
+		"bad-input":        `func build(n int)int{if n!=2{panic("bad")};return n};var data=build(1)`,
+		"unknown-input":    `var input=2;func build(n int)int{if n!=2{panic("bad")};return n};var data=build(input)`,
+		"shared":           `var buffer [4]byte;func build(s string)int{return copy(buffer[:],s)};var data=build("abc")`,
+		"global-read":      `var flag=true;func build(n int)int{if flag{panic("bad")};return n};var data=build(1)`,
+		"bad-copy":         `func build(s string)*[4]byte{p:=new([4]byte);copy(p[:],s);if p[0]!='a'{panic("bad")};return p};var data=build("bcd")`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			m := fromSource(t, "package main;"+source+";func main(){}")

@@ -186,7 +186,7 @@ No additional production initializer is claimed accepted by this increment.
 Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-array-data/` contains focused/gate/race
 logs, both failed gate attempts, self-check output and diagnostic CLI artifacts.
 
-## Literal-input SSA evaluation (latest continuation)
+## Literal-input SSA evaluation
 
 A bounded evaluator now proves individual data calls with SSA-constant arguments.
 It executes the actual selected SSA path, including transitive source calls, private
@@ -224,6 +224,32 @@ zero skips/failures and unchanged original snapshots.
 Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-constant-data/` contains unit/focused/gate/
 race logs, initial failed attempts, self-check output and diagnostic CLI artifacts.
 Full bootstrap remains unproved; no hosted pass is claimed.
+
+## Private zero-reference data storage (latest increment)
+
+Literal-input evaluation now allows zero pointer/slice/map fields after checking the
+entire data type graph. Synchronization, callbacks, interfaces and unsafe pointers
+remain excluded even behind nil references. Nil fields allocate no backing storage;
+all subsequent writes still require owned cells. Private cyclic references are
+permitted without recursively cloning pointees. Aggregate replacement preserves
+field addresses and ordinary pointer aliasing; external/global references and nil
+dereferences still refuse. Map construction/mutation and floating-point arithmetic
+are not added.
+
+The actual go/constant.newFloat initializer and its fresh big.Float.SetPrec call are
+now proved, with native precision comparison. The real CLI regression requires this
+source-located proof in addition to the base64 proofs. Initializer refusals fall from
+236 to **235**, with other refusal counts unchanged. Full self-input remains
+unsupported / 5 and produces no executable model.
+
+Three new TLC cases cover nil fields, owned pointer fields and reference arrays;
+unit cases cover cyclic ownership, alias-preserving replacement, nil dereference,
+external references and forbidden nested callback/interface/channel types. The old
+reference-array refusal now uses an external pointer, while its formerly refused
+owned-pointer variant is a positive TLC case. Initial focused failure is retained.
+Strict gate and race tests pass with **166 semantic TLC and 18 CLI/TLC cases**, zero
+skips/failures and unchanged snapshots. Evidence is under
+`$HOME/tmp/pi/gotla-self-bootstrap-references/`. Results remain local, not hosted.
 
 Remaining work includes other dependency initialization/effects, other non-receive control loops,
 returned/dynamic callback and object identities, runtime synchronization primitives,

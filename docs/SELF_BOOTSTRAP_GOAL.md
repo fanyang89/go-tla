@@ -696,3 +696,30 @@ coverage. Startup-N=2 still has 101 initializer refusals and returns unsupported
 with only diagnostic model.json and no checker command. The checker worker-formatting
 site is still not a consumed full-self proof. Evidence:
 `$HOME/tmp/pi/gotla-self-bootstrap-checker-inputs/`.
+
+## Exactly bound deferred dispatch
+
+Source-defined helpers invoked through the existing local-boxed-interface and
+immutable-callable-field proofs now use the ordinary fresh callee binder during
+defer registration. Resource identities are captured then; cleanup executes the
+actual source body in LIFO order, including blocking and synchronization failures.
+Graph, retained operands/receiver and current field initializer are not bypassed.
+No new general object identity, returned-closure, primitive-interface, wrapper,
+I/O or exception model is introduced.
+
+Ten cases run both natively and under pinned TLC, covering empty and effectful
+methods, receiver snapshots, instance-specific field captures, blocking arguments/
+cleanup, and LIFO reversal/double-close failures. Mutation tests reject missing graph/
+slice/origin proofs, synthetic wrappers and foreign defer stacks. Mutable/ambiguous/
+nil dispatch, returned closures, output, panic and existing object-identity refusals
+remain fail-closed. Initial attempts exposed unchanged channel-boxing/callable-only
+object restrictions; fixtures were scoped to already supported identities rather
+than weakening those rules. An obsolete empty-interface defer refusal moved to a
+positive native/TLC check; the failed gate is preserved.
+
+Strict gate and full race pass without skips or snapshot regeneration. Totals are
+224 semantic + 20 CLI TLC cases. The actual N=2 self-check still has 101 initializer,
+68 loop and 14 defer refusals, including checker.Run's returned timeout cancellation.
+It remains unsupported / 5 with no executable self-model or TLC invocation. This
+increment supplies a reusable cleanup proof, not full bootstrap completion.
+Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-deferred-dispatch/`.

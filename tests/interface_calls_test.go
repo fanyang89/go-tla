@@ -104,8 +104,6 @@ type I interface{Run()};type worker struct{};func(worker)Run(){};func main(){var
 type I interface{Run()};type worker struct{};func(*worker)Run(){};type outer struct{worker};func main(){var i I=&outer{};i.Run()}`, nil},
 		{"generic", `package main
 type I interface{Run()};type worker[T any] struct{};func(*worker[T])Run(){};func main(){var i I=&worker[int]{};i.Run()}`, nil},
-		{"interface-defer", `package main
-type I interface{Run()};type worker struct{};func(worker)Run(){};func main(){var i I=worker{};defer i.Run()}`, nil},
 		{"sync-copy", `package main
 import "sync"
 type I interface{Run()};type worker struct{mu sync.Mutex};func(worker)Run(){};func main(){var i I=worker{};i.Run()}`, nil},

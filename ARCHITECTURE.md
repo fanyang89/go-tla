@@ -254,21 +254,25 @@ no Go loop syntax, source overlays or runtime loop counter enters it.
 
 Direct deferred Mutex.Unlock and WaitGroup.Done are separate from immediate
 primitive execution. Discovery retains registration and `RunDefers` as slice roots;
-call summaries validate static targets. `lowering/defers.go` captures resource
+call summaries validate exact targets. `lowering/defers.go` captures resource
 identities at registration sites and gives each invocation fresh finite local flags.
+Source helpers reuse the ordinary callee binder: direct calls, local boxed interfaces
+and immutable callable fields require current graph/receiver/initializer/slice proofs.
+Returned closures and arbitrary dynamic dispatch have no new exemption.
 
 Registration/drain sites remain outside cyclic SCCs and can run at most once.
 Their reverse-postorder extends executable registration order; reversing the
 registered subset gives LIFO without abstracting order. A fixed-point may-pending
 analysis selects sites at each `RunDefers`/normal return, while exact flags preserve
 conditional registration. Cleanup tests each flag, performs one primitive and clears
-it atomically. Callee invocations cannot drain caller flags. Return expressions and
+it atomically, or clears it and enters the actual source helper body. Earlier cleanup
+waits for that body's normal return. Callee invocations cannot drain caller flags. Return expressions and
 blocking operations before cleanup retain their original SSA order.
 
 This emits only generic assignments, guards and existing synchronization effects;
 there is no Go-specific defer stack in behavioral IR or TLA runtime. More than 64
-sites per invocation, non-direct/custom cleanup, alternate SSA defer stacks and
-initializer defers are rejected. Explicit panic/recover remain unsupported and
+sites per invocation, unproved targets or synthetic wrappers, alternate SSA defer
+stacks and initializer defers are rejected. Explicit panic/recover remain unsupported and
 implicit sequential panics remain excluded: normal-return cleanup is not unwinding.
 
 ## Identity and supported domain

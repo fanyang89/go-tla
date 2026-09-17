@@ -55,12 +55,12 @@ func (b *builder) prepareDefers(fr *frame) bool {
 			}
 			call.effect = behavior.Effect{Kind: primitive.Kind, Resource: resource}
 		} else {
-			// Only source-defined, direct calls/closures are admitted here. No
-			// primitive, wrapper, dynamic target or trusted-body shortcut is added.
-			if d.DeferStack != nil || d.Common().IsInvoke() || target == nil ||
-				d.Common().StaticCallee() != target || target.Synthetic != "" ||
+			// The ordinary callee binder rechecks exact direct, boxed-interface
+			// and immutable-field proofs and captures identities at registration.
+			// Cleanup executes the source body, never a trusted-body shortcut.
+			if d.DeferStack != nil || target == nil || target.Synthetic != "" ||
 				discovery.SyncTypeReceiver(target) != "" {
-				b.diag("error", "unsupported-defer", "defer requires direct Unlock/Done or a source-defined static helper on this invocation's stack", d.Pos())
+				b.diag("error", "unsupported-defer", "defer requires direct Unlock/Done or an exactly bound source-defined helper on this invocation's stack", d.Pos())
 				return false
 			}
 			for _, operand := range d.Operands(nil) {

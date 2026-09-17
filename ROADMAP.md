@@ -756,6 +756,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: exact deferred dispatch
+
+- Reuse fresh local-interface/immutable-field call proofs at defer registration;
+  preserve captured identities, actual helper effects and LIFO cleanup.
+- Ten paired native/TLC checks and stale-proof/refusal tests; strict gate/full race
+  pass, 224 + 20 TLC totals, unchanged snapshots. Returned context cancellation,
+  general dynamic dispatch and previously unmodeled identities are not admitted.
+- Actual N=2 self-check remains unsupported / 5 (101 initializer, 68 loop, 14 defer
+  refusals), without executable self artifacts. Full acceptance is still unmet.
+
 ### Full-self continuation: fixed checker input files
 
 - Use a finite, deterministic two-file array in actual checker.Run; preserve both

@@ -79,7 +79,7 @@ Builtin output now refuses instead of being silently elided. Two more semantic T
 cases admit a shadowed source-function name and a literal-proved zero-output execution.
 Executed output, builtin trust overrides and stale cached summaries are refusal tests.
 
-Current total: **214 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Current total: **224 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -181,6 +181,21 @@ changed bounds, progress-bypassing cycles, external writes and hidden effects.
 Graph/slice and budget tests enforce consumed proof contracts.
 `TestActualModelHasErrorsFiniteData` loads the actual production source. The full CLI
 probe consumes this proof and toolinfo.fromBuildInfo's proof but remains unsupported.
+
+## Exact deferred interface/field dispatch
+
+`tests/deferred_dispatch_test.go` checks ten cases with both native Go execution and
+pinned TLC: empty/source interface methods, receiver snapshots, double close,
+per-invocation function-field captures, interface fields, blocked cleanup, correct
+and reversed LIFO order, and blocked argument evaluation. The formerly rejected
+empty-interface defer is now one of these positive checks. Ordinary graph/receiver/
+immutable-field binding is reused; no new callable-only or boxed-channel-object
+identity rule is implied. Returned closures, ambiguous/nil targets, mutable fields,
+primitive interface dispatch, output and panic remain refusal tests.
+
+Unit mutations remove graph edges, retained operands/receivers, or the current field
+initializer; synthetic wrappers and foreign defer stacks also refuse. Current full-self
+analysis still refuses returned context cancellation and does not emit executable TLA+.
 
 ## Full-self prerequisite: static deferred helper bodies
 

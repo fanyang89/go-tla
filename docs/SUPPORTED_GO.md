@@ -155,8 +155,10 @@ func (c *component) work(done chan int) {
 ```
 
 Direct `sync.Mutex.Unlock` / `sync.WaitGroup.Done` and source-defined static
-helper functions, methods and literal closures are accepted as defers. Helper bodies
-are inspected, not treated as pure cleanup. Receivers and resource arguments are
+helper functions, methods and literal closures are accepted as defers. Source helpers
+may also use the existing exact local-boxed-interface or immutable-callable-field
+proofs; no general dynamic dispatch or new object-identity rule is implied. Helper
+bodies are inspected, not treated as pure cleanup. Receivers and resource arguments are
 resolved from the values evaluated at registration, not
 from later variable assignments. Reaching a defer registers cleanup; it does not
 unlock or decrement immediately. Conditional/unselected registrations remain exact.
@@ -179,8 +181,9 @@ The implementation accepts at most 64 sites; exceeding this is unsupported, neve
 truncated cleanup or an assumed stack bound. Primitive cleanup retains the defer
 site's source position; helper effects retain their actual body locations. Graph
 and retained-operand proofs are required even for a side-effect-free helper.
-Dynamic/interface/field defer targets, synthetic/bound method wrappers, direct deferred
-Lock/Wait/Add/close, foreign defer stacks, initializer defers, panic/recover and unproved
+Unproved dynamic/interface/field defer targets (including returned cancellation
+closures), synthetic/bound method wrappers, direct deferred Lock/Wait/Add/close,
+foreign defer stacks, initializer defers, panic/recover and unproved
 loop forms remain unsupported. A trusted-call contract does not extend this whitelist
 or allow skipping a deferred helper's body. Implicit
 sequential panics remain excluded by the recorded domain assumption; this is not
@@ -612,8 +615,9 @@ implicit pointer/value receiver adaptation, generic receivers or explicit nil bo
 Synchronization-bearing value copies and channel-object escapes still fail their
 existing checks. Interface dispatch directly to `sync` / `sync/atomic` primitives
 (including `sync.Locker`) is refused, even with a trust flag; direct primitive calls
-inside an ordinary supported method keep their existing semantics. General deferred
-interface calls and helper calls inside receive cycles remain unsupported.
+inside an ordinary supported method keep their existing semantics. Exactly bound
+source-method defers reuse this local-box proof and registration-time receiver capture;
+unproved interface defers and helper calls inside receive cycles remain unsupported.
 
 ### Immutable interface and callback fields
 

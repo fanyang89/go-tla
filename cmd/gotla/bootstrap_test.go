@@ -151,6 +151,11 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if byteSearchAssumptions != 1 {
 		t.Fatal("byte-search model assumption missing or duplicated")
 	}
+	for _, d := range r.Diagnostics {
+		if d.Code == "initializer" && (strings.Contains(d.Message, "(in github.com/fanmi/go-tla/internal/checker.init)") || strings.Contains(d.Message, "(in github.com/fanmi/go-tla/internal/tla.init)")) {
+			t.Fatalf("project lexical initialization regressed: %+v", d)
+		}
+	}
 	edgeProofs, typeProofs := 0, 0
 	for _, d := range r.Diagnostics {
 		if d.Code != "constant-data-call" || d.Line == 0 {

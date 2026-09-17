@@ -295,6 +295,78 @@ func lengthCountedComponent(component []*ssa.BasicBlock) bool {
 		// unused increment computed on the final exit is not a back edge.
 		return true
 	}
+	return rotatedCountedComponent(component, members)
+}
+
+// Go's integer range SSA may test 0 < bound before entry and increment/test at
+// the bottom. Every back edge must carry that tested increment into the header
+// phi. This proves the same [0,bound) measure without assuming a trip count.
+func rotatedCountedComponent(component []*ssa.BasicBlock, members map[*ssa.BasicBlock]bool) bool {
+	for _, header := range component {
+		for _, instruction := range header.Instrs {
+			phi, ok := instruction.(*ssa.Phi)
+			if !ok || phi.Block() != header || !types.Identical(phi.Type(), types.Typ[types.Int]) || len(phi.Edges) != len(header.Preds) {
+				continue
+			}
+			var bound ssa.Value
+			valid, entry, back := true, false, false
+			for i, pred := range header.Preds {
+				if !members[pred] {
+					continue
+				}
+				back = true
+				branch, ok := pred.Instrs[len(pred.Instrs)-1].(*ssa.If)
+				if !ok || len(pred.Succs) != 2 || pred.Succs[0] != header || members[pred.Succs[1]] {
+					valid = false
+					break
+				}
+				condition, ok := branch.Cond.(*ssa.BinOp)
+				if !ok || condition.Op != token.LSS || condition.X != phi.Edges[i] || !incrementOf(condition.X, phi) || !finiteDataBound(condition.Y, members) {
+					valid = false
+					break
+				}
+				// Keep constant-range expansion limits independent of this rule.
+				// This new rotated shape is admitted only for stable len bounds.
+				if _, length := condition.Y.(*ssa.Call); !length {
+					valid = false
+					break
+				}
+				if bound == nil {
+					bound = condition.Y
+				} else if bound != condition.Y {
+					valid = false
+					break
+				}
+			}
+			if !valid || !back {
+				continue
+			}
+			for i, pred := range header.Preds {
+				if members[pred] {
+					continue
+				}
+				entry = true
+				branch, ok := pred.Instrs[len(pred.Instrs)-1].(*ssa.If)
+				if !ok || len(pred.Succs) != 2 || pred.Succs[0] != header || members[pred.Succs[1]] || !intConstant(phi.Edges[i], 0) {
+					valid = false
+					break
+				}
+				condition, ok := branch.Cond.(*ssa.BinOp)
+				if !ok || condition.Op != token.LSS || !intConstant(condition.X, 0) || condition.Y != bound {
+					valid = false
+					break
+				}
+			}
+			for _, bb := range component {
+				if !header.Dominates(bb) {
+					valid = false
+				}
+			}
+			if valid && entry && !cycleWithoutHeader(component, members, header) {
+				return true
+			}
+		}
+	}
 	return false
 }
 

@@ -279,6 +279,14 @@ printing, unknown/unavailable calls, recursion, defers, panic and synchronizatio
 cannot acquire this summary. User trust flags cannot supply missing proof facts.
 The existing implicit-panic/resource-exhaustion domain assumption still applies.
 
+The rotated SSA form of range-over-len is also accepted: each external entry must
+test zero against the same stable len and initialize the header phi to zero;
+every back edge must test its exact +1 increment below that bound. The header must
+dominate the component, with no cycle avoiding it. This preserves a non-wrapping
+[0,len) measure. This additional shape does not admit constant bounds or relax
+constant-range expansion limits. Actual ASCII Identifier and decimalDigits helpers
+use this proof. Their production callers retain ordinary behavior and data abstraction.
+
 Cached call summaries are rechecked against the current graph and body; lowering also
 consumes the retained caller operands. Argument evaluation is not erased. Initialization
 helpers use the same proof, not a package allowlist. Proof search is capped at 4096

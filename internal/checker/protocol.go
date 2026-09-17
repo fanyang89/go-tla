@@ -4,16 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"regexp"
 	"strconv"
 	"strings"
 )
 
 // TLC -tool message codes from tlc2.output.EC (verified with official TLC 1.8.0).
 // Require framed outcomes AND matching exit codes; prose alone never proves success.
-var startMessage = regexp.MustCompile(`^@!@!@STARTMSG ([0-9]+):([0-9]+) @!@!@$`)
-var pcEntry = regexp.MustCompile(`(?:"([A-Za-z_][A-Za-z0-9_]*)"\s*:>|([A-Za-z_][A-Za-z0-9_]*)\s*\|->)\s*"([A-Za-z_][A-Za-z0-9_]*)"`)
-
 type protocol struct {
 	started, finished, success, deadlock, invariant, resourceLimit, otherError bool
 	version, stats                                                             string
@@ -31,12 +27,12 @@ func parseProtocol(r io.Reader) (protocol, error) {
 		if strings.Contains(line, "java.lang.OutOfMemoryError") {
 			p.resourceLimit = true
 		}
-		if m := startMessage.FindStringSubmatch(line); m != nil {
+		if codeText, classText, ok := messageHeader(line); ok {
 			if code != -1 {
 				return p, fmt.Errorf("nested TLC message")
 			}
-			code, _ = strconv.Atoi(m[1])
-			class, _ = strconv.Atoi(m[2])
+			code, _ = strconv.Atoi(codeText)
+			class, _ = strconv.Atoi(classText)
 			body.Reset()
 			continue
 		}
@@ -133,15 +129,7 @@ func tracePC(text string) map[string]string {
 		return nil
 	}
 	pc, _, _ = strings.Cut(pc, "\n/\\ ")
-	out := map[string]string{}
-	for _, m := range pcEntry.FindAllStringSubmatch(pc, -1) {
-		id := m[1]
-		if id == "" {
-			id = m[2]
-		}
-		out[id] = m[3]
-	}
-	return out
+	return pcEntries(pc)
 }
 
 func (p protocol) classify(exit int) (Status, string) {

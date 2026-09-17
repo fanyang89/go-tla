@@ -474,3 +474,41 @@ with exactly two deduplicated reflection assumptions. Initializer errors decreas
 from 221 to **112**; other error counts are unchanged. It still returns
 **unsupported / 5**, emits only diagnostic model.json, and does not invoke TLC.
 The full finite-environment/executable-self-model acceptance contract is not complete.
+
+## Production lexical scanning and rotated length ranges
+
+The actual TLA validator and TLC protocol parser no longer initialize three
+regular expressions. Shared ASCII identifier predicates and explicit header/PC
+scanning preserve the old grammar, including ASCII-only whitespace, unanchored
+PC matches, last duplicate entry, numeric conversion and malformed-frame handling.
+Message classification and the evidence required for success are unchanged. The
+old regexes remain test oracles, not production initializers; this is a lexical
+implementation change, not a substitute coordinator or a dependency exemption.
+
+Differential fixtures, 20,000 generated protocol inputs, byte/identifier tests and
+15-second fuzz runs pass (92,633 protocol and 2,525,798 identifier executions in
+this local run). Large malformed inputs are included. These tests do not constitute
+a general payload/compiler correctness proof.
+
+Go 1.26 emits rotated SSA for range-over-len: entry tests 0 < bound, and the bottom
+increments/tests before returning to the header phi. A fresh structural proof now
+requires every entry/back edge to have that form, the same stable len bound, exact
++1 progress, header dominance and no cycle avoiding the header. The measure cannot
+wrap because only indices below len take back edges. This rule deliberately does
+not relax constant-range normalization/expansion limits. Real Identifier and
+checker decimalDigits bodies pass the finite-data proof; results remain abstract.
+Entry/step/comparison/bound mutations, hidden effects/cycles and stale consumed
+proofs refuse.
+
+The first focused run exposed the rotated shape; the first full gate exposed an
+unintended overlap with constant-range expansion refusals. Restricting this rule to
+len bounds restored all original refusal tests without weakening them. Both failed
+logs remain under `$HOME/tmp/pi/gotla-self-bootstrap-lexical/` alongside final gate,
+race, fuzz and actual CLI evidence. Five new pinned TLC cases cover normal locking,
+empty input, initialization, abstract-result deadlock and blocking argument effects:
+**206 semantic TLC + 18 CLI/TLC**, no skips/failures, unchanged snapshots.
+
+Self-analysis remains **unsupported / 5**. Project lexical initializer errors are
+gone; total initializer refusals fall from 112 to **109**. Only diagnostic model.json
+is emitted; no executable self TLA+ or self TLC proof exists. The full goal and
+finite-environment requirements remain active and incomplete.

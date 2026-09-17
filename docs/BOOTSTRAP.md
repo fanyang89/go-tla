@@ -12,7 +12,7 @@ have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **201 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current totals: **206 semantic TLC cases and 18 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -63,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 201 positive/negative semantic TLC cases and 18
+itself. It is separate from the 206 positive/negative semantic TLC cases and 18
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -465,6 +465,13 @@ implementation proofs. Reflective values, application methods and promoted-field
 search remain refused. Initializer errors fall to 112; strict gate/full race pass
 with unchanged 201 semantic + 18 CLI/TLC totals and snapshots. Full self-analysis
 remains unsupported / 5: diagnostic-only model.json, no executable TLA+ and no TLC.
+
+Production TLA identifiers and TLC header/PC scanning now replace three project
+regexp initializers with equivalent ASCII scanning, backed by differential and fuzz
+tests. Rotated range-over-len proof supports the actual finite lexical helpers while
+preserving constant expansion limits. Five new TLC cases bring totals to 206 + 18;
+strict gate/race pass with unchanged snapshots. Initializer refusals fall to 109;
+full self-check remains unsupported / 5 and emits no executable self-model.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

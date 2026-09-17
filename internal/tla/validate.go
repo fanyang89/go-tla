@@ -2,13 +2,11 @@ package tla
 
 import (
 	"fmt"
-	"regexp"
 	"slices"
 
 	"github.com/fanmi/go-tla/internal/behavior"
+	"github.com/fanmi/go-tla/internal/tlalex"
 )
-
-var identifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 // Validate adds implementation capability checks to generic IR validation. Other
 // backends must use behavior.Validate, not inherit TLA runtime conventions.
@@ -23,7 +21,7 @@ func Validate(m *behavior.Model) error {
 		return fmt.Errorf("TLA backend requires the NoSynchronizationErrors assertion")
 	}
 	checkID := func(id string) error {
-		if !identifier.MatchString(id) {
+		if !tlalex.Identifier(id) {
 			return fmt.Errorf("TLA backend cannot encode identifier %q", id)
 		}
 		return nil

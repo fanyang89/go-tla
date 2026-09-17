@@ -61,7 +61,15 @@ values remain refused. `TestReflectionMetadataPreservesInitializationRefusal` en
 other reflection initialization is not omitted. These are not new reflection-import
 TLC passes: standard runtime ABI and reflection correctness are explicit assumptions.
 
-Current total: **201 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Rotated range-over-len SSA has five additional pinned TLC cases: locked computation,
+empty input, initializer, abstract-result deadlock and blocking argument evaluation.
+Fresh entry/step/comparison/bound mutations, hidden cycles/stores and cached-proof
+consumption refuse; constant expansion refusals remain unchanged. Actual Identifier
+and decimalDigits source bodies pass finite-data proof. Production lexical scanning
+is compared with its old regex grammars through fixed/randomized and fuzz tests;
+protocol classification and source-trace CLI tests continue to run.
+
+Current total: **206 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 

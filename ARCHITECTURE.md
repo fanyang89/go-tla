@@ -31,7 +31,10 @@ The passes are explicit functions/packages:
 3. `effects.Analyzer` caches call-effect summaries using graph-checked SSA call
    targets. Unresolved/unsafe/recursive effects never receive pure summaries.
    A separate finite-data proof checks monotone length-bounded SSA cycles, all
-   transitive call bodies, data-only types and private writes. Lowering freshly
+   transitive call bodies, data-only types and private writes. Rotated range-over-len
+   requires a guarded zero entry, matching tested +1 back edges, header dominance
+   and no hidden cycle; constant-range expansion limits are unchanged. Production
+   lexical validators use this proof, not regex or trusted-call exemptions. Lowering freshly
    rechecks this proof and caller operands before eliding computation; returned
    data remains abstract and argument evaluation is preserved.
    Literal-input invocation proofs separately evaluate a bounded selected SSA path

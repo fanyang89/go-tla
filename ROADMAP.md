@@ -726,3 +726,18 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   initializers; initializer refusals decrease from 221 to 112. Strict gate and
   full race pass, snapshots unchanged; totals remain 201 semantic and 18 CLI/TLC
   cases. Still unsupported / 5, with no executable self-model or self TLC run.
+
+### Full-self continuation: production lexical scanning
+
+- Replace the project's three lexical regexp initializers with ASCII scanning:
+  shared TLA identifiers, framed TLC headers and trace PC entries. Preserve the
+  exact old grammar, duplicate-entry behavior, numeric conversion and outcome
+  classification; retain regex oracles only in tests. Differential fixtures,
+  deterministic randomized inputs and both fuzz targets pass.
+- Prove Go 1.26's rotated integer-range SSA for stable len bounds, with guarded
+  zero entry, exact tested increments, dominance and no hidden cycles. Keep
+  constant-range expansion limits unchanged. Actual Identifier/decimalDigits
+  source proofs and cached-proof mutation refusals pass.
+- Five new TLC cases bring totals to 206 semantic + 18 CLI/TLC; strict gate/race
+  pass, snapshots unchanged. Self-input remains unsupported / 5, with initializer
+  refusals reduced from 112 to 109. No executable self-model or self TLC yet.

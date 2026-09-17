@@ -151,6 +151,30 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if byteSearchAssumptions != 1 {
 		t.Fatal("byte-search model assumption missing or duplicated")
 	}
+	edgeProofs, typeProofs := 0, 0
+	for _, d := range r.Diagnostics {
+		if d.Code != "constant-data-call" || d.Line == 0 {
+			continue
+		}
+		if d.File == "golang.org/x/tools/go/ast/edge/edge.go" && strings.Contains(d.Message, "edge.info[") {
+			edgeProofs++
+		}
+		if strings.Contains(d.Message, "reflect.TypeFor[") {
+			typeProofs++
+		}
+	}
+	if edgeProofs != 104 || typeProofs != 5 {
+		t.Fatalf("reflection metadata proofs: edge=%d type=%d", edgeProofs, typeProofs)
+	}
+	reflectionAssumptions := 0
+	for _, assumption := range model.Assumptions {
+		if strings.HasPrefix(assumption, "Standard Go reflect.") {
+			reflectionAssumptions++
+		}
+	}
+	if reflectionAssumptions != 2 {
+		t.Fatal("reflection model assumptions missing or duplicated")
+	}
 	exit := false
 	for _, transition := range model.Transitions {
 		if transition.SourcePosition.File != "cmd/gotla/main.go" {

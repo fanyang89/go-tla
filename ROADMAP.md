@@ -712,3 +712,17 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
 - Three string-concatenation TLC cases bring totals to 201 semantic and 18 CLI/TLC
   cases. Strict gate and full race pass; snapshots unchanged. Full self-analysis
   still returns unsupported / 5; initializer errors decrease from 231 to 221.
+
+### Full-self continuation: immutable reflection metadata
+
+- Add source/graph/SSA-bound TypeFor metadata tokens and explicit standard Elem/
+  direct FieldByName models. Record ABI and standard-reflection assumptions;
+  never construct runtime values, invoke application methods or search promoted
+  fields. Other reflection initialization remains independently checked.
+- Compare all 104 actual x/tools AST edge initializers with native Go metadata,
+  alongside type/layout/tag/presence checks. Reject altered extraction chains,
+  methods, arguments and stale consumed proofs.
+- Real self-analysis consumes those 104 proofs and five encoding/json TypeFor
+  initializers; initializer refusals decrease from 221 to 112. Strict gate and
+  full race pass, snapshots unchanged; totals remain 201 semantic and 18 CLI/TLC
+  cases. Still unsupported / 5, with no executable self-model or self TLC run.

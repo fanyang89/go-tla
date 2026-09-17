@@ -124,7 +124,7 @@ func finiteDataType(t types.Type, depth int) bool {
 
 // Read-only data graphs may be recursive, but cannot conceal synchronization,
 // callbacks or unsafe pointers. General finite proofs also exclude interfaces;
-// only a concrete evaluator that enforces nil-only interface values may opt in.
+// only a concrete evaluator enforcing nil/explicit metadata values may opt in.
 // A visited type closes a type cycle; every distinct edge must pass the check.
 func dataTypeGraph(t types.Type, depth int, seen map[types.Type]bool, remaining *int, nilInterfaces bool) bool {
 	if t == nil || depth > 64 {
@@ -143,6 +143,9 @@ func dataTypeGraph(t types.Type, depth int, seen map[types.Type]bool, remaining 
 		case "sync", "sync/atomic", "internal/sync":
 			return false
 		}
+	}
+	if nilInterfaces && reflectionType(t) {
+		return true
 	}
 	switch t := t.Underlying().(type) {
 	case *types.Basic:

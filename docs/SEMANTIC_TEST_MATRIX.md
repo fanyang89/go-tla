@@ -26,7 +26,8 @@ unsupported dependency initialization despite the admitted byte-search operation
 `TestConstantNilInterfaces` permits only nil empty-interface values in concrete
 SSA evaluation, checking fields, comparisons, arguments, source returns, named
 interfaces and aggregate reset aliases. Boxing (including typed nil pointers),
-nonempty interfaces, assertions, external reads/writes and nonliteral inputs refuse.
+other nonempty interfaces, assertions, external reads/writes and nonliteral inputs refuse.
+The immutable reflection metadata exception has its own model and checks below.
 General finite-data proofs stay unchanged. `TestActualConstantIdentConstructor`
 compares actual ast.NewIdent fields against native Go; the CLI refusal regression
 requires the go/doc initializer's source proof. `TestNilInterfaceProofRechecksOwnership`
@@ -49,6 +50,16 @@ The real CLI refusal regression requires its source-located Exit instruction.
 These are not full-program TLC checks of a program importing `os`.
 
 ## Production-component bootstrap
+
+Immutable reflection metadata has separate native/structural coverage:
+`TestActualASTEdgeMetadata` compares every one of the 104 real AST edge initializers
+with native field types/indices. Direct-query tests compare field presence, names,
+package paths, tags, offsets, indices and anonymity. TypeFor wrappers and ABI
+extraction bodies/graph edges are freshly checked; consumed ABI/method/argument
+mutations refuse. Promoted fields, nil/invalid receivers, other methods and reflective
+values remain refused. `TestReflectionMetadataPreservesInitializationRefusal` ensures
+other reflection initialization is not omitted. These are not new reflection-import
+TLC passes: standard runtime ABI and reflection correctness are explicit assumptions.
 
 Current total: **201 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their

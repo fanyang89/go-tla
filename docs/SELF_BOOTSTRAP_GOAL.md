@@ -411,7 +411,7 @@ operations. The native, body-less standard-toolchain declaration of
 semantics, evaluated without invoking loaded code and with each examined byte
 charged against the shared step budget. Signature, declaration ownership, absent
 Go body, source mapping, current call graph and source location under the running
-GOROOT are checked. Available Go bodies are interpreted normally; arbitrary
+GOROOT are checked. Available Go byte-search bodies are interpreted normally; arbitrary
 unavailable functions and user-name collisions are not exempted.
 
 **The standard assembly implementation's correctness is assumed, not proved.**
@@ -439,3 +439,38 @@ remains **unsupported / 5**, with only `model.json` and no TLC invocation. Initi
 errors decrease from 231 to **221**; other error counts are unchanged. The full
 bootstrap acceptance contract, including an enforced finite environment and an
 executable meaningful self-model, remains unfulfilled.
+
+## Immutable reflection metadata prerequisite
+
+The concrete evaluator now admits immutable reflect.Type tokens from TypeFor[T].
+Its current standard-source declaration, concrete type argument, retained call
+edges and the exact SSA/dataflow chain through abi.TypeFor, abi.TypeOf, abi.NoEscape
+and reflect.toRType are checked. Added instructions, altered ABI field selection,
+casts, pointer arithmetic and removed graph edges refuse. This structurally binds
+an explicit operation model: **runtime ABI/type metadata correctness is assumed,
+not a proof of unsafe representation or compiler correctness**.
+
+Known type tokens alone admit explicit standard Elem and direct FieldByName
+queries. Current method objects/signatures and source ownership are checked;
+conflicting target facts refuse. These models read Go type descriptions and target
+sizes, never application memory. Direct StructField results include name, package,
+type, tag, offset, index and anonymity; missing fields return zero/false only when
+no promoted search is needed. Query standard-library correctness is a separate
+recorded assumption, not an execution proof of reflection's implementation.
+Nil/invalid receivers, promoted fields, other methods and reflect.Value remain
+unsupported. A described channel or function is not an actual resource or callback.
+Results stay abstract outside the per-invocation proof.
+
+Native comparison covers **all 104 real x/tools AST edge initializers**, plus direct
+field layouts/tags/presence and six type categories. Cached consumption rechecks
+ABI bodies, methods and literal field-name arguments. Other dependency initializers
+are still refused; these reflection-import programs are not advertised as whole
+source TLC proofs. Existing **201 semantic TLC and 18 CLI/TLC** cases still pass,
+with strict gate/full race, no skips/failures and unchanged snapshots. Evidence:
+`$HOME/tmp/pi/gotla-self-bootstrap-reflection/`.
+
+Actual self-analysis records all 104 AST edge proofs and five direct TypeFor proofs,
+with exactly two deduplicated reflection assumptions. Initializer errors decrease
+from 221 to **112**; other error counts are unchanged. It still returns
+**unsupported / 5**, emits only diagnostic model.json, and does not invoke TLC.
+The full finite-environment/executable-self-model acceptance contract is not complete.

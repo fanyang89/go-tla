@@ -51,8 +51,8 @@ func (a *Analyzer) ProveConstantData(site *ssa.Call) (proof *ConstantDataProof) 
 }
 
 // Unlike general finite-data proofs, concrete evaluation can admit empty
-// interface slots: every admitted interface value is nil. MakeInterface,
-// ChangeInterface, TypeAssert and invoke remain unsupported.
+// interface slots are nil, except explicit immutable reflect.Type metadata.
+// General boxing, conversion, assertion and invocation remain unsupported.
 func constantDataType(t types.Type) bool {
 	remaining := 256
 	return dataTypeGraph(t, 0, map[types.Type]bool{}, &remaining, true)
@@ -60,7 +60,7 @@ func constantDataType(t types.Type) bool {
 
 func nilDataInterface(v dataValue) bool {
 	t, ok := v.typ.Underlying().(*types.Interface)
-	return ok && t.Empty() && v.scalar == nil && v.pointer == nil && v.elements == nil && v.view == nil
+	return ok && t.Empty() && v.scalar == nil && v.pointer == nil && v.elements == nil && v.view == nil && v.reflected == nil
 }
 
 type dataRefusal struct{}
@@ -68,11 +68,12 @@ type dataRefusal struct{}
 func refuseData() { panic(dataRefusal{}) }
 
 type dataValue struct {
-	typ      types.Type
-	scalar   constant.Value
-	pointer  *dataCell
-	elements []*dataCell
-	view     *dataView
+	typ       types.Type
+	scalar    constant.Value
+	pointer   *dataCell
+	elements  []*dataCell
+	view      *dataView
+	reflected types.Type // Immutable type description, never an application value.
 }
 type dataCell struct{ value dataValue }
 type dataView struct {
@@ -106,7 +107,9 @@ func (e *dataEval) cell(v dataValue) *dataCell {
 func (e *dataEval) clone(v dataValue) dataValue {
 	e.step()
 	if _, ok := v.typ.Underlying().(*types.Interface); ok && !nilDataInterface(v) {
-		refuseData()
+		if !reflectionType(v.typ) || v.scalar != nil || v.pointer != nil || v.elements != nil || v.view != nil {
+			refuseData()
+		}
 	}
 	if v.elements != nil {
 		out := make([]*dataCell, len(v.elements))
@@ -309,6 +312,9 @@ func (e *dataEval) function(f *ssa.Function, args []dataValue) []dataValue {
 		}
 		values[p] = e.clone(args[i])
 	}
+	if result, ok := e.reflectedTypeFor(f, args); ok {
+		return []dataValue{result}
+	}
 	if len(f.Blocks) == 0 {
 		if result, ok := e.modeledDataFunction(f, args); ok {
 			return []dataValue{result}
@@ -493,7 +499,12 @@ func (e *dataEval) function(f *ssa.Function, args []dataValue) []dataValue {
 					out = e.builtin(builtin.Name(), x.Type(), args)
 				} else {
 					if x.Common().IsInvoke() {
-						refuseData()
+						value, ok := e.reflectionQuery(x, get(x.Common().Value), args)
+						if !ok {
+							refuseData()
+						}
+						values[x] = value
+						continue
 					}
 					results := e.function(e.program.CallTarget(x), args)
 					if len(results) == 1 {

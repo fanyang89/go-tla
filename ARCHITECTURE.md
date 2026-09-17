@@ -40,7 +40,13 @@ The passes are explicit functions/packages:
    application code is executed. Returned values still remain abstract in IR.
    Explicit operation models are reported separately from source proofs: the
    standard-toolchain byte-string-search primitive computes a bounded exact result
-   and records its assembly-correctness assumption. Unknown bodies remain refused.
+   and records its assembly-correctness assumption. Immutable TypeFor metadata
+   has a checked standard-source/graph/SSA extraction chain, plus an explicit ABI
+   correctness assumption. Only known metadata receivers admit standard Elem and
+   direct FieldByName contracts; method ownership/signatures and computed field
+   layout are checked. Standard reflection correctness is separately assumed.
+   These tokens are not application values or IR resources. Unknown bodies remain
+   refused; no reflective values, application methods or promoted search are run.
    Explicit trusted contracts remain visible; purity guides slicing, not permission
    to bypass reachable-body validation.
 4. `discovery.Scan` returns typed primitives, roots and goroutine sites. Cached

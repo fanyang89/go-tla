@@ -457,6 +457,15 @@ explicit assumption, not a source proof. Three new string-concatenation TLC case
 bring totals to 201 semantic and 18 CLI/TLC cases. Initializer errors fall to 221;
 full self-analysis still emits no executable TLA+ and does not run TLC.
 
+Immutable TypeFor metadata with explicit Elem/direct FieldByName models now covers
+all 104 actual AST edge initializers plus five encoding/json TypeFor initializers.
+Native type/field comparisons and fresh ABI/graph/method/argument checks pass.
+Runtime ABI and standard-reflection correctness are recorded assumptions, not
+implementation proofs. Reflective values, application methods and promoted-field
+search remain refused. Initializer errors fall to 112; strict gate/full race pass
+with unchanged 201 semantic + 18 CLI/TLC totals and snapshots. Full self-analysis
+remains unsupported / 5: diagnostic-only model.json, no executable TLA+ and no TLC.
+
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 
 1. **Done:** keep the complete CLI self-input refusal test and its actionable diagnostics.

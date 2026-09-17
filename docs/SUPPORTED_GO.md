@@ -313,9 +313,10 @@ storage can be written. Private views and fully inspected helper calls can there
 pass this rule even when the general private-address-use rule refuses them.
 Zero pointer/slice/map fields are permitted only after the complete type graph
 excludes synchronization, callbacks, nonempty interfaces and unsafe pointers.
-Empty-interface slots are admitted only as nil: the evaluator cannot box values,
-assert types, change interface types or invoke interface methods. Copies recheck
-this nil-only invariant. Nil fields do not create backing storage. Later pointer assignments must still derive from owned
+Empty-interface slots are admitted only as nil. The separate immutable reflect.Type
+metadata model below is the only nonempty-interface exception. General boxing,
+assertion, interface conversion and application method dispatch remain refused;
+copies enforce these value-representation rules. Nil fields do not create backing storage. Later pointer assignments must still derive from owned
 cells; nil dereferences and external/global addresses refuse. Recursive private data
 graphs are allowed, but map construction/mutation is not implemented by this rule.
 This proves the actual go/constant.newFloat constructor and its SetPrec call on a
@@ -356,6 +357,36 @@ This enables ten literal `go/types.asGoVersion` initializers through the actual
 version/strings/gover source, with native-result comparisons. The nonliteral current
 version initializer remains refused. Standard-library initialization is not omitted:
 a whole program importing strings may still fail on other dependency initializers.
+
+### Immutable reflection type metadata
+
+`reflect.TypeFor[T]` may produce a type-description token, not an application value
+or resource. The evaluator checks a concrete type argument, standard-source origin,
+current call graph and exact typed SSA/dataflow shapes of the TypeFor/ABI extraction
+chain (`abi.TypeFor`, `abi.TypeOf`, `abi.NoEscape`, `reflect.toRType`). Added operations,
+changed field selection, pointer arithmetic, casts or missing call edges invalidate
+that admission. **Runtime ABI/type metadata correctness remains an assumption**,
+not a proof of unsafe memory representation or compiler correctness.
+
+Only this known metadata receiver may use the explicit standard `reflect.Type`
+`Elem` and direct `FieldByName` models. Method objects, signatures, source ownership
+and absence of conflicting target facts are checked. Elem accepts pointer, array,
+slice, map and channel type descriptions; invalid/nil receivers refuse. Direct
+field queries calculate Name, PkgPath, Type, Tag, Offset, Index and Anonymous from
+current Go types and target sizes. The ordinary Go executable's unexported main-package
+field path is normalized to `main` and compared with native execution; plugin build
+modes are outside this contract. Missing fields return the zero StructField/false
+only without embedded fields; promoted search is refused. A direct field may still
+shadow an embedded one. A field query is limited to 4096 fields and charged against
+the shared step/cell budgets. Concrete type traversal has 256-node/64-depth limits.
+
+The standard-reflection assumption is recorded separately from the ABI assumption.
+No reflect.Value, application method, field value, pointer or synchronization object
+is constructed by these models; even a described channel/function type is just
+metadata. Results remain abstract after the invocation proof is consumed. Other
+reflection initialization is still checked and may refuse whole-program emission.
+Native tests compare all 104 actual x/tools AST edge initializers plus direct-field
+layout/presence/tag results. Five direct encoding/json TypeFor initializers also pass.
 
 ### Initially open global channels
 

@@ -65,6 +65,13 @@ plus static deferred helpers, finite data computations, pre-closed global channe
 and data-computation, owned-reference/value-copy, open-global and array-range proofs,
 plus eight independent program-exit IR/TLC cases and five nil-interface storage
 cases and three bounded string-concatenation cases, bring the local semantic total to **201**.
+Immutable reflection metadata additionally has native comparisons for all 104 actual
+AST edge initializers, direct-field layout/presence checks and fresh consumed-proof
+mutation tests. Five direct TypeFor initializers are also admitted. Runtime ABI and
+standard reflection correctness are explicit assumptions; other initialization and
+reflective values/methods/promoted search remain unsupported. These do not add a
+reflection-import TLC pass or complete self-bootstrap; actual self-analysis remains
+unsupported / 5, now with 112 initializer refusals.
 Byte-search/version native comparisons and operation-model assumption checks are
 separate evidence, not proofs of the standard-library assembly implementation.
 Production bootstrap adds seven CLI/TLC

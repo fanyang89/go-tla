@@ -10,7 +10,7 @@ import (
 
 // BuildCallGraph is pass 2. Refine direct edges only with exact local interface
 // boxing proofs. No points-to guess or whole-program implementer enumeration is
-// used; unresolved interface fields, parameters and phis still have no target.
+// used. A separate immutable-field proof can refine single-origin field calls.
 func BuildCallGraph(p *Program) {
 	p.Calls = static.CallGraph(p.SSA)
 	queue := make([]*ssa.Function, 0, len(p.Calls.Nodes))
@@ -52,6 +52,7 @@ func BuildCallGraph(p *Program) {
 			}
 		}
 	}
+	p.refineCallableFields()
 }
 
 // CallTarget requires agreement between the SSA target proof and the explicit
@@ -63,6 +64,11 @@ func (p *Program) CallTarget(site ssa.CallInstruction) *ssa.Function {
 	callee := site.Common().StaticCallee()
 	if callee == nil {
 		callee, _ = p.directInvoke(site)
+	}
+	if callee == nil {
+		if proof := p.fieldCall(site); proof != nil {
+			callee = proof.Target
+		}
 	}
 	if callee != nil && hasCallEdge(p.Calls.Nodes[site.Parent()], site, callee) {
 		return callee
@@ -115,37 +121,40 @@ func (p *Program) directInvoke(site ssa.CallInstruction) (*ssa.Function, ssa.Val
 	if !ok || box.Parent() != site.Parent() {
 		return nil, nil
 	}
-	if constant, ok := box.X.(*ssa.Const); ok && constant.IsNil() {
+	f := p.concreteMethod(c.Method, box.X)
+	if f == nil {
 		return nil, nil
 	}
-	t := types.Unalias(box.X.Type())
+	return f, box.X
+}
+
+func (p *Program) concreteMethod(want *types.Func, receiver ssa.Value) *ssa.Function {
+	if constant, ok := receiver.(*ssa.Const); ok && constant.IsNil() {
+		return nil
+	}
+	t := types.Unalias(receiver.Type())
 	if pointer, ok := t.(*types.Pointer); ok {
 		t = types.Unalias(pointer.Elem())
 	}
 	named, ok := t.(*types.Named)
 	if !ok || named.TypeArgs().Len() != 0 || named.TypeParams().Len() != 0 {
-		return nil, nil
+		return nil
 	}
 	if pkg := named.Obj().Pkg(); pkg != nil && (pkg.Path() == "sync" || pkg.Path() == "sync/atomic") {
-		// Primitive invokes need dedicated discovery semantics. Do not let a
-		// trust contract erase a lock/counter/atomic operation through an interface.
-		return nil, nil
+		// Primitive invokes require dedicated discovery semantics, not trust.
+		return nil
 	}
-	selection := types.NewMethodSet(box.X.Type()).Lookup(c.Method.Pkg(), c.Method.Name())
+	selection := types.NewMethodSet(receiver.Type()).Lookup(want.Pkg(), want.Name())
 	if selection == nil || len(selection.Index()) != 1 {
-		return nil, nil
+		return nil
 	}
 	method, ok := selection.Obj().(*types.Func)
 	if !ok {
-		return nil, nil
+		return nil
 	}
 	sig := method.Type().(*types.Signature)
-	if sig.Recv() == nil || !types.Identical(sig.Recv().Type(), box.X.Type()) {
-		return nil, nil
+	if sig.Recv() == nil || !types.Identical(sig.Recv().Type(), receiver.Type()) {
+		return nil
 	}
-	f := p.SSA.FuncValue(method)
-	if f == nil {
-		return nil, nil
-	}
-	return f, box.X
+	return p.SSA.FuncValue(method)
 }

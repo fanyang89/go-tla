@@ -20,6 +20,10 @@ The passes are explicit functions/packages:
    and refines exact local interface boxes to their declared concrete methods. Receiver
    adaptation, promotion and unknown interface sources are not guessed. Call-target
    queries require agreement between the SSA proof and an explicit graph edge.
+   A subsequent immutable-field pass follows unambiguous direct object parameters,
+   proves one dominating allocation-frame store and records interface/function-field
+   targets. Complete-graph rechecking, bounded proof traversal and per-invocation
+   receiver/capture bindings prevent a candidate edge from becoming an alias guess.
 3. `effects.Analyzer` caches call-effect summaries using graph-checked SSA call
    targets. Unresolved/unsafe/recursive effects never receive pure summaries.
    Explicit trusted contracts remain visible; purity guides slicing, not permission

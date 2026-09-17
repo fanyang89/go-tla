@@ -5,6 +5,21 @@ Paths and test names refer to the current implementation. Actual TLC tests are
 optional in a plain local test run but mandatory in the
 [strict gate](VERIFICATION.md#tests-and-required-ci-gate).
 
+## Bootstrap prerequisite: immutable callable fields
+
+`TestTLCImmutableCallableFields` adds ten actual TLC checks for interface fields,
+named/captured callbacks, blocked cleanup, synchronization faults, resource receiver
+aliasing, per-invocation captures, pure calls and combined writer/callback fields.
+The total is **119 semantic TLC cases**, with **11** unchanged TLC CLI cases and a
+separate unsupported CLI self-analysis test.
+
+`TestImmutableCallableFieldRefusals` and `TestImmutableInterfaceFieldRefusals` reject
+unproved initialization/aliasing, callee mutations, escapes, wrappers and unstable
+captures. `TestCallableFieldProofRechecksGraphAndOrigins`,
+`TestCallableFieldProofBudgetRefusesLongAliasChain` and
+`TestCallableFieldBindingAndSliceAreConsumed` enforce completed-graph agreement,
+proof budgets, allocation-frame bindings and dependency-slice consumption.
+
 ## Bootstrap prerequisite: exact local interface dispatch
 
 `TestTLCDirectInterfaceCalls` adds ten real TLC cases: relay argument binding,

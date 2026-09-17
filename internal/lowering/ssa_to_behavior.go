@@ -28,19 +28,20 @@ type edge struct {
 }
 type node struct{ edges []edge }
 type builder struct {
-	p             *frontend.Program
-	m             *behavior.Model
-	opts          Options
-	nodes         map[string]*node
-	names         map[string]int
-	globals       map[*ssa.Global]string
-	fields        map[string]string
-	channelFields map[string]string
-	stack         map[*ssa.Function]bool
-	resources     map[string]bool
-	effects       *effects.Analyzer
-	plans         map[*ssa.Function]*functionPlan
-	loopReported  map[*ssa.Function]bool
+	p              *frontend.Program
+	m              *behavior.Model
+	opts           Options
+	nodes          map[string]*node
+	names          map[string]int
+	globals        map[*ssa.Global]string
+	fields         map[string]string
+	channelFields  map[string]string
+	callableFields map[callableFieldKey]callableFieldBinding
+	stack          map[*ssa.Function]bool
+	resources      map[string]bool
+	effects        *effects.Analyzer
+	plans          map[*ssa.Function]*functionPlan
+	loopReported   map[*ssa.Function]bool
 }
 type frame struct {
 	f             *ssa.Function

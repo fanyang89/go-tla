@@ -46,6 +46,7 @@ func (b *builder) allocateResources(fr *frame) {
 		}
 	}
 	b.prepareChannelFields(fr)
+	b.prepareCallableFields(fr)
 }
 
 func (b *builder) addSync(id, typ string) {
@@ -74,12 +75,32 @@ func (b *builder) callee(fr *frame, site ssa.CallInstruction, f *ssa.Function, p
 		b.diag("error", "unknown-effects", "dynamic/interface call may synchronize or diverge; unsupported", pos)
 		return nil, nil
 	}
+	if b.p.CallTarget(site) != f {
+		b.diag("error", "call-contract", "callee disagrees with the current call-graph proof", pos)
+		return nil, nil
+	}
 	if len(f.Blocks) == 0 {
 		b.diag("error", "unknown-effects", "unavailable body for "+f.String()+"; requires explicit total side-effect-free trust contract", pos)
 		return nil, nil
 	}
 	args := c.Args
-	if c.IsInvoke() {
+	var fieldBinding callableFieldBinding
+	fieldProof := b.p.CallableField(site)
+	if fieldProof != nil {
+		if fieldProof.Target != f || b.p.CallTarget(site) != f {
+			b.diag("error", "call-contract", "callable field target disagrees with its graph proof", pos)
+			return nil, nil
+		}
+		var ok bool
+		fieldBinding, ok = b.callableBinding(fr, site, fieldProof)
+		if !ok {
+			return nil, nil
+		}
+		if c.IsInvoke() {
+			args = append([]ssa.Value{fieldProof.Receiver}, c.Args...)
+		}
+		b.diag("info", "resolved-field-call", "proved immutable field target: "+f.String(), pos)
+	} else if c.IsInvoke() {
 		receiver := b.p.InvokeReceiver(site)
 		if receiver == nil || b.p.CallTarget(site) != f {
 			b.diag("error", "call-contract", "interface target lacks a matching receiver and call-graph proof", pos)
@@ -99,7 +120,15 @@ func (b *builder) callee(fr *frame, site ssa.CallInstruction, f *ssa.Function, p
 			}
 		}
 		if j < len(args) && relevantType(p.Type()) {
-			bind[p] = b.identity(fr, args[j], map[ssa.Value]bool{})
+			if fieldProof != nil && c.IsInvoke() && j == 0 {
+				if fieldBinding.receiverID == "" {
+					b.diag("error", "callable-field-binding", "concrete field receiver identity is unavailable", pos)
+					return nil, nil
+				}
+				bind[p] = fieldBinding.receiverID
+			} else {
+				bind[p] = b.identity(fr, args[j], map[ssa.Value]bool{})
+			}
 		}
 	}
 	if mc, ok := c.Value.(*ssa.MakeClosure); ok {
@@ -108,6 +137,9 @@ func (b *builder) callee(fr *frame, site ssa.CallInstruction, f *ssa.Function, p
 				bind[v] = b.identity(fr, mc.Bindings[j], map[ssa.Value]bool{})
 			}
 		}
+	}
+	for v, id := range fieldBinding.captures {
+		bind[v] = id
 	}
 	return f, bind
 }

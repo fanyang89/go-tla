@@ -76,6 +76,50 @@ func TestInterfaceProofConsumesGraphAndSlice(t *testing.T) {
 	t.Fatal("missing invoke")
 }
 
+func TestCallableFieldBindingAndSliceAreConsumed(t *testing.T) {
+	p := testutil.Load(t, `package main;import "sync";type writer struct{mu sync.Mutex;f func()};func good(){};func(w *writer)Run(){w.f()};func main(){w:=&writer{f:good};w.Run()}`)
+	var run *ssa.Function
+	for f := range p.Calls.Nodes {
+		if f != nil && f.Name() == "Run" && f.Pkg != nil && f.Pkg.Pkg.Path() == "fixture" {
+			run = f
+		}
+	}
+	if run == nil {
+		t.Fatal("missing method")
+	}
+	b := &builder{p: p, m: &behavior.Model{Outcome: "precisely-modeled"}, effects: effects.New(p, nil), plans: map[*ssa.Function]*functionPlan{}, callableFields: map[callableFieldKey]callableFieldBinding{}}
+	plan := b.plan(run)
+	for site, summary := range plan.Calls {
+		proof := p.CallableField(site)
+		if proof == nil {
+			continue
+		}
+		fr := &frame{f: run, plan: plan, ids: map[ssa.Value]string{run.Params[0]: "object"}}
+		key := callableFieldKey{"object", proof.Field}
+		binding := callableFieldBinding{initializer: proof.Initializer}
+		b.callableFields[key] = binding
+		if f, _ := b.callee(fr, site, summary.Callee, site.Pos()); f == nil || b.m.HasErrors() {
+			t.Fatal("valid field binding refused")
+		}
+		delete(b.callableFields, key)
+		if f, _ := b.callee(fr, site, summary.Callee, site.Pos()); f != nil {
+			t.Fatal("missing allocation binding ignored")
+		}
+		b.callableFields[key] = binding
+		delete(plan.Slice.Data, site.Common().Value)
+		if f, _ := b.callee(fr, site, summary.Callee, site.Pos()); f != nil {
+			t.Fatal("missing field load dependency ignored")
+		}
+		plan.Slice.Data[site.Common().Value] = true
+		p.Calls.Nodes[run].Out = nil
+		if f, _ := b.callee(fr, site, summary.Callee, site.Pos()); f != nil {
+			t.Fatal("cached field target bypassed missing graph edge")
+		}
+		return
+	}
+	t.Fatal("missing field proof")
+}
+
 func TestLowerRequiresCallGraph(t *testing.T) {
 	p := testutil.Load(t, `package main;func main(){}`)
 	p.Calls = nil

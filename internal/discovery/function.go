@@ -24,7 +24,8 @@ func Scan(f *ssa.Function) Function {
 			switch x := i.(type) {
 			case *ssa.Store:
 				if _, field := x.Addr.(*ssa.FieldAddr); field {
-					if _, channel := x.Val.Type().Underlying().(*types.Chan); channel {
+					switch x.Val.Type().Underlying().(type) {
+					case *types.Chan, *types.Interface, *types.Signature:
 						r.Roots[i] = true
 					}
 				}

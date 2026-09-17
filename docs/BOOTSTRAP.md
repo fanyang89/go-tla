@@ -47,7 +47,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 109 positive/negative semantic TLC cases and 11
+itself. It is separate from the 119 positive/negative semantic TLC cases and 11
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -136,6 +136,44 @@ Next work must prove finite receiver/callback bindings through the component's
 actual fields or choose another explicit component-entry contract without erasing
 I/O, cancellation or re-entry behavior. The direct-box proof does not authorize
 such an extension by itself.
+
+## Bootstrap prerequisite: immutable callable fields
+
+A new proof follows a directly allocated object's pointer through unambiguous
+ordinary calls and checks every object/selected-field use. A direct interface or
+function field may be initialized once, before every read and object call/spawn.
+Callees cannot replace or initialize it; opaque aliases and escapes are refused.
+Interface boxing, named functions and source closures produce exact targets, not
+an implementer-count guess. The graph is refined in a separate stage, and target
+queries recheck the complete proof. Lowering binds receivers/captures in each
+allocation invocation and consumes the initializer and reader dependency slices.
+
+This handles a mutex-bearing writer calling a stored interface and a stored callback
+with channel/synchronization effects. Ten additional real TLC cases cover delivery,
+blocked callbacks retaining a lock/defer, callback synchronization errors, receiver
+aliasing, and distinct constructor invocations/captures. Refusal tests cover future/
+conditional/multiple stores, callee mutation, escaped field addresses, object copies/
+resets, returned/global/phi objects, ambiguous origins, nil/opaque initializers,
+method wrappers and mutable/future captures. Graph corruption, missing frame bindings
+and missing slice facts fail closed. A 1024-step bound on each origin/use proof
+refuses excessively long alias chains rather than assuming their safety.
+
+The local total is now **119 semantic TLC cases plus 11 TLC CLI cases** and the
+separate CLI refusal test. Strict pinned-TLC/vet/snapshot and full race suites passed,
+with zero skips/failures. An initial gate exposed an ambiguous test lookup for a
+method named Run (a standard-library method could be selected); the test now also
+matches its package, passed 20 repetitions, and the complete gate/race reruns passed.
+Logs, including the failed first attempt, are under `$HOME/tmp/pi/gotla-bootstrap-fields/`.
+This increment has not been pushed or claimed as a hosted pass.
+
+The repeated full-CLI probe still reports `unsupported / 5`, 240 initializer errors
+and unchanged other error categories, with no resolved field-call diagnostic on its
+lowered path. It emits only diagnostic artifacts; `boundedLog.Write` remains
+unverified in its actual caller environment. A concrete next step is to isolate its
+unchanged locking implementation in a production leaf package and supply a small
+finite caller/writer/cancellation harness; copying a lock skeleton or trusting I/O
+would not count. The existing checker path must use the same extracted production
+implementation, with native behavior/race regressions retained.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

@@ -60,8 +60,8 @@ TLC does not prove arithmetic or general shared-memory race freedom.
 
 The delivered hosted baseline included **95 semantic TLC cases and 11 CLI integration
 cases** (four workflow cases plus seven component cases), with zero skips.
-The later bootstrap constructor and exact-interface increments bring the local
-semantic total to **109** and leave those 11 TLC CLI cases unchanged; the separate
+The later bootstrap constructor, exact-interface and immutable-field increments
+bring the local semantic total to **119** and leave those 11 TLC CLI cases unchanged; the separate
 self-input test still expects unsupported. See [BOOTSTRAP.md](BOOTSTRAP.md) for that increment's local-only
 evidence and remaining self-verification blockers. Existing snapshots/model-size baselines remain unchanged.
 Full internal/CLI/integration/component race tests also pass locally.

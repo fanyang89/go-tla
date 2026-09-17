@@ -272,8 +272,9 @@ retain their positions after the concrete receiver is bound; inline synchronizat
 fields retain their existing object identities. Source-located
 `resolved-interface-call` diagnostics record the proof. Data returns remain abstract.
 
-Interface parameters, interface fields/loads, phis, returned interfaces, type
-assertions and method-value callbacks are not covered. Nor are promoted methods,
+Interface parameters, unproved interface fields/loads, phis, returned interfaces,
+type assertions and method-value callbacks are not covered by the local-box proof.
+The separate immutable-field proof below covers a restricted field case. Nor are promoted methods,
 implicit pointer/value receiver adaptation, generic receivers or explicit nil boxes.
 Synchronization-bearing value copies and channel-object escapes still fail their
 existing checks. Interface dispatch directly to `sync` / `sync/atomic` primitives
@@ -281,8 +282,41 @@ existing checks. Interface dispatch directly to `sync` / `sync/atomic` primitive
 inside an ordinary supported method keep their existing semantics. General deferred
 interface calls and helper calls inside receive cycles remain unsupported.
 
-This does **not** resolve `boundedLog`'s stored `io.Writer` or cancellation callback:
-proving those field bindings and effects remains separate bootstrap work.
+### Immutable interface and callback fields
+
+An object with an existing static synchronization-bearing identity can initialize a
+direct interface/function field once in its allocation frame, then call it through
+ordinary methods or named helper functions. Interface initializers must directly
+box a concrete value; function initializers must be named source functions or source
+closures, optionally with a named function-type conversion. The real target body is
+inspected, not summarized as harmless. Resource-bearing receivers and closure captures
+are bound in the allocation's invocation, not reinterpreted in the reader's frame.
+
+The proof follows direct pointer parameters only when **all** incoming direct-call
+edges resolve to the same SSA allocation. Two invocations of that allocation site
+keep distinct runtime bindings. Two different allocation sites passed to the same
+reader method are conservatively refused, even if both could be safe.
+
+All syntactic object uses and selected-field addresses are checked. One store must
+dominate every allocation-frame read and every object call/spawn. Callees may read,
+not initialize or replace the field. Returned/global objects, pointer cells, object
+closure captures, copies/resets, address escapes/conversions and phi aliases are
+refused. Interface-parameter or returned-value initializers, nil targets, bound
+method wrappers and general callback parameter dispatch remain unsupported. Captured
+resource cells retain their existing unique-store/dominance requirements. Other
+ordinary scalar fields may still be updated; this is not shared-data verification.
+
+The graph records candidate edges only after direct-call refinement; every use
+rechecks the complete origin/store proof and edge agreement. Lowering additionally
+requires matching allocation-frame bindings and retained dependencies.
+`resolved-field-call` diagnostics record accepted dispatches. Origin traversal and
+alias-use inspection each have a 1024-step proof budget; exhaustion means unsupported,
+never an assumed alias or truncated execution. No trusted call can supply a missing
+field-origin proof.
+
+This admits bounded environments for stored writers/callbacks, not the actual
+`os/exec`/`context` environment of `boundedLog`. Its opaque returned callback and
+external object escapes still require separate component-entry/environment work.
 
 ### Private data construction in initialization helpers
 
@@ -350,7 +384,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 | Dynamic or over-budget spawning/channel topology | Only static sites, including accepted integer-range expansions, have finite identities |
 | Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |
-| Unproved callbacks/interface dispatch | Only direct local boxing with an exact receiver/graph proof is admitted; fields, parameters and other dynamic sources remain unsupported |
+| Unproved callbacks/interface dispatch | Only exact local boxing or the documented immutable-field proof is admitted; ambiguous fields, parameters and other dynamic sources remain unsupported |
 | General `defer`, explicit panic/recover | Only direct deferred Unlock/Done on normal-return paths are modeled; no panic unwinding |
 | RWMutex and other unsupported synchronization APIs | No corresponding implemented semantics |
 | WaitGroup reuse or concurrent positive enrollment | Counter-only representation does not model waiter generations |

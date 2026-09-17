@@ -27,7 +27,7 @@ func (b *builder) plan(f *ssa.Function) *functionPlan {
 			if call, ok := i.(ssa.CallInstruction); ok {
 				summary := b.effects.Call(call)
 				p.Calls[call] = summary
-				if !summary.IsPure() || call.Common().IsInvoke() && summary.Callee != nil {
+				if !summary.IsPure() || call.Common().IsInvoke() && summary.Callee != nil || b.p.CallableField(call) != nil {
 					// A resolved invoke still needs its box/receiver in the retained
 					// data slice, including when its body is local computation.
 					p.Discovery.Roots[i] = true

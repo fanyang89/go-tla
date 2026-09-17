@@ -24,6 +24,7 @@ java -version
 # Do not permit ambient GOFLAGS (e.g. -run) to silently reduce the test suite.
 export GOFLAGS=
 export GOTLA_REQUIRE_TLC=1
+python3 -B scripts/capture_self_check_test.py
 go vet ./...
 go test ./... -count=1 -v
 git diff --exit-code -- tests/testdata

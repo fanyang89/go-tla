@@ -36,6 +36,32 @@ functional correctness or arbitrary Go executions.
 The full-CLI regression currently correctly requires unsupported / 5 and no executable
 artifacts. No completion is claimed until every item above has direct evidence.
 
+## Reproducible attempt capture
+
+`scripts/capture-self-check.py` captures the actual `./cmd/gotla` attempt from a clean
+checkout into a new external directory. It checks the repository-pinned TLC digest,
+records only selected build environment settings (not the entire environment),
+fingerprints tracked files, selected dependency sources/module files, Go compiler/
+assembler/linker and JAR, builds the real CLI, and executes its normal check pipeline.
+Startup GOMAXPROCS and the analysis profile agree. Before/after fingerprints, git
+revision/cleanliness, binary identity, result/model provenance and artifact hashes
+must match. Unsupported results must contain no executable model or TLC evidence.
+
+`manifest.json` retains command arguments, stdout/stderr hashes, capture failures and
+the actual checker outcome. Existing evidence directories are never overwritten;
+subprocess deadlines terminate their process groups. It returns the original checker
+exit code for a valid capture, including 5 for unsupported, and 1 for capture failures.
+The manifest always records `goalComplete: false`: even a future checker pass does
+not by itself establish finite input/I/O/lifecycle scope or production mutation
+sensitivity. This is evidence infrastructure, not an alternative bootstrap model.
+Concurrent writers are excluded; selected source/tool fingerprints are not a native
+header/toolchain closure, full host snapshot, or memory/disk sandbox.
+
+The strict gate includes Python-standard-library tests rejecting stale versions,
+profiles, trusted calls, hashes/paths, symlinks, unsupported/TLC contradictions and
+incomplete success evidence. Full compiler semantics and bootstrap acceptance above
+remain unchanged. Python 3 is required; no new package download is needed.
+
 ## Static deferred helpers (first full-self prerequisite)
 
 Static, source-defined deferred helper/closure bodies are now analyzed at normal-return

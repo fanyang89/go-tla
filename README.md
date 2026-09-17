@@ -94,6 +94,22 @@ Use the built binary for these exit codes; `go run` wraps nonzero program exits.
 Source summaries are candidates from trace locations, not complete counterexample
 decoding. See the [verification guide](docs/VERIFICATION.md) for the result contract.
 
+### Capture a reproducible self-check attempt
+
+With a clean checkout, Python 3 and the pinned JAR already provisioned:
+
+```sh
+python3 -B scripts/capture-self-check.py --tlc-jar "$TLC_JAR" \
+  --runtime-procs 2 --out "$HOME/tmp/pi/self-check-$(date +%Y%m%d-%H%M%S)"
+```
+
+The output directory must be new and outside the checkout. The script builds and
+checks the real `./cmd/gotla`, fingerprints selected source/dependency files and Go
+tools, checks for input drift, and validates result/artifact provenance. Failed
+attempts remain available in `manifest.json` and command logs. It returns the actual
+checker status code—currently **5 / unsupported**, not a bootstrap success. A
+captured attempt does not discharge the [full acceptance contract](docs/SELF_BOOTSTRAP_GOAL.md).
+
 ### Run TLC manually
 
 Obtain `tla2tools.jar` from the [official TLA+ releases](https://github.com/tlaplus/tlaplus/releases).

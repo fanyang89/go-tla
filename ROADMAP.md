@@ -756,6 +756,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self evidence capture
+
+- Provide a fixed-real-entry capture command with a clean-source prerequisite,
+  pinned JAR, selected source/tool fingerprints, explicit startup processor setting,
+  before/after drift checks and validated result/artifact provenance.
+- Retain failed attempts and propagate unsupported / 5 rather than relabeling a
+  diagnostic model as a proof. Keep `goalComplete: false` independently of capture.
+- Add standard-library Python evidence-corruption tests to the strict gate. This
+  infrastructure does not satisfy the remaining full-self semantic requirements.
+
 ### Full-self continuation: literal type metadata
 
 - Guard the actual three reflect.rtypeOf initializers by current standard wrapper,

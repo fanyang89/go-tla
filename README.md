@@ -22,7 +22,7 @@ are not supported features until implemented and tested.
 - [Semantic test coverage and gaps](docs/SEMANTIC_TEST_MATRIX.md)
 - [Component harnesses and measurements](docs/COMPONENTS.md)
 - [Local and hosted acceptance evidence](docs/ACCEPTANCE.md)
-- [Self-analysis / bootstrap feasibility](docs/BOOTSTRAP.md)
+- [Production-component bootstrap and full self-analysis boundary](docs/BOOTSTRAP.md)
 - [Versioned behavioral IR contract](docs/BEHAVIOR_IR.md)
 
 ## Quick start

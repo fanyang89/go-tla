@@ -10,8 +10,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/fanmi/go-tla/internal/boundedlog"
 )
 
 var errLogLimit = errors.New("TLC log limit reached")
@@ -53,7 +54,7 @@ func Run(parent context.Context, cfg Config, spec, configText, logPath string) (
 		return fail(fmt.Errorf("create TLC log: %w", err))
 	}
 	defer log.Close()
-	output := &boundedLog{file: log, remaining: int64(cfg.MaxLogMiB) << 20, cancel: cancel}
+	output := &boundedlog.Writer{Output: log, Remaining: int64(cfg.MaxLogMiB) << 20, Cancel: cancel, LimitError: errLogLimit}
 	if err := ctx.Err(); err != nil {
 		report.Status = Incomplete
 		return fail(fmt.Errorf("checker cancelled before startup: %w", err))
@@ -143,8 +144,8 @@ func Run(parent context.Context, cfg Config, spec, configText, logPath string) (
 		report.Reason = cause.Error() + "; verification did not complete"
 		return report
 	}
-	if output.err != nil || closeErr != nil {
-		return fail(fmt.Errorf("write TLC log: %w", errors.Join(output.err, closeErr)))
+	if output.Err != nil || closeErr != nil {
+		return fail(fmt.Errorf("write TLC log: %w", errors.Join(output.Err, closeErr)))
 	}
 	if versionErr != nil {
 		return fail(fmt.Errorf("Java version probe failed: %w", versionErr))
@@ -204,31 +205,4 @@ func hashJAR(ctx context.Context, path string) (string, error) {
 			return "", err
 		}
 	}
-}
-
-type boundedLog struct {
-	mu        sync.Mutex
-	file      io.Writer
-	remaining int64
-	cancel    context.CancelCauseFunc
-	err       error
-}
-
-func (w *boundedLog) Write(p []byte) (int, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	data := p
-	if int64(len(data)) > w.remaining {
-		data = data[:w.remaining]
-	}
-	n, err := w.file.Write(data)
-	w.remaining -= int64(n)
-	if err == nil && n != len(p) {
-		err = errLogLimit
-	}
-	if err != nil {
-		w.err = err
-		w.cancel(err)
-	}
-	return n, err
 }

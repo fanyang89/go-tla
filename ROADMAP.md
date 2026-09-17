@@ -483,3 +483,24 @@ writing its plan or skipping its checker tests does not count as implementation.
 
 **Next action:** require fresh CI for subsequent changes. Address action deprecation
 warnings as maintenance; expand semantic scope only with explicit proofs and tests.
+
+### B1: restricted production-component bootstrap — locally complete
+
+- Constructor, exact local interface and immutable callable-field proofs were added
+  incrementally, without trusting standard-library I/O or dropping initializer checks.
+- Extracted the actual runner logger into `internal/boundedlog.Writer`, preserving
+  its Write body after field/dependency renaming. The checker and finite harness
+  call the same production implementation; the runner retains its error sentinel.
+- Two concurrent callers pass TLC with a returning sink/bounded notification callback.
+  Removing the actual deferred Unlock and using a blocking cancellation environment
+  each produce deadlock counterexamples. Models contain nonempty production locking,
+  proved field dispatch and explicit data abstractions; no trusted-call flags.
+- The strict local gate and full race suite pass, with 119 semantic TLC cases and
+  14 TLC CLI cases, zero skips/failures and unchanged original snapshots. Native
+  logger tests separately cover budget/error behavior and concurrent writes.
+- Full CLI self-analysis still returns unsupported / 5. This does not verify
+  arbitrary file I/O, context/process lifecycles, re-entry, payload correctness or
+  the analyzer's soundness. Bootstrap commits have no claimed hosted pass.
+  [BOOTSTRAP.md](docs/BOOTSTRAP.md) records exact assumptions, measurements and logs.
+- Further bootstrap work requires independent parser-callback or lifecycle contracts;
+  do not replace unresolved effects with trusted no-ops to claim whole-program success.

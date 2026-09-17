@@ -61,10 +61,14 @@ TLC does not prove arithmetic or general shared-memory race freedom.
 The delivered hosted baseline included **95 semantic TLC cases and 11 CLI integration
 cases** (four workflow cases plus seven component cases), with zero skips.
 The later bootstrap constructor, exact-interface and immutable-field increments
-bring the local semantic total to **119** and leave those 11 TLC CLI cases unchanged; the separate
-self-input test still expects unsupported. See [BOOTSTRAP.md](BOOTSTRAP.md) for that increment's local-only
-evidence and remaining self-verification blockers. Existing snapshots/model-size baselines remain unchanged.
-Full internal/CLI/integration/component race tests also pass locally.
+bring the local semantic total to **119**. Production logger bootstrap adds three
+CLI/TLC cases, bringing that total to **14**: the real Writer passes under a finite
+environment, removing its actual Unlock deadlocks, and a blocking cancellation
+environment deadlocks. These models explicitly contain eight abstracted predicates,
+unlike the seven original component variants above. The full CLI self-input test
+still expects unsupported. See [BOOTSTRAP.md](BOOTSTRAP.md) for local-only evidence
+and remaining blockers. Original snapshots/model-size baselines remain unchanged.
+Full internal/CLI/integration/component/bootstrap race tests also pass locally.
 
 ## Reproduce the local gate
 
@@ -76,7 +80,7 @@ mkdir -p "$TOOLS"
 bash scripts/download-tlc.sh "$TOOLS/tla2tools.jar"
 TLC_JAR="$TOOLS/tla2tools.jar" bash scripts/test-ci.sh
 TLC_JAR="$TOOLS/tla2tools.jar" go test -race \
-  ./internal/... ./cmd/gotla ./tests ./examples/components/... -count=1
+  ./internal/... ./cmd/gotla ./tests ./examples/components/... ./examples/bootstrap/... -count=1
 go build -o "$TOOLS/gotla" ./cmd/gotla
 "$TOOLS/gotla" check -tlc-jar "$TOOLS/tla2tools.jar" -timeout=30s \
   -out "$TOOLS/counter-good" ./examples/components/counter/good/harness
@@ -90,8 +94,9 @@ proof. The owner configured the remote, pushed the initial revision, and authori
 subsequent repair pushes. No PR, workflow dispatch or branch-protection change was
 made here.
 
-Latest local logs: `${TMPDIR:-$HOME/tmp}/pi/gotla-tlc-refresh-gate.log` and
-`${TMPDIR:-$HOME/tmp}/pi/gotla-tlc-refresh-race.log`. Machine-specific logs/artifacts are not
+Latest bootstrap logs: `$HOME/tmp/pi/gotla-bootstrap-production/{gate,race}.log`.
+The delivered hosted-baseline refresh logs remain at
+`${TMPDIR:-$HOME/tmp}/pi/gotla-tlc-refresh-{gate,race}.log`. Machine-specific logs/artifacts are not
 committed. Historical evidence and atomic revisions are tracked in [ROADMAP.md](../ROADMAP.md).
 
 ## Interpretation and deferred work

@@ -317,6 +317,9 @@ field-origin proof.
 This admits bounded environments for stored writers/callbacks, not the actual
 `os/exec`/`context` environment of `boundedLog`. Its opaque returned callback and
 external object escapes still require separate component-entry/environment work.
+The extracted production `boundedlog.Writer` now has finite bootstrap environments
+using these proofs; [BOOTSTRAP.md](BOOTSTRAP.md) records their results and assumptions.
+This does not admit the actual process/context lifecycle as a whole.
 
 ### Private data construction in initialization helpers
 

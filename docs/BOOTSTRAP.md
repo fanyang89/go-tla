@@ -1,6 +1,18 @@
 # Self-analysis / bootstrap feasibility
 
-## Observed result
+## Current status
+
+**First production-component bootstrap achieved under a finite environment.**
+The real logger used by `checker.Run` is now `internal/boundedlog.Writer`.
+Its two-caller harness passes TLC; deleting its actual deferred Unlock produces a
+deadlock, as does a deliberately blocking cancellation environment. No trusted calls
+are used. The complete CLI still returns **unsupported / 5**.
+
+Current totals: **119 semantic TLC cases and 14 TLC CLI cases**, plus the separate
+CLI self-input refusal test. The prerequisite sections below record earlier stages;
+their counts and unresolved-component statements describe those historical stages.
+
+## Original full-CLI observation
 
 The binary built from `a57d675` was run on its own actual entry point:
 
@@ -47,7 +59,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 119 positive/negative semantic TLC cases and 11
+itself. It is separate from the 119 positive/negative semantic TLC cases and 14
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -57,14 +69,14 @@ this regression. The self-analysis test also passed under `-race`. Logs are in
 did not change production semantics or supported syntax; the constructor increment
 below is a separate capability change. Neither increment has a claimed hosted pass.
 
-## Best first production target
+## Original production-target selection
 
-The most useful next target is `internal/checker/runner.go`'s `boundedLog.Write`:
+The selected target was `internal/checker/runner.go`'s `boundedLog.Write`:
 it takes an inline Mutex, defers Unlock, writes through an `io.Writer`, records an
 error and invokes a cancellation callback. Its lock belongs to actual production
 code, unlike copying a small locking example into a bootstrap directory.
 
-This is not yet a supported component harness. Obstacles include private entry
+At that stage it was not a supported component harness. Obstacles included private entry
 access, effectful package initialization, concrete target resolution for the writer
 interface and cancellation function field, and externally scheduled calls from
 `os/exec`. I/O and cancellation cannot be marked pure: doing so could hide blocking
@@ -175,18 +187,90 @@ finite caller/writer/cancellation harness; copying a lock skeleton or trusting I
 would not count. The existing checker path must use the same extracted production
 implementation, with native behavior/race regressions retained.
 
+## First production-component bootstrap
+
+The implementation was extracted to `internal/boundedlog/writer.go`; `checker.Run`
+now constructs that Writer. A comparison against the original method confirmed the
+body is identical after receiver/field renaming and replacing its global error read
+with an injected `LimitError`. The runner still supplies the **same original error
+sentinel**, file writer, byte budget and context cancellation function. Lock/defer,
+truncation, error precedence and callback order were not rewritten. The new leaf
+imports only sync; its concrete callers supply I/O and cancellation dependencies.
+
+`examples/bootstrap/boundedlog/main.go` imports this production package. It provides
+exactly two concurrent one-byte writes, a returning sink and a cancellation callback
+that sends to a capacity-two channel. Each invocation can cancel once. The model
+contains **3 processes, 1 mutex, 1 waitgroup and 1 channel**. It has **8 abstracted
+data predicates**, reports `conservatively-abstracted`, and inspects both stored call
+targets. It does not mark the writer or cancellation function pure by contract.
+
+`TestCheckProductionBoundedLog` runs three actual CLI/TLC cases:
+
+| Environment / mutation | Exit / status | Locations / transitions | Generated / distinct states |
+|---|---|---|---|
+| Production Writer, returning sink, bounded notifications | 0 / passed | 36 / 55 | 531 / 259 |
+| Same source with only deferred Unlock removed | 3 / deadlock | 32 / 45 | 137 / 72 |
+| Production Writer, zero budget, blocking notification | 3 / deadlock | 36 / 55 | 128 / 67 |
+
+The mutation test parses the actual production file, removes the one Unlock defer
+in an isolated temporary module, preserves source positions and records both hashes.
+It does not edit the working tree or a dependency cache. Assertions require effects
+located in `internal/boundedlog/writer.go`, both invocations' proved writer/callback
+dispatches, a nonempty model, real checker evidence, artifact hashes, no trusted calls
+and source candidates for counterexamples. The blocking environment is checked, not
+executed natively: its unbuffered notification has no receiver, and its zero budget
+forces an error on a nonempty write.
+
+Native tests separately cover byte truncation, exact/empty/zero budgets, short writes,
+output errors, cancellation under the mutex, retained error state after later success
+and 64 concurrent writes sharing one budget. The ordinary finite harness also runs
+natively. These tests and the checker runner's existing subprocess/limit/cancellation
+regressions pass under the race detector.
+
+Reproduce the two checked-in environments (never `go run` the blocked one):
+
+```sh
+go run ./cmd/gotla check -out /absolute/path/good \
+  -tlc-jar "$TLC_JAR" ./examples/bootstrap/boundedlog
+# 0
+
+go run ./cmd/gotla check -out /absolute/path/blocked \
+  -tlc-jar "$TLC_JAR" ./examples/bootstrap/boundedlog/blocked
+# gotla returns 3; go run itself reports a nonzero wrapper exit.
+
+GOTLA_REQUIRE_TLC=1 go test ./cmd/gotla \
+  -run '^TestCheckProductionBoundedLog$' -count=1 -v
+```
+
+**Scope:** this establishes the modeled lock/callback protocol only for the supplied
+finite environments. It is not a proof of byte budgets, error values, file contents,
+race freedom, fairness or termination. It does not model arbitrary `os.File`,
+`os/exec`, context propagation, synchronous re-entry or other callers. Abstract
+counterexample traces are not automatic concrete Go replays. The blocking case
+shows why a returning-callback assumption matters; extraction alone makes neither
+I/O nor cancellation safe. Independent tests remain necessary.
+
+The strict checksum-pinned gate and full race suite (including bootstrap examples)
+passed locally with zero skips/failures and unchanged original snapshots. Totals are
+119 semantic and 14 TLC CLI cases. Persistent logs and result/model/TLC artifacts are
+under `$HOME/tmp/pi/gotla-bootstrap-production/`, including `good`, `missing-unlock`,
+`blocking-cancel`, `cli`, `mutation.json`, `gate.log` and `race.log`. These bootstrap
+changes have no claimed hosted pass. The repeated complete-CLI probe still returns
+unsupported / 5, with 240 initializer errors and the same other diagnostic counts;
+it does not run TLC.
+
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 
-1. Keep the complete CLI self-input refusal test and its actionable diagnostics.
-2. Establish a real, restricted production-component entry/harness mechanism without
+1. **Done:** keep the complete CLI self-input refusal test and its actionable diagnostics.
+2. **Done for the bounded logger:** establish a real, restricted production-component entry/harness mechanism without
    copying its synchronization or adding broad trusted-call exemptions. Resolve the
    required concrete callbacks/identities and model or explicitly delimit effects.
-3. Check the actual bounded-log locking protocol with two finite concurrent callers;
+3. **Done under the documented finite environments:** check the actual bounded-log locking protocol with two finite concurrent callers;
    retain the original body, test normal/error paths and a missing-unlock mutation.
    Require a nonempty synchronization model, actual TLC outcomes and source evidence.
    This still does not prove file bytes, cancellation semantics outside the stated
    environment, or every possible caller.
-4. Expand to the parser callback and runner lifecycle only with independent effect,
+4. **Not done:** expand to the parser callback and runner lifecycle only with independent effect,
    initialization and callback proofs. Full CLI self-verification remains a separate,
    much larger milestone involving context, processes, I/O and dynamic control.
 

@@ -5,6 +5,21 @@ Paths and test names refer to the current implementation. Actual TLC tests are
 optional in a plain local test run but mandatory in the
 [strict gate](VERIFICATION.md#tests-and-required-ci-gate).
 
+## Production-component bootstrap
+
+Current total: **119 semantic TLC cases and 14 TLC CLI cases**, plus the separate
+unsupported full-CLI regression. Counts in prerequisite sections below record their
+respective historical increments.
+
+`TestCheckProductionBoundedLog` checks the actual `internal/boundedlog.Writer`
+used by `checker.Run`: two concurrent callers pass under a returning sink/bounded
+notification environment; removing its actual deferred Unlock deadlocks; a zero
+budget with blocking cancellation also deadlocks. All three models contain nonempty
+production synchronization and explicit data abstractions. The test requires real
+TLC evidence, source-located production effects/dispatches, no trust flags and a
+mutation isolated from the working tree. Native policy/concurrency tests and race
+checking remain separate. See [BOOTSTRAP.md](BOOTSTRAP.md) for exact scope/results.
+
 ## Bootstrap prerequisite: immutable callable fields
 
 `TestTLCImmutableCallableFields` adds ten actual TLC checks for interface fields,

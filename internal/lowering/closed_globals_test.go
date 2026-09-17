@@ -11,7 +11,7 @@ import (
 )
 
 func TestClosedGlobalConsumesFreshProof(t *testing.T) {
-	for _, broken := range []string{"none", "graph", "body", "capacity", "order"} {
+	for _, broken := range []string{"none", "graph", "body", "capacity", "valid-capacity", "order"} {
 		t.Run(broken, func(t *testing.T) {
 			p := testutil.Load(t, `package main;var ready=make(chan int);func init(){close(ready)};func main(){<-ready}`)
 			root := p.Roots[0].Func("init")
@@ -33,6 +33,8 @@ func TestClosedGlobalConsumesFreshProof(t *testing.T) {
 				p.Calls.Nodes[root].Out = nil
 			case "body":
 				proof.close.Call.Args = nil
+			case "valid-capacity":
+				makeChan.Size = ssa.NewConst(constant.MakeInt64(1), types.Typ[types.Int])
 			case "capacity":
 				makeChan.Size = ssa.NewConst(constant.MakeInt64(2048), types.Typ[types.Int])
 			case "order":

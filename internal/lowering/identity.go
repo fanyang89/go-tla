@@ -172,9 +172,17 @@ func (b *builder) identity(fr *frame, v ssa.Value, seen map[ssa.Value]bool) stri
 			return id
 		}
 	case *ssa.Global:
+		if proof := b.openGlobals[x]; proof != nil {
+			fresh := b.proveGlobalCreation(proof.make)
+			if fresh == nil || fresh.global != x || fresh.store != proof.store || fresh.capacity != proof.capacity {
+				b.diag("error", "global-init-contract", "global channel lacks a current unique creation/capacity proof", x.Pos())
+				return "invalid"
+			}
+			return b.globals[x]
+		}
 		if proof := b.closedGlobals[x]; proof != nil {
 			fresh := b.proveClosedGlobal(proof.make)
-			if fresh == nil || fresh.global != x || fresh.call != proof.call || fresh.close != proof.close {
+			if fresh == nil || fresh.global != x || fresh.store != proof.store || fresh.capacity != proof.capacity || fresh.call != proof.call || fresh.close != proof.close {
 				b.diag("error", "global-init-contract", "global channel lacks a current unique initialization/close proof", x.Pos())
 				return "invalid"
 			}

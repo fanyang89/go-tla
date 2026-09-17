@@ -106,7 +106,7 @@ func TestUnsupportedIsNeverExecutable(t *testing.T) {
 		{"external-effects", `package main;func external()bool;func main(){ch:=make(chan int);if external(){ch<-1}}`},
 		{"unknown-unused-result", `package main;func external();func main(){external()}`},
 		{"dynamic-call", `package main;func apply(f func()){f()};func main(){apply(func(){})}`},
-		{"init-channel", `package main;var ch=make(chan int);func main(){}`},
+		{"init-channel-send", `package main;var ch=make(chan int,1);func init(){ch<-1};func main(){}`},
 		{"init-goroutine", `package main;func init(){go func(){}()};func main(){}`},
 		{"init-unknown", `package main;func external();func init(){external()};func main(){}`},
 		{"dynamic-defer", `package main;func f(g func()){defer g()};func main(){f(func(){})}`},

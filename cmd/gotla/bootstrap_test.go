@@ -81,6 +81,26 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if constructors != 2 {
 		t.Fatal("actual base64 literal-input constructor proofs missing")
 	}
+	for file, capacity := range map[string]int{
+		"golang.org/x/tools/go/packages/packages.go":     20,
+		"golang.org/x/tools/go/buildutil/allpackages.go": 20,
+		"golang.org/x/tools/go/loader/util.go":           10,
+	} {
+		foundState, foundProof := false, false
+		for _, channel := range model.Channels {
+			if channel.Source.File == file && channel.Source.Line > 0 && channel.Capacity == capacity && !channel.InitiallyClosed {
+				foundState = true
+			}
+		}
+		for _, d := range r.Diagnostics {
+			if d.Code == "open-global-init" && d.File == file && d.Line > 0 {
+				foundProof = true
+			}
+		}
+		if !foundState || !foundProof {
+			t.Fatalf("actual global I/O semaphore proof/state missing: %s", file)
+		}
+	}
 	// Require a diagnostic in our own entry point, not merely a dependency load error.
 	for _, d := range r.Diagnostics {
 		if d.Severity == "error" && strings.HasPrefix(d.File, "cmd/gotla/") && d.Line > 0 {

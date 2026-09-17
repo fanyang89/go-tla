@@ -12,7 +12,7 @@ have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **166 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current totals: **173 semantic TLC cases and 18 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -63,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 166 positive/negative semantic TLC cases and 18
+itself. It is separate from the 173 positive/negative semantic TLC cases and 18
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -416,6 +416,12 @@ initializer with nil slice storage and SetPrec, reducing initializer refusals to
 Three additional TLC cases bring current totals to 166 semantic and 18 CLI/TLC cases.
 Nil references never authorize external memory or synchronization-bearing type graphs.
 Full self-input still refuses; see SELF_BOOTSTRAP_GOAL.md for the latest evidence.
+
+Fixed-capacity open-global creation now proves the three actual x/tools I/O
+semaphores (20/20/10). Fresh identity checks include exact capacity consistency for
+both open and pre-closed channels. Seven new TLC cases bring current totals to 173
+semantic and 18 CLI/TLC cases. Full self-input still refuses with 232 initializer
+diagnostics; dynamic CPU capacities and other initialization effects remain unproved.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

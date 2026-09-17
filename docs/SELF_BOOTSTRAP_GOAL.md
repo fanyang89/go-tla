@@ -225,7 +225,7 @@ Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-constant-data/` contains unit/focus
 race logs, initial failed attempts, self-check output and diagnostic CLI artifacts.
 Full bootstrap remains unproved; no hosted pass is claimed.
 
-## Private zero-reference data storage (latest increment)
+## Private zero-reference data storage
 
 Literal-input evaluation now allows zero pointer/slice/map fields after checking the
 entire data type graph. Synchronization, callbacks, interfaces and unsafe pointers
@@ -250,6 +250,32 @@ owned-pointer variant is a positive TLC case. Initial focused failure is retaine
 Strict gate and race tests pass with **166 semantic TLC and 18 CLI/TLC cases**, zero
 skips/failures and unchanged snapshots. Evidence is under
 `$HOME/tmp/pi/gotla-self-bootstrap-references/`. Results remain local, not hosted.
+
+## Fixed-capacity global I/O semaphores (latest increment)
+
+A shared creation/identity proof now supports initially open global channels made
+with a constant capacity and a unique direct store. Complete SSA address inventory
+still rejects rebinding and address escape, including functions omitted from the
+call graph. The pre-closed pattern retains its additional unconditional-close proof.
+Both patterns now reject stale capacity changes even when the new capacity remains
+within 0..1024; this closes a proof-consumption consistency gap.
+
+The actual x/tools packages.ioLimit, buildutil.ioLimit and loader.ioLimit creations
+are proved and represented as empty open channels of capacities 20, 20 and 10. The
+real CLI regression requires all three source records and resource states. Initializer
+refusals fall from 235 to **232**, with other refusal counts unchanged. Dynamic CPU
+semaphore capacities remain unproved, as do unknown initialization operations and
+pre-main sends/receives. Full self-input remains unsupported / 5 with no executable
+TLA+ or TLC run.
+
+Seven new TLC cases cover rendezvous, buffering, runtime close, empty/full deadlocks,
+and a semaphore with/without release. Corruption/refusal tests cover valid/invalid
+capacity changes, graph-omitted rebinding, address escape and unsupported initializer
+effects. Old bare-global refusal cases are replaced by positive TLC coverage; an
+initializer-send refusal remains. Initial focused/gate failures are retained.
+Strict gate and full race pass: **173 semantic TLC and 18 CLI/TLC cases**, zero
+skips/failures and unchanged original snapshots. Evidence is under
+`$HOME/tmp/pi/gotla-self-bootstrap-open-globals/`; it remains local-only.
 
 Remaining work includes other dependency initialization/effects, other non-receive control loops,
 returned/dynamic callback and object identities, runtime synchronization primitives,

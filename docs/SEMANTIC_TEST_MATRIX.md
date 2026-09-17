@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **166 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **173 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -31,6 +31,15 @@ nil/empty inputs, independent copied storage, replacement and concurrent capture
 frontend/race regressions exercise its real integration. The production leaf uses
 slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
 bootstrap document for that dependency change's scope and evidence.
+
+## Full-self prerequisite: open global channels
+
+Seven `TestTLCOpenGlobalChannels` cases cover buffered/rendezvous operations, runtime
+close, empty/full deadlocks and semaphore release/missing-release. Refusal tests
+retain initializer I/O, conditional close, dynamic capacity and rebinding/address
+escape. Fresh-proof tests corrupt capacity within/outside the supported range and
+hide a rebind from the call graph. Full CLI refusal regression requires the three
+actual x/tools I/O semaphore initial states and source proof records.
 
 ## Full-self prerequisite: owned reference storage
 

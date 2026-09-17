@@ -76,7 +76,7 @@ func (b *builder) initializers() {
 		}
 		for _, bb := range f.Blocks {
 			for _, i := range bb.Instrs {
-				if b.consumeClosedGlobal(i) {
+				if b.consumeClosedGlobal(i) || b.consumeOpenGlobal(i) {
 					continue
 				}
 				b.checkUnsafePointer(i)

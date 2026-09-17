@@ -28,6 +28,7 @@ program may deadlock. Successful extraction does not mean successful verificatio
 | Channel parameters / direction conversions | Supported when identity is statically resolved |
 | Captured single-assignment channel cell | Initialization must dominate every load and capture; no later mutation |
 | Local or direct global Mutex / WaitGroup | Stable identities; passing/copying these objects by value is rejected |
+| Proved initially open global channels | Unique constant-capacity direct creation, empty buffer, stable global identity; other initializer effects checked separately |
 | Proved pre-closed global channels | Unique direct creation and unconditional single close in package initialization; no rebinding/address escape |
 | Inline Mutex / WaitGroup fields, including nested value structs | Static allocation/global object plus field path; zero initialization only for synchronization state |
 | Direct pointer-receiver methods on these objects | Supported with statically resolved receiver identities; closures can capture stable object pointers |
@@ -285,6 +286,23 @@ calls follow the same rule. `constant-data-call` records name the proved invocat
 The installed base64.NewEncoding source is proved for its two valid standard-library
 alphabet literals; invalid length, duplicate and newline mutations are refused.
 
+### Initially open global channels
+
+A direct package variable `var limit = make(chan T, N)` is supported when N is a
+constant in 0..1024 and the allocation has one dominating store into its own global.
+The same complete SSA address inventory used for pre-closed globals forbids rebinding
+and address escape, even from functions omitted from the call graph. Later identity
+resolution rechecks creation, store and exact capacity. A capacity change within the
+supported range invalidates an already emitted resource, just as an out-of-range
+capacity does; pre-closed resources use the same capacity consistency requirement.
+
+`open-global-init` records the source creation. The model starts with an open channel
+and empty buffer. Main/goroutine sends, receives and closes then use ordinary channel
+semantics. This does not discharge sends, receives, conditional closes or arbitrary
+helper effects during initialization. Dynamic GOMAXPROCS-derived capacities remain
+unsupported. The actual x/tools packages, buildutil and loader I/O semaphores use
+this rule (capacities 20, 20 and 10); no package allowlist is involved.
+
 ### Pre-closed global channels
 
 A narrow package-initialization pattern is supported without omitting its effects:
@@ -311,8 +329,8 @@ checked and may independently refuse the whole program.
 
 The saved channel has `initiallyClosed: true` and an empty buffer; TLC starts with
 that state. Reads, receive status, select/default, and erroneous sends/closes use
-normal channel semantics. Returning channels through helpers, open globals, closure
-factories, conditional/multiple closes, initialization sends and arbitrary initializer
+normal channel semantics. Open globals use the separate creation rule above.
+Returning channels through helpers, closure factories, conditional/multiple closes, initialization sends and arbitrary initializer
 helper bodies are not added by this rule. Runtime close/send on the accepted global
 is modeled as a synchronization error, not silently discarded.
 
@@ -514,7 +532,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 | RWMutex and other unsupported synchronization APIs | No corresponding implemented semantics |
 | WaitGroup reuse or concurrent positive enrollment | Counter-only representation does not model waiter generations |
 | Reachable unsafe pointer operations, including inspected helpers/init | Can bypass modeled resource identity/state |
-| Unproved application/dependency initialization with concurrency, unknown calls, or cycles | Initializers are checked, not silently dropped; the pre-closed global pattern models its proved initial state |
+| Unproved application/dependency initialization with concurrency, unknown calls, or cycles | Initializers are checked, not silently dropped; proved direct global channel patterns model their initial states |
 
 Narrow standard-library initializer summaries are recorded in the model. They do
 not authorize ordinary atomic APIs, arbitrary standard-library calls, or

@@ -642,3 +642,14 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
 - Three new TLC cases bring totals to 166 semantic and 18 CLI/TLC cases. Strict gate
   and race pass; full self-input still refuses with 235 initializer diagnostics.
   See docs/SELF_BOOTSTRAP_GOAL.md for reproducible evidence and remaining scope.
+
+### Full-self continuation: open global I/O semaphores
+
+- Prove unique constant-capacity global channel creation and stable identity using
+  complete SSA address inventory; preserve independent initializer-effect checks.
+- Model the three real x/tools I/O semaphores as initially empty/open. Require their
+  source proof records and capacities in the full-CLI refusal regression.
+- Recheck exact capacity for open and pre-closed resources, including in-range changes.
+- Seven new TLC cases bring totals to 173 semantic and 18 CLI/TLC cases; strict gate
+  and race pass. Full self-input still refuses with 232 initializer diagnostics.
+  Evidence and remaining requirements: docs/SELF_BOOTSTRAP_GOAL.md.

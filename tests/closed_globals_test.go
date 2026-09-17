@@ -64,7 +64,6 @@ func TestTLCClosedGlobalStateMutation(t *testing.T) {
 
 func TestClosedGlobalRefusals(t *testing.T) {
 	for name, decl := range map[string]string{
-		"open":        `var ready=make(chan int)`,
 		"conditional": `var ready=make(chan int);func condition()bool{return true};func init(){if condition(){close(ready)}}`,
 		"twice":       `var ready=make(chan int);func init(){close(ready);close(ready)}`,
 		"two-inits":   `var ready=make(chan int);func init(){close(ready)};func init(){close(ready)}`,

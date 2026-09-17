@@ -11,9 +11,9 @@ import (
 )
 
 // This is deliberately a small initializer language, not a package allowlist:
-// a direct global make, followed by an unconditional source init that only closes
-// that global. All other initializer effects are still checked normally.
-type closedGlobalProof struct {
+// a direct global make, optionally followed by a proved unconditional close.
+// All other initializer effects are still checked normally.
+type globalChannelProof struct {
 	global   *ssa.Global
 	make     *ssa.MakeChan
 	store    *ssa.Store
@@ -22,7 +22,9 @@ type closedGlobalProof struct {
 	capacity int
 }
 
-func (b *builder) proveClosedGlobal(makeChan *ssa.MakeChan) *closedGlobalProof {
+// proveGlobalCreation proves allocation and stable global identity, independently
+// of whether a later supported initializer closes the channel.
+func (b *builder) proveGlobalCreation(makeChan *ssa.MakeChan) *globalChannelProof {
 	root := makeChan.Parent()
 	if root == nil || root.Pkg == nil || root != root.Pkg.Func("init") || root.Synthetic != "package initializer" {
 		return nil
@@ -53,38 +55,7 @@ func (b *builder) proveClosedGlobal(makeChan *ssa.MakeChan) *closedGlobalProof {
 	if !ok || global.Pkg != root.Pkg || !instructionDominates(makeChan, store) {
 		return nil
 	}
-	proof := &closedGlobalProof{global: global, make: makeChan, store: store, capacity: capacity}
-	for _, bb := range root.Blocks {
-		for _, i := range bb.Instrs {
-			call, ok := i.(*ssa.Call)
-			if !ok {
-				continue
-			}
-			f := b.p.CallTarget(call)
-			if f == nil || f.Pkg != root.Pkg {
-				continue
-			}
-			decl, ok := f.Syntax().(*ast.FuncDecl)
-			if !ok || decl.Name.Name != "init" || len(f.Blocks) != 1 {
-				continue
-			}
-			closeCall := onlyGlobalClose(f, global)
-			if closeCall == nil {
-				continue
-			}
-			if proof.call != nil || !instructionDominates(store, call) || !mustReachBlock(store.Block(), call.Block(), map[*ssa.BasicBlock]int{}) {
-				return nil
-			}
-			node := b.p.Calls.Nodes[f]
-			if node == nil || len(node.In) != 1 || node.In[0].Site != call {
-				return nil
-			}
-			proof.call, proof.close = call, closeCall
-		}
-	}
-	if proof.call == nil {
-		return nil
-	}
+	proof := &globalChannelProof{global: global, make: makeChan, store: store, capacity: capacity}
 	// Globals have no usable SSA Referrers list. Inspect all SSA functions,
 	// including currently unreachable ones, to reject rebindings/address escape.
 	// Exhaustion rejects instead of treating a partial inventory as complete.
@@ -119,6 +90,46 @@ func (b *builder) proveClosedGlobal(makeChan *ssa.MakeChan) *closedGlobalProof {
 				}
 			}
 		}
+	}
+	return proof
+}
+
+func (b *builder) proveClosedGlobal(makeChan *ssa.MakeChan) *globalChannelProof {
+	proof := b.proveGlobalCreation(makeChan)
+	if proof == nil {
+		return nil
+	}
+	root := makeChan.Parent()
+	for _, bb := range root.Blocks {
+		for _, i := range bb.Instrs {
+			call, ok := i.(*ssa.Call)
+			if !ok {
+				continue
+			}
+			f := b.p.CallTarget(call)
+			if f == nil || f.Pkg != root.Pkg {
+				continue
+			}
+			decl, ok := f.Syntax().(*ast.FuncDecl)
+			if !ok || decl.Name.Name != "init" || len(f.Blocks) != 1 {
+				continue
+			}
+			closeCall := onlyGlobalClose(f, proof.global)
+			if closeCall == nil {
+				continue
+			}
+			if proof.call != nil || !instructionDominates(proof.store, call) || !mustReachBlock(proof.store.Block(), call.Block(), map[*ssa.BasicBlock]int{}) {
+				return nil
+			}
+			node := b.p.Calls.Nodes[f]
+			if node == nil || len(node.In) != 1 || node.In[0].Site != call {
+				return nil
+			}
+			proof.call, proof.close = call, closeCall
+		}
+	}
+	if proof.call == nil {
+		return nil
 	}
 	return proof
 }
@@ -181,7 +192,7 @@ func (b *builder) consumeClosedGlobal(i ssa.Instruction) bool {
 			return false
 		}
 		if b.closedGlobals == nil {
-			b.closedGlobals = map[*ssa.Global]*closedGlobalProof{}
+			b.closedGlobals = map[*ssa.Global]*globalChannelProof{}
 		}
 		if b.globals == nil {
 			b.globals = map[*ssa.Global]string{}
@@ -198,7 +209,7 @@ func (b *builder) consumeClosedGlobal(i ssa.Instruction) bool {
 				continue
 			}
 			fresh := b.proveClosedGlobal(proof.make)
-			if fresh == nil || fresh.global != proof.global || fresh.call != x || fresh.close != proof.close {
+			if fresh == nil || fresh.global != proof.global || fresh.store != proof.store || fresh.capacity != proof.capacity || fresh.call != x || fresh.close != proof.close {
 				return false
 			}
 			b.diag("info", "closed-global-init", "proved unconditional initialization close: "+proof.global.String(), proof.close.Pos())

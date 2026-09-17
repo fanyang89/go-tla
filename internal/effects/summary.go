@@ -20,6 +20,7 @@ const (
 	Inspect      Kind = "inspect-body"
 	FiniteData   Kind = "finite-read-only-computation"
 	ConstantData Kind = "literal-input-data-computation"
+	ScalarFormat Kind = "modeled-scalar-formatting"
 )
 
 type Summary struct {
@@ -28,7 +29,7 @@ type Summary struct {
 }
 
 func (s Summary) IsPure() bool {
-	return s.Kind == Trusted || s.Kind == Builtin || s.Kind == Pure || s.Kind == FiniteData || s.Kind == ConstantData
+	return s.Kind == Trusted || s.Kind == Builtin || s.Kind == Pure || s.Kind == FiniteData || s.Kind == ConstantData || s.Kind == ScalarFormat
 }
 
 type Analyzer struct {
@@ -81,6 +82,11 @@ func (a *Analyzer) Call(site ssa.CallInstruction) Summary {
 			} else if call, ok := site.(*ssa.Call); ok && a.ProveConstantDataCall(call) {
 				s.Kind = ConstantData
 			}
+		}
+	}
+	if s.Kind != Primitive && s.Kind != Trusted {
+		if call, ok := site.(*ssa.Call); ok && a.ProveScalarFormat(call) != nil {
+			s.Kind = ScalarFormat
 		}
 	}
 	a.calls[site] = s

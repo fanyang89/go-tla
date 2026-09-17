@@ -186,6 +186,21 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if reflectionAssumptions != 3 {
 		t.Fatal("reflection model assumptions missing or duplicated")
 	}
+	versionFormat, ownFormat, formatAssumptions := false, false, 0
+	for _, d := range r.Diagnostics {
+		if d.Code == "scalar-format-call" && d.Line > 0 {
+			versionFormat = versionFormat || d.File == "go/types/version.go"
+			ownFormat = ownFormat || strings.HasPrefix(d.File, "internal/lowering/")
+		}
+	}
+	for _, assumption := range model.Assumptions {
+		if strings.HasPrefix(assumption, "Standard Go fmt.Sprintf") {
+			formatAssumptions++
+		}
+	}
+	if !versionFormat || !ownFormat || formatAssumptions != 1 {
+		t.Fatal("actual scalar formatting proofs/assumption missing")
+	}
 	exit := false
 	for _, transition := range model.Transitions {
 		if transition.SourcePosition.File != "cmd/gotla/main.go" {

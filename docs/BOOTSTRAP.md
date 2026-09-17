@@ -478,7 +478,8 @@ ordinary linux/amd64 process starts with GOMAXPROCS=N. It does not infer/change 
 settings; source inventory rejects setters, resets, API escapes and trust, and fresh
 proofs bind direct zero queries to local/global capacities. At N=2, the actual self
 input includes both x/tools CPU-limit channels. After the three guarded reflect.rtypeOf
-literal metadata initializers it has 102 initializer refusals (106 without the profile). Both remain unsupported / 5, without executable self TLA+.
+literal metadata initializers and the basic-scalar formatting model it has 101
+initializer refusals (105 without the profile). Both remain unsupported / 5, without executable self TLA+.
 Native capacity comparisons and six semantic/two CLI TLC additions bring totals to
 212 + 20, with strict gate/full race passing and snapshots unchanged. Other finite
 input/environment and process/I/O lifecycle requirements remain unresolved.
@@ -488,6 +489,14 @@ graph, source ownership, dominating box and retained literal operand. It records
 runtime ABI correctness as an assumption; native type/layout comparisons are not
 an implementation proof. General interface boxing and other reflection initialization
 remain refused. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-reflection-literals/`.
+
+The basic-scalar fmt.Sprintf model checks standard wrapper/source/graph identity
+and a nonescaping scalar-only argument array; it excludes custom methods and output
+I/O. Argument evaluation and private stores remain retained and freshly checked.
+Standard formatting/private-pool correctness is assumed, not implementation-proved.
+Actual self-input consumes 25 such sites but still has no executable self-model.
+Native boundary and stale-proof tests pass; no whole-fmt-import TLC proof is claimed.
+Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-format/`.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

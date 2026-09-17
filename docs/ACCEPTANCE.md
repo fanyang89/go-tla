@@ -75,8 +75,8 @@ mutation tests. Five direct TypeFor initializers are also admitted. Runtime ABI 
 standard reflection correctness are explicit assumptions; other initialization and
 reflective values/methods/promoted search remain unsupported. These do not add a
 reflection-import TLC pass or complete self-bootstrap; actual self-analysis remains
-unsupported / 5: after the three source-guarded reflect.rtypeOf literal metadata
-initializers, 106 initializer refusals remain without a runtime profile, or 102
+unsupported / 5: after source-guarded literal reflection metadata and basic-scalar
+fmt.Sprintf models, 105 initializer refusals remain without a runtime profile, or 101
 with startup GOMAXPROCS=2. This target-specific condition is explicit and inventoried;
 setters, resets, API escapes, missing proofs and other effects still refuse. It is
 not a complete finite environment or an executable self-bootstrap proof.

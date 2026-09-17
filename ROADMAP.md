@@ -756,6 +756,17 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: basic-scalar formatting
+
+- Admit source/graph-checked fmt.Sprintf only for nil or nonescaping local scalar
+  argument arrays. Refuse application callbacks, aliases, stale stores/slices and
+  unknown values; record standard formatting/private-runtime correctness explicitly.
+- Retain argument evaluation and store roots, freshly consuming every proof. Native
+  and corruption tests pass; actual own-source/stdlib formatting sites are covered.
+- Strict gate/full race pass, snapshots and 212 + 20 TLC totals unchanged. Actual
+  N=2 self-input remains unsupported / 5 with 101 initializer refusals; no executable
+  self-model or TLC self-proof. Finite input/I/O/lifecycle work remains open.
+
 ### Full-self evidence capture
 
 - Provide a fixed-real-entry capture command with a clean-source prerequisite,

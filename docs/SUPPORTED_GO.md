@@ -396,6 +396,30 @@ reflection initialization is still checked and may refuse whole-program emission
 Native tests compare all 104 actual x/tools AST edge initializers plus direct-field
 layout/presence/tag results. Five direct encoding/json TypeFor initializers also pass.
 
+### Basic-scalar string formatting
+
+A source-bound operation model admits `fmt.Sprintf` only with unnamed basic scalar
+or nil interface arguments. It checks the current standard declaration/signature,
+exact newPrinter/doPrintf/buffer-copy/free wrapper and graph edges. Correctness of
+standard formatting, its private pool/runtime and normal resource availability is
+an explicit assumption—not a proof of fmt's implementation. Format strings/results
+remain abstract; this establishes no finite payload bound and performs no host formatting.
+
+Variadic arguments must be a nil slice or a full view of a nonescaping local array
+of at most 64 interface slots. Current SSA uses are rebuilt with a 4096 instruction/
+operand budget. Each populated slot has one dominating store; its box contains an
+unnamed basic value. Zero slots are nil. Named values (even with no methods), custom
+String/Format callbacks, aggregates, pointers, shared/escaped/reused slices, changed
+stores, partial slices and exhausted budgets refuse this model. Argument evaluation,
+blocking and other effects are retained. Formatting I/O functions are not modeled.
+
+Consumption rechecks the source/graph/private-array proof and every retained
+operand/store root, recording the assumption once. Native checks cover scalar
+formatting while holding a mutex and a named-value callback that must be refused.
+Actual own-source formatting and go/types' version initializer consume the model.
+Other package initialization still refuses executable emission; this adds no positive
+whole-fmt-import TLC proof or whole-self proof.
+
 ### Boxed-literal runtime type metadata
 
 Three standard `reflect.rtypeOf` initializers are admitted through an explicit

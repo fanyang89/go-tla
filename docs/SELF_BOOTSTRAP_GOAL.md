@@ -601,3 +601,34 @@ reflection-import model. Actual self-analysis remains **unsupported / 5**, with
 Only a diagnostic model is emitted; there is still no full self TLA+ or self TLC run.
 Evidence and initial failed attempts are retained under
 `$HOME/tmp/pi/gotla-self-bootstrap-reflection-literals/`.
+
+## Source-bound basic-scalar formatting
+
+`fmt.Sprintf` now has an explicit operation model restricted to unnamed basic
+scalar/nil arguments, with no application callbacks, I/O or application synchronization.
+The current standard declaration/signature, exact wrapper and internal call edges
+are checked; standard formatting/private-pool/runtime correctness and normal resource
+availability remain assumptions. This is not a proof of fmt internals or a finite
+payload profile. Strings/results are abstract and no host formatting is evaluated.
+
+Admission reconstructs current SSA uses for a nonescaping, single-consumer local
+variadic array (at most 64 slots, 4096 instruction/operand inspection budget).
+One dominating store per populated slot and literal nil or unnamed-basic boxes are
+required. Named/custom-method values, shared/escaped/reused slices, alternate stores,
+partial slices, missing graph/source facts and budget exhaustion refuse. Store roots
+and scalar operands are retained and freshly consumed; blocking argument evaluation
+and critical-section effects survive. Other initialization remains independent.
+
+Native execution confirms a scalar call inside a locked region and a named-value
+String callback that the proof correctly refuses. Mutation tests exercise current
+wrapper/graph/source, store ordering/aliasing, index/value/slice changes, budget,
+retained operands and store roots. Actual self-input consumes 25 scalar-format sites,
+including production lowering diagnostics and go/types/version.go. Startup-N=2
+initializer refusals drop from 102 to **101**; identity refusals drop 340 to 292,
+receive-loop 420 to 396 and unsupported sync-method 282 to 234. These duplicated
+site counts are not a coverage measure.
+
+The strict gate/full race pass without skips/failures and with unchanged snapshots.
+TLC totals remain **212 semantic + 20 CLI**: there is no new positive full-fmt-import
+or full-self TLC result. Self-analysis still returns **unsupported / 5**, with only
+a diagnostic model. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-format/`.

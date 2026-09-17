@@ -699,3 +699,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
 - Five new TLC cases bring totals to 198 semantic and 18 CLI/TLC cases. Strict gate
   and full race pass with unchanged snapshots. Initializer refusals fall to 231;
   the full self-input still returns unsupported / 5 with diagnostic-only artifacts.
+
+### Full-self continuation: explicit byte search and version initialization
+
+- Add a checked standard-toolchain byte-string-search operation model, with exact
+  finite input evaluation and a recorded assembly-correctness assumption rather
+  than a name-only pure-call exemption. Retain current graph/signature/declaration/
+  source checks, budget refusal and ordinary interpretation of available Go bodies.
+- Add bounded string concatenation. Native comparisons cover byte search, version
+  strings and the actual ten literal go/types version initializers; the nonliteral
+  current version and other unknown initialization remain refused.
+- Three string-concatenation TLC cases bring totals to 201 semantic and 18 CLI/TLC
+  cases. Strict gate and full race pass; snapshots unchanged. Full self-analysis
+  still returns unsupported / 5; initializer errors decrease from 231 to 221.

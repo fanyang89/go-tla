@@ -128,6 +128,29 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if !identProof {
 		t.Fatal("actual ast.NewIdent nil-interface storage proof missing")
 	}
+	versionProofs, operationModels := 0, 0
+	for _, d := range r.Diagnostics {
+		if d.File == "go/types/version.go" && d.Line > 0 {
+			if d.Code == "constant-data-call" && strings.Contains(d.Message, "go/types.asGoVersion;") {
+				versionProofs++
+			}
+			if d.Code == "modeled-data-operation" && strings.Contains(d.Message, "internal/bytealg.IndexByteString") {
+				operationModels++
+			}
+		}
+	}
+	if versionProofs < 10 || operationModels != versionProofs {
+		t.Fatal("version initializer proof/model evidence missing")
+	}
+	byteSearchAssumptions := 0
+	for _, assumption := range model.Assumptions {
+		if strings.HasPrefix(assumption, "Standard Go internal/bytealg.IndexByteString") {
+			byteSearchAssumptions++
+		}
+	}
+	if byteSearchAssumptions != 1 {
+		t.Fatal("byte-search model assumption missing or duplicated")
+	}
 	exit := false
 	for _, transition := range model.Transitions {
 		if transition.SourcePosition.File != "cmd/gotla/main.go" {

@@ -5,6 +5,22 @@ Paths and test names refer to the current implementation. Actual TLC tests are
 optional in a plain local test run but mandatory in the
 [strict gate](VERIFICATION.md#tests-and-required-ci-gate).
 
+## Byte-search model and bounded string concatenation
+
+`TestConstantByteSearchNative` compares 20 concrete byte-search cases with native
+Go, including NUL, UTF-8 bytes, empty input and absence. `TestConstantVersionModel`
+compares six version cases; `TestActualGoVersionInitializers` checks the real literal
+initializers and preserves nonliteral refusal. Model tests corrupt graph, signature,
+declaration and source mapping, exhaust the shared budget, and reject user-name
+collisions/other unavailable bodies. Lowering rechecks cached evidence and records
+the explicit standard-toolchain assumption; the full CLI regression requires it.
+These tests do not prove the assembly implementation.
+
+Three additional actual TLC cases test pure-Go string concatenation: communication,
+initialization and an abstract-result counterexample. They are not whole-program
+TLC proofs of imported version/strings libraries. A separate regression retains
+unsupported dependency initialization despite the admitted byte-search operation.
+
 ## Literal nil-interface storage
 
 `TestConstantNilInterfaces` permits only nil empty-interface values in concrete
@@ -34,7 +50,7 @@ These are not full-program TLC checks of a program importing `os`.
 
 ## Production-component bootstrap
 
-Current total: **198 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **201 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 

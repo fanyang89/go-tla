@@ -402,3 +402,40 @@ Actual full self-analysis remains **unsupported / 5**, only `model.json`, no TLC
 Initializer diagnostics fall from 232 to **231**; other error counts remain those
 of the preceding exit prerequisite. No complete-bootstrap requirement is declared
 done by this incremental constructor proof.
+
+## Explicit byte-search operation and version initialization
+
+The constant evaluator now distinguishes source execution from explicit modeled
+operations. The native, body-less standard-toolchain declaration of
+`internal/bytealg.IndexByteString(string, byte) int` has exact first-byte-index/-1
+semantics, evaluated without invoking loaded code and with each examined byte
+charged against the shared step budget. Signature, declaration ownership, absent
+Go body, source mapping, current call graph and source location under the running
+GOROOT are checked. Available Go bodies are interpreted normally; arbitrary
+unavailable functions and user-name collisions are not exempted.
+
+**The standard assembly implementation's correctness is assumed, not proved.**
+The assumption is returned with the concrete proof, consumed freshly, recorded in
+model assumptions and exposed by `modeled-data-operation` diagnostics. This is not
+a trusted pure-call skip: actual result values drive subsequent source branches,
+and exhausted budgets or executed panics refuse the invocation. Bounded string
+concatenation completes the selected version-parsing paths.
+
+Native comparisons cover 20 byte-search cases, six version cases, and the actual
+ten literal `go/types.asGoVersion` initializers. Graph, declaration, source and
+signature corruption and budget exhaustion refuse. Consumed cached evidence is
+rechecked. The nonliteral current-version initializer remains unsupported; standard
+library initialization is never omitted to make the new operation usable.
+
+Three additional real TLC cases test pure-Go concatenation, package initialization
+and an abstract-result counterexample; they are not whole-program TLC checks of
+strings/version imports. Strict gate and full race pass, no skips/failures and no
+snapshot changes: **201 semantic TLC and 18 CLI/TLC cases**. Evidence is local under
+`$HOME/tmp/pi/gotla-self-bootstrap-byte-search/`.
+
+The real CLI regression requires ten source-located version proofs and corresponding
+operation-model records plus one deduplicated model assumption. Actual self-analysis
+remains **unsupported / 5**, with only `model.json` and no TLC invocation. Initializer
+errors decrease from 231 to **221**; other error counts are unchanged. The full
+bootstrap acceptance contract, including an enforced finite environment and an
+executable meaningful self-model, remains unfulfilled.

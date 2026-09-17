@@ -38,6 +38,9 @@ The passes are explicit functions/packages:
    with owned private memory. They recheck arguments, graph/body and caller slices;
    unchosen effects are excluded by concrete facts, not callee-wide trust. No host
    application code is executed. Returned values still remain abstract in IR.
+   Explicit operation models are reported separately from source proofs: the
+   standard-toolchain byte-string-search primitive computes a bounded exact result
+   and records its assembly-correctness assumption. Unknown bodies remain refused.
    Explicit trusted contracts remain visible; purity guides slicing, not permission
    to bypass reachable-body validation.
 4. `discovery.Scan` returns typed primitives, roots and goroutine sites. Cached

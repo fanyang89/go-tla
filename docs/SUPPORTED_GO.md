@@ -294,12 +294,13 @@ whole-program termination or analyzer-correctness theorem.
 A separate bounded SSA evaluator can prove one call whose arguments are SSA constants
 (including typed nil). This is **not** a callee-wide purity annotation. It reads the
 actual current call graph and bodies, takes only exactly determined branches, and
-requires a normal return. It never calls application/native functions on the host or
-uses a library-name allowlist. User trust flags do not provide evaluator facts.
+requires a normal return. It never executes loaded application/native functions on
+the host. Library names alone do not establish purity; explicitly modeled operations
+are separate, recorded semantics assumptions. User trust flags do not provide evaluator facts.
 
 Supported computation includes bounded-size bool/integer/string values, private
 data-only structs/arrays, owned array-slice views, field/index access, copies,
-selected scalar operations and transitively inspected source calls. Go target type
+selected scalar operations (including bounded string concatenation) and transitively inspected source calls. Go target type
 sizes bound integer values. Overflow, conversion wrap, unsupported operators, unknown
 values, external memory/global access, recursion, defer/recover, executed panic, unsafe operations,
 I/O and synchronization refuse this proof. Entirely unchosen effects do not execute:
@@ -334,6 +335,27 @@ body and graph; regular calls also consume retained caller operands. Initializer
 calls follow the same rule. `constant-data-call` records name the proved invocation.
 The installed base64.NewEncoding source is proved for its two valid standard-library
 alphabet literals; invalid length, duplicate and newline mutations are refused.
+
+### Explicit byte-search operation model
+
+A source-less `internal/bytealg.IndexByteString(string, byte) int` declaration may
+use the exact first-equal-byte-index/-1 semantics of the standard Go toolchain.
+The model checks the typed signature, declaration ownership, absent Go body, source
+mapping and location under the running toolchain's GOROOT. It is not an arbitrary
+unavailable-body or name-only purity exemption. Current call-graph edges are still
+required; a supplied Go body is interpreted normally rather than bypassed.
+
+The evaluator searches concrete bytes, not Unicode code points, and charges each
+examined byte to its shared step budget. It does not invoke native search functions.
+The computed result participates in subsequent SSA branches and return checks.
+`ConstantDataProof.ModeledOperations`, `modeled-data-operation` diagnostics and a
+model assumption disclose this dependency. **Assembly correctness is assumed, not
+proved**; a modified/nonstandard toolchain is outside this operation contract.
+
+This enables ten literal `go/types.asGoVersion` initializers through the actual
+version/strings/gover source, with native-result comparisons. The nonliteral current
+version initializer remains refused. Standard-library initialization is not omitted:
+a whole program importing strings may still fail on other dependency initializers.
 
 ### Initially open global channels
 

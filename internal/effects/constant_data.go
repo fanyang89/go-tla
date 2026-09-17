@@ -12,33 +12,42 @@ import (
 // ProveConstantDataCall proves one literal-input invocation, not every invocation
 // of its callee. Evaluation never invokes host/application code. Unsupported
 // operations, executed panics, external memory and exhausted budgets refuse.
-func (a *Analyzer) ProveConstantDataCall(site *ssa.Call) (proved bool) {
+func (a *Analyzer) ProveConstantDataCall(site *ssa.Call) bool {
+	return a.ProveConstantData(site) != nil
+}
+
+// ConstantDataProof distinguishes executed source from explicitly modeled operations.
+type ConstantDataProof struct{ ModeledOperations []string }
+
+// ProveConstantData returns a fresh invocation proof. Consumers must record all
+// modeled-operation assumptions; the boolean classifier alone is not evidence.
+func (a *Analyzer) ProveConstantData(site *ssa.Call) (proof *ConstantDataProof) {
 	defer func() {
 		if r := recover(); r != nil {
 			if _, ok := r.(dataRefusal); !ok {
 				panic(r)
 			}
-			proved = false
+			proof = nil
 		}
 	}()
 	if len(a.program.Packages) == 0 || a.program.Packages[0].TypesSizes == nil {
-		return false
+		return nil
 	}
 	e := &dataEval{program: a.program, sizes: a.program.Packages[0].TypesSizes, steps: 100000, cells: 65536, owned: map[*dataCell]bool{}, stack: map[*ssa.Function]bool{}}
 	args := []dataValue{}
 	for _, arg := range site.Common().Args {
 		c, ok := arg.(*ssa.Const)
 		if !ok {
-			return false
+			return nil
 		}
 		args = append(args, e.literal(c))
 	}
 	f := a.program.CallTarget(site)
 	if f == nil || site.Common().IsInvoke() {
-		return false
+		return nil
 	}
 	e.function(f, args)
-	return true
+	return &ConstantDataProof{ModeledOperations: e.modeledOperations}
 }
 
 // Unlike general finite-data proofs, concrete evaluation can admit empty
@@ -71,11 +80,12 @@ type dataView struct {
 	low, length, capacity int
 }
 type dataEval struct {
-	program      *frontend.Program
-	sizes        types.Sizes
-	steps, cells int
-	owned        map[*dataCell]bool
-	stack        map[*ssa.Function]bool
+	program           *frontend.Program
+	sizes             types.Sizes
+	steps, cells      int
+	owned             map[*dataCell]bool
+	stack             map[*ssa.Function]bool
+	modeledOperations []string
 }
 
 func (e *dataEval) step() {
@@ -284,7 +294,7 @@ func (e *dataEval) indexed(v dataValue, i int) *dataCell {
 
 func (e *dataEval) function(f *ssa.Function, args []dataValue) []dataValue {
 	e.step()
-	if f == nil || len(f.Blocks) == 0 || len(f.FreeVars) != 0 || len(args) != len(f.Params) || e.stack[f] || len(e.stack) >= 32 {
+	if f == nil || len(f.FreeVars) != 0 || len(args) != len(f.Params) || e.stack[f] || len(e.stack) >= 32 {
 		refuseData()
 	}
 	if !constantDataType(f.Signature.Results()) {
@@ -298,6 +308,12 @@ func (e *dataEval) function(f *ssa.Function, args []dataValue) []dataValue {
 			refuseData()
 		}
 		values[p] = e.clone(args[i])
+	}
+	if len(f.Blocks) == 0 {
+		if result, ok := e.modeledDataFunction(f, args); ok {
+			return []dataValue{result}
+		}
+		refuseData()
 	}
 	get := func(v ssa.Value) dataValue {
 		if c, ok := v.(*ssa.Const); ok {
@@ -544,6 +560,15 @@ func (e *dataEval) binary(x *ssa.BinOp, a, b dataValue) dataValue {
 	case token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ:
 		out.scalar = constant.MakeBool(constant.Compare(a.scalar, x.Op, b.scalar))
 	case token.ADD, token.SUB, token.MUL, token.QUO, token.REM:
+		if x.Op == token.ADD && a.scalar.Kind() == constant.String && b.scalar.Kind() == constant.String {
+			left, right := constant.StringVal(a.scalar), constant.StringVal(b.scalar)
+			if len(left)+len(right) > 256*1024 {
+				refuseData()
+			}
+			out.scalar = constant.MakeString(left + right)
+			e.checkScalar(out)
+			return out
+		}
 		if a.scalar.Kind() != constant.Int || b.scalar.Kind() != constant.Int {
 			refuseData()
 		}

@@ -573,3 +573,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   Strict pinned gate and full race suite pass with zero skips/failures; original
   snapshots are unchanged. See [SELF_BOOTSTRAP_GOAL.md](docs/SELF_BOOTSTRAP_GOAL.md)
   for the continuing goal, remaining gates and local-only evidence.
+
+### Full-self continuation: initializer contracts
+
+- Initializer calls now consume current graph evidence even when their purity summary
+  was cached; missing outer/transitive edges fail closed. Six contract cases cover
+  ordinary and finite-data helpers, and four integration cases preserve rejected
+  source/external/dynamic/interface call attribution.
+- Refusals identify target and containing function without treating candidate names
+  as proof. The real CLI's 240 initializer refusals include 104 `edge.info` calls
+  and 11 `go/types.asGoVersion` calls. Reflection metadata construction and version
+  parsing remain real dependencies to model, not permission to omit initialization.
+- Full pinned gate and race tests pass with unchanged snapshots and TLC totals;
+  the real CLI remains unsupported / 5. See the full-self contract for evidence.

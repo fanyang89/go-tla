@@ -67,7 +67,7 @@ caught a stale rejection expectation for an empty literal defer; that case is no
 positive TLC test and unresolved dynamic defers remain refusal tests. These results
 are local-only; no hosted pass is claimed.
 
-## Length-bounded data computation (latest continuation)
+## Length-bounded data computation
 
 An independent typed-SSA proof now summarizes externally read-only helpers whose
 cycles advance an ordinary int index by one against a stable slice/string length.
@@ -99,6 +99,30 @@ than copying HasErrors. Full strict gate and race tests pass with zero skips/fai
 snapshots are unchanged. Evidence is in
 `$HOME/tmp/pi/gotla-self-bootstrap-finite-data/{unit.log,focused.log,gate.log,race.log,self-check.log,cli/}`.
 No hosted pass or full-self completion is claimed.
+
+## Initializer proof consumption and attribution (latest continuation)
+
+Initializer calls now recheck cached callee summaries against the current call graph,
+including acyclic pure constructors and calls nested within them. A stale outer or
+transitive edge produces a contract error instead of admitting initialization.
+Six proof-consumption cases cover intact/corrupted graphs for acyclic and finite
+helpers. Four integration cases preserve refusal and call-site attribution for
+source, unavailable, dynamic and interface calls. Diagnostic target names are not
+proofs: an unresolved static candidate is explicitly marked unproved.
+
+The complete self-input still reports 240 initializer refusals. The enriched messages
+identify 104 calls to instantiated `golang.org/x/tools/go/ast/edge.info` and 11 to
+`go/types.asGoVersion`; other targets include `os.NewFile`, `reflect.rtypeOf` and
+`encoding/base64.NewEncoding`. Source inspection shows the edge metadata factory
+uses TypeFor/Elem/FieldByName plus an explicit failure panic, while Go-version
+normalization reaches strings.Cut and version parsing. These require actual proofs
+or justified semantics, not blanket reflection/string allowlists or skipped init.
+
+The strict gate and full race suite pass; counts remain 139 semantic and 18 CLI/TLC
+cases, zero skipped required checks and unchanged original snapshots. Full self-input
+remains unsupported / 5 with diagnostic-only artifacts. Local evidence:
+`$HOME/tmp/pi/gotla-self-bootstrap-init-targets/{focused.log,gate.log,race.log,self-check.log,initializer-inventory.json,cli/}`.
+No whole-self or hosted pass is claimed.
 
 Remaining work includes dependency initialization/effects, other non-receive control loops,
 returned/dynamic callback and object identities, runtime synchronization primitives,

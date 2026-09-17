@@ -92,11 +92,24 @@ func (b *builder) initializers() {
 						b.diag("error", "initializer", "synchronization object copying in initializer unsupported", i.Pos())
 					}
 				case *ssa.Call:
-					if callee := b.effects.Call(x).Callee; callee != nil && callee.Name() == "init" {
+					summary := b.effects.Call(x)
+					if summary.Callee != nil && b.p.CallTarget(x) != summary.Callee {
+						b.diag("error", "call-contract", "initializer callee lacks a current matching call-graph proof: "+summary.Callee.String()+" (in "+f.String()+")", x.Pos())
+						continue
+					}
+					if callee := summary.Callee; callee != nil && callee.Name() == "init" {
 						check(callee)
-					} else if !b.effects.Call(x).IsPure() {
-						b.diag("error", "initializer", "effectful or unknown package initialization unsupported", i.Pos())
-					} else if summary := b.effects.Call(x); summary.Kind == effects.Pure || summary.Kind == effects.FiniteData {
+					} else if !summary.IsPure() {
+						target := "unresolved dynamic target"
+						if callee := summary.Callee; callee != nil {
+							target = callee.String()
+						} else if callee := x.Common().StaticCallee(); callee != nil {
+							target = "unproved static target " + callee.String()
+						} else if x.Common().IsInvoke() {
+							target = "unresolved interface method " + x.Common().Method.FullName()
+						}
+						b.diag("error", "initializer", "effectful or unknown package initialization unsupported: "+target+" (in "+f.String()+")", i.Pos())
+					} else if summary.Kind == effects.Pure || summary.Kind == effects.FiniteData {
 						if summary.Kind == effects.FiniteData && !b.effects.ProveFiniteData(summary.Callee) {
 							b.diag("error", "finite-data-contract", "initializer computation lacks a current body/graph proof", x.Pos())
 						} else {

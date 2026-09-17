@@ -97,7 +97,8 @@ proof. The owner configured the remote, pushed the initial revision, and authori
 subsequent repair pushes. No PR, workflow dispatch or branch-protection change was
 made here.
 
-Latest full-self prerequisite logs: `$HOME/tmp/pi/gotla-self-bootstrap-finite-data/{gate,race}.log`.
+Latest full-self prerequisite logs: `$HOME/tmp/pi/gotla-self-bootstrap-init-targets/{gate,race}.log`.
+Finite-data logs remain under `gotla-self-bootstrap-finite-data/`.
 Deferred-helper logs remain under `gotla-self-bootstrap-defer/`.
 Source-capture logs remain under `$HOME/tmp/pi/gotla-bootstrap-capture/`.
 The full objective remains unfulfilled; see [SELF_BOOTSTRAP_GOAL.md](SELF_BOOTSTRAP_GOAL.md).

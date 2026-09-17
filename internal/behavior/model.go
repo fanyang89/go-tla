@@ -61,9 +61,10 @@ type Variable struct {
 	Initial int    `json:"initial"`
 }
 type Channel struct {
-	ID       string   `json:"id"`
-	Capacity int      `json:"capacity"`
-	Source   Position `json:"source"`
+	ID              string   `json:"id"`
+	Capacity        int      `json:"capacity"`
+	InitiallyClosed bool     `json:"initiallyClosed,omitzero"`
+	Source          Position `json:"source"`
 }
 type InitialState struct {
 	Main   string   `json:"main"`

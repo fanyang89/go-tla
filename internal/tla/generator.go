@@ -100,7 +100,17 @@ func Generate(m *behavior.Model) (string, string, error) {
 	o.line("Init ==")
 	o.line("    /\\ pc = [p \\in ProcSet |-> CASE %s]", strings.Join(pcs, " [] "))
 	o.line("    /\\ queues = [c \\in ChannelSet |-> <<>>]")
-	o.line("    /\\ closed = [c \\in ChannelSet |-> FALSE]")
+	initiallyClosed := []string{}
+	for _, c := range m.Channels {
+		if c.InitiallyClosed {
+			initiallyClosed = append(initiallyClosed, c.ID)
+		}
+	}
+	if len(initiallyClosed) == 0 {
+		o.line("    /\\ closed = [c \\in ChannelSet |-> FALSE]")
+	} else {
+		o.line("    /\\ closed = [c \\in ChannelSet |-> c \\in %s]", set(initiallyClosed))
+	}
 	o.line("    /\\ locks = [m \\in MutexSet |-> FALSE]")
 	o.line("    /\\ wg = [w \\in WaitGroupSet |-> 0]")
 	initial := []string{}

@@ -100,7 +100,7 @@ snapshots are unchanged. Evidence is in
 `$HOME/tmp/pi/gotla-self-bootstrap-finite-data/{unit.log,focused.log,gate.log,race.log,self-check.log,cli/}`.
 No hosted pass or full-self completion is claimed.
 
-## Initializer proof consumption and attribution (latest continuation)
+## Initializer proof consumption and attribution
 
 Initializer calls now recheck cached callee summaries against the current call graph,
 including acyclic pure constructors and calls nested within them. A stale outer or
@@ -124,7 +124,38 @@ remains unsupported / 5 with diagnostic-only artifacts. Local evidence:
 `$HOME/tmp/pi/gotla-self-bootstrap-init-targets/{focused.log,gate.log,race.log,self-check.log,initializer-inventory.json,cli/}`.
 No whole-self or hosted pass is claimed.
 
-Remaining work includes dependency initialization/effects, other non-receive control loops,
+## Proved pre-closed globals (latest continuation)
+
+The actual `context.closedchan` creation and initialization close are now represented
+as initial channel state, not skipped under a package exemption. The proof requires
+a unique direct make/store in the compiler-generated package initializer, a subsequent
+unconditional source init body that only closes that global, and a current unique
+call-graph edge. All normal paths from the store reach the close call. Every SSA
+function is checked for address escape/rebinding, including functions absent from
+or unreachable in the call graph. Proof search is bounded and fails closed. Creation,
+close consumption and later global identity resolution recheck these facts.
+
+IR channels have an optional `initiallyClosed` boolean (default false); the saved IR
+alone supplies the backend's empty/closed initial state. Existing receive status,
+select/default, send and close semantics apply. Open globals, initialization sends,
+conditional/repeated closure, factories and unknown effects remain unsupported.
+Runtime sends/closes on a pre-closed channel produce the normal synchronization error.
+
+Eight new actual TLC cases cover repeated and concurrent receives, buffered empty
+status, range completion, select/default, send/close errors, JSON round trips and an
+IR initial-state mutation that restores the expected deadlock. Refusal and corruption
+tests cover order, current graph/body, capacity, escaped/rebound globals, removed graph
+nodes and control paths bypassing closure. Strict gate and full race suite pass with
+zero skips/failures and unchanged original snapshots: **147 semantic TLC and 18 CLI/TLC
+cases**. The actual self-probe has creation/close evidence at context/context.go:423/426
+and 238 initializer refusals instead of 240; other refusal categories are unchanged.
+It still returns unsupported / 5 with no executable full self-model.
+
+Local evidence:
+`$HOME/tmp/pi/gotla-self-bootstrap-closed-globals/{focused.log,gate.log,race.log,self-check.log,cli/}`.
+This is one real dependency effect modeled, not full bootstrap or a hosted CI claim.
+
+Remaining work includes other dependency initialization/effects, other non-receive control loops,
 returned/dynamic callback and object identities, runtime synchronization primitives,
 I/O/context/process lifecycle semantics and an enforceable finite input/environment
 profile. These are implementation tasks, not permission to weaken the acceptance

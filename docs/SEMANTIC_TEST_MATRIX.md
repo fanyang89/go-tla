@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **139 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **147 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -31,6 +31,17 @@ nil/empty inputs, independent copied storage, replacement and concurrent capture
 frontend/race regressions exercise its real integration. The production leaf uses
 slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
 bootstrap document for that dependency change's scope and evidence.
+
+## Full-self prerequisite: pre-closed global channels
+
+`TestTLCClosedGlobalChannels` checks seven saved-IR cases: repeated/concurrent receives,
+buffered empty status, range completion, select/default and send/close errors.
+`TestTLCClosedGlobalStateMutation` proves changing the initial closed flag back to
+false exposes deadlock. Source refusals reject missing/conditional/repeated close,
+initialization sends, address escape/rebinding, factories and helper indirection.
+Lowering tests invalidate graph, body, capacity and order, and ensure removing a
+function from the graph cannot conceal a rebind in its SSA body. The actual whole-CLI
+probe consumes this proof for context.closedchan but remains unsupported.
 
 ## Full-self prerequisite: finite data computation
 

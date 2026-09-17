@@ -34,6 +34,7 @@ type builder struct {
 	nodes          map[string]*node
 	names          map[string]int
 	globals        map[*ssa.Global]string
+	closedGlobals  map[*ssa.Global]*closedGlobalProof
 	fields         map[string]string
 	channelFields  map[string]string
 	callableFields map[callableFieldKey]callableFieldBinding

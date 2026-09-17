@@ -76,6 +76,9 @@ func (b *builder) initializers() {
 		}
 		for _, bb := range f.Blocks {
 			for _, i := range bb.Instrs {
+				if b.consumeClosedGlobal(i) {
+					continue
+				}
 				b.checkUnsafePointer(i)
 				if discovery.IsRoot(i) {
 					b.diag("error", "initializer", "concurrency or channel construction in package init unsupported", i.Pos())

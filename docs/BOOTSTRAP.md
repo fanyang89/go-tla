@@ -12,7 +12,7 @@ have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **139 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current totals: **147 semantic TLC cases and 18 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -63,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 139 positive/negative semantic TLC cases and 18
+itself. It is separate from the 147 positive/negative semantic TLC cases and 18
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -380,6 +380,16 @@ new real TLC cases and graph/slice/budget/refusal tests bring totals to 139 sema
 and 18 CLI/TLC cases. Strict gate and full race tests pass with unchanged snapshots.
 The complete CLI still returns unsupported / 5: this is not the full goal. Details
 and evidence are in [SELF_BOOTSTRAP_GOAL.md](SELF_BOOTSTRAP_GOAL.md).
+
+## Full-self prerequisite: pre-closed global channel state
+
+The actual `context.closedchan` allocation and initialization close now have a consumed
+unique-initialization proof. Its empty/closed state is persisted in IR and honored by
+TLC; unknown initializer effects remain refusals. Eight additional real TLC cases,
+including concurrent receives and a mutated initial-state deadlock, bring totals to
+147 semantic and 18 CLI/TLC cases. Strict gate/race tests pass with unchanged original
+snapshots. Initializer refusals fall from 240 to 238, but complete CLI self-analysis
+still returns unsupported / 5. See the full-self contract for scope and evidence.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

@@ -586,3 +586,18 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   parsing remain real dependencies to model, not permission to omit initialization.
 - Full pinned gate and race tests pass with unchanged snapshots and TLC totals;
   the real CLI remains unsupported / 5. See the full-self contract for evidence.
+
+### Full-self continuation: pre-closed global channels
+
+- A unique direct global channel creation followed by a proved unconditional
+  initialization close now becomes explicit empty/closed IR state. The proof checks
+  current source/graph/order and all SSA global-address uses; hidden rebinding,
+  address escape, conditional/repeated close and unknown effects remain refused.
+- The actual `context.closedchan` now has creation/close proof records. Initialization
+  refusals decrease from 240 to 238 without a context-package exemption. The whole
+  CLI remains unsupported / 5; no executable full self-model is claimed.
+- Eight added actual TLC cases exercise saved-state semantics, concurrent receives,
+  select/status/range behavior, synchronization errors and an initial-state mutation.
+  Totals: 147 semantic and 18 CLI/TLC cases. Strict pinned gate and race suite pass,
+  zero skips/failures, original snapshots unchanged. Local-only evidence and remaining
+  full-goal gates are recorded in SELF_BOOTSTRAP_GOAL.md.

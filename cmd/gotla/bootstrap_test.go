@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/fanmi/go-tla/internal/behavior"
 	"github.com/fanmi/go-tla/internal/checker"
 )
 
@@ -38,6 +40,31 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(out, name)); !os.IsNotExist(err) {
 			t.Fatalf("unsupported self-analysis left executable/stale artifacts or a lock: %s (%v)", name, err)
 		}
+	}
+	// Even this refused whole model must consume the real dependency's closed
+	// global proof, rather than silently dropping initialization or trusting it.
+	data, err := os.ReadFile(filepath.Join(out, "model.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var model behavior.Model
+	if err := json.Unmarshal(data, &model); err != nil {
+		t.Fatal(err)
+	}
+	closed := false
+	for _, channel := range model.Channels {
+		if channel.InitiallyClosed && channel.Source.Package == "context" && channel.Source.File == "context/context.go" && channel.Source.Line > 0 {
+			closed = true
+		}
+	}
+	proofs := 0
+	for _, d := range r.Diagnostics {
+		if d.Code == "closed-global-init" && strings.Contains(d.Message, "context.closedchan") && d.File == "context/context.go" && d.Line > 0 {
+			proofs++
+		}
+	}
+	if !closed || proofs != 2 {
+		t.Fatal("actual context.closedchan initialization proof/state missing")
 	}
 	// Require a diagnostic in our own entry point, not merely a dependency load error.
 	for _, d := range r.Diagnostics {

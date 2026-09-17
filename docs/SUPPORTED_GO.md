@@ -28,6 +28,7 @@ program may deadlock. Successful extraction does not mean successful verificatio
 | Channel parameters / direction conversions | Supported when identity is statically resolved |
 | Captured single-assignment channel cell | Initialization must dominate every load and capture; no later mutation |
 | Local or direct global Mutex / WaitGroup | Stable identities; passing/copying these objects by value is rejected |
+| Proved pre-closed global channels | Unique direct creation and unconditional single close in package initialization; no rebinding/address escape |
 | Inline Mutex / WaitGroup fields, including nested value structs | Static allocation/global object plus field path; zero initialization only for synchronization state |
 | Direct pointer-receiver methods on these objects | Supported with statically resolved receiver identities; closures can capture stable object pointers |
 | Immutable channel fields in local allocated objects | At most one allocation-frame initialization, dominating every read and object escape; omitted initialization means nil |
@@ -241,6 +242,37 @@ functions. A proof failure does not turn an otherwise unsupported loop into a mo
 This is a termination/effect proof for data computation, not a payload, memory-race,
 whole-program termination or analyzer-correctness theorem.
 
+### Pre-closed global channels
+
+A narrow package-initialization pattern is supported without omitting its effects:
+
+```go
+var ready = make(chan struct{})
+func init() { close(ready) }
+```
+
+The direct make must have constant capacity 0..1024 and exactly one store into its
+own package's global. The compiler-generated package initializer must subsequently
+call a source `init` whose single block only loads/closes that global and returns.
+The store dominates the call, and every normal path after the store reaches it.
+The close helper must have exactly one incoming graph edge. No package names are
+special-cased; the actual `context.closedchan` uses this pattern.
+
+All SSA functions, not merely graph-reachable functions, are inspected for global
+address uses: only the unique store and ordinary loads are admitted. Rebinding or
+address escape even in an unused function refuses this proof. Inventory search stops
+with refusal beyond one million instructions. Creation, close consumption and later
+identity resolution recheck current source/graph facts. `closed-global-init`
+diagnostics identify both source operations. Other initialization effects are still
+checked and may independently refuse the whole program.
+
+The saved channel has `initiallyClosed: true` and an empty buffer; TLC starts with
+that state. Reads, receive status, select/default, and erroneous sends/closes use
+normal channel semantics. Returning channels through helpers, open globals, closure
+factories, conditional/multiple closes, initialization sends and arbitrary initializer
+helper bodies are not added by this rule. Runtime close/send on the accepted global
+is modeled as a synchronization error, not silently discarded.
+
 ### Receive completion status
 
 `_, ok := <-ch` and `case _, ok := <-ch` retain an exact process-local status.
@@ -434,7 +466,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 | RWMutex and other unsupported synchronization APIs | No corresponding implemented semantics |
 | WaitGroup reuse or concurrent positive enrollment | Counter-only representation does not model waiter generations |
 | Reachable unsafe pointer operations, including inspected helpers/init | Can bypass modeled resource identity/state |
-| Application/dependency initialization with concurrency, unknown calls, or cycles | Initializers are checked, not silently dropped |
+| Unproved application/dependency initialization with concurrency, unknown calls, or cycles | Initializers are checked, not silently dropped; the pre-closed global pattern models its proved initial state |
 
 Narrow standard-library initializer summaries are recorded in the model. They do
 not authorize ordinary atomic APIs, arbitrary standard-library calls, or

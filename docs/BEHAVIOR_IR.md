@@ -38,7 +38,10 @@ provenance with the IR. A valid IR header is not a completed verification result
 - Process IDs denote declared concrete instances, not unbounded templates. Each
   process has an explicit entry, terminal and location set. Initially active
   processes start at entry; others are dormant. Terminals have no outgoing edges.
-- Channels start open and empty; mutexes unlocked; WaitGroup counters zero.
+- Channels start empty. An omitted/false channel `initiallyClosed` field means
+  open; true means already closed before process execution. This is declarative
+  IR state, not an instruction for the backend to re-run Go initialization.
+  Mutexes start unlocked and WaitGroup counters zero.
   Ordinary payloads have one abstract token. Variable domains are explicit finite
   integer sets, with declared initial values. Locals belong to one process.
 - A transition tests its guard at its source and atomically performs its effects

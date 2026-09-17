@@ -747,3 +747,35 @@ refusals remain, as does the channel-object return in os/signal/signal.go:283.
 No executable self-model or TLC invocation is emitted. Context creation/cancellation
 and the other full acceptance requirements remain unproved.
 Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-channel-boxes/`.
+
+## Source-bound Once.Do and finite shared control
+
+Direct Once.Do now has a standard-source/signature/graph/control-shape contract.
+A zero Once is represented with a generic mutex and shared finite completion flag.
+The initial atomic flag read commits before lock acquisition; slow callers recheck
+under the lock. The actual callback body and normal defers run before completion is
+stored, and unlock remains a separate scheduling step. Standard atomic/mutex/runtime
+correctness is explicitly assumed; callback exceptions and arbitrary callbacks are
+not erased. No Go-specific backend effect or unbounded counter was introduced.
+
+TLA now handles the generic IR's already-declared finite shared variables with explicit
+initial values, guards and assignments. Callback function values have their own source
+body graph edges, without resolving dynamic parameter calls or claiming reachability.
+Unknown/nil/synthetic callbacks, reset/copy, panic, output and initialization effects
+remain refused, including attempted Once.Do trust overrides.
+
+Eleven native/TLC comparisons and two independent shared-state IR/TLC cases cover
+contention, waiting for callback completion, reentrancy, cleanup, a double-close mutant,
+nonzero shared initialization and missing publication. Unit mutations cover source/
+body/graph/flag-store/closure-order/retained-operand facts. The actual dependency
+internal/godebug.Setting.Value has one eligible contract; IncNonDefault's bound wrapper
+still refuses. Whole-self analysis does not yet consume a Once call, so this is an
+operation-model prerequisite, not whole-source callback verification.
+
+The strict gate passes with 245 semantic + 20 CLI TLC cases and unchanged snapshots.
+The combined gate/race command exceeded its outer 600-second limit after the gate;
+the independently rerun complete race suite passed. Initial compile/probe/backend/
+callback-graph failures are preserved where logged, not presented as successful gates.
+Actual self-check still returns unsupported / 5 (101 initializer, 68 loop, 14 defer
+refusals), with no executable self TLA+ or self TLC invocation.
+Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-once/`.

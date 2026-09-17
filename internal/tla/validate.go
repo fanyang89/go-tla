@@ -14,9 +14,6 @@ func Validate(m *behavior.Model) error {
 	if err := behavior.Validate(m); err != nil {
 		return err
 	}
-	if len(m.SharedState) != 0 {
-		return fmt.Errorf("TLA backend does not support shared abstract variables")
-	}
 	if len(m.Assertions) != 1 || m.Assertions[0].Kind != "NoSynchronizationErrors" {
 		return fmt.Errorf("TLA backend requires the NoSynchronizationErrors assertion")
 	}
@@ -72,6 +69,12 @@ func Validate(m *behavior.Model) error {
 		for _, v := range p.Locals {
 			domains[v.Name] = v.Domain
 		}
+	}
+	for _, v := range m.SharedState {
+		if err := checkID(v.Name); err != nil {
+			return err
+		}
+		domains[v.Name] = v.Domain
 	}
 	for _, t := range m.Transitions {
 		for _, other := range m.Transitions {

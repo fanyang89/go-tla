@@ -756,6 +756,18 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: source-bound Once.Do
+
+- Model checked standard Once.Do with analyzed source callbacks, mutex-protected
+  first execution, committed flag reads and separate completion/unlock steps.
+- Enable declared finite shared IR variables in TLA without modeling arbitrary Go
+  shared memory. Callback body edges do not resolve dynamic parameter calls.
+- Eleven native/TLC and two generic shared-state TLC cases, contract mutations and
+  refusal tests; strict gate/full race pass, 245 + 20 TLC totals, unchanged snapshots.
+- Real godebug.Value has an eligible contract; bound wrappers remain refused. The
+  whole-self attempt still consumes no Once call and remains unsupported / 5;
+  context lifecycle, finite environment and full executable proof remain unfinished.
+
 ### Full-self continuation: channel receiver boxes
 
 - Admit only graph-proved receiver uses of locally boxed channel-bearing objects;

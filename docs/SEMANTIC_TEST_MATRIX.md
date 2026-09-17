@@ -79,7 +79,7 @@ Builtin output now refuses instead of being silently elided. Two more semantic T
 cases admit a shadowed source-function name and a literal-proved zero-output execution.
 Executed output, builtin trust overrides and stale cached summaries are refusal tests.
 
-Current total: **232 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Current total: **245 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -181,6 +181,21 @@ changed bounds, progress-bypassing cycles, external writes and hidden effects.
 Graph/slice and budget tests enforce consumed proof contracts.
 `TestActualModelHasErrorsFiniteData` loads the actual production source. The full CLI
 probe consumes this proof and toolinfo.fromBuildInfo's proof but remains unsupported.
+
+## Source-bound Once and finite shared state
+
+Eleven native/TLC cases cover first/repeated/competing Do calls, global and field
+identities, distinct callbacks, callback defers, blocked and reentrant callbacks,
+completion-before-return waiting, and a no-Once double-close mutant. Two independent
+IR/TLC cases verify nonzero shared-state initialization, cross-process publication,
+and a missing-publication deadlock. Read/lock and store/unlock boundaries are asserted
+in lowered IR rather than relying only on a passing schedule.
+
+Mutations reject standard graph/body/branch/store/source changes, nil callbacks,
+closure reordering and missing retained receiver/capture operands. Reset/copy, output,
+unknown callbacks, panic and initializer calls cannot bypass the model using trust.
+The actual internal/godebug.Setting.Value call has an eligible operation contract;
+IncNonDefault's bound-method wrapper still refuses. Neither is a full-self proof.
 
 ## Channel-object receiver boxes
 

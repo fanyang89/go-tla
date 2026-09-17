@@ -33,7 +33,7 @@ func (b *builder) allocateResources(fr *frame) {
 					continue
 				}
 				if typ := discovery.SyncType(x.Type()); typ != "" {
-					if typ != "Mutex" && typ != "WaitGroup" {
+					if typ != "Mutex" && typ != "WaitGroup" && typ != "Once" {
 						b.diag("error", "sync-type", "unsupported sync type "+typ, x.Pos())
 					} else {
 						id := b.fresh(fr.f.Name() + "_" + x.Comment)
@@ -53,7 +53,10 @@ func (b *builder) addSync(id, typ string) {
 		return
 	}
 	b.resources[id] = true
-	if typ == "Mutex" {
+	if typ == "Once" {
+		b.m.Mutexes = append(b.m.Mutexes, id+"_once_lock")
+		b.m.SharedState = append(b.m.SharedState, behavior.Variable{Name: id + "_once_done", Domain: []int{0, 1}, Initial: 0})
+	} else if typ == "Mutex" {
 		b.m.Mutexes = append(b.m.Mutexes, id)
 	} else {
 		b.m.WaitGroups = append(b.m.WaitGroups, id)
@@ -188,7 +191,7 @@ func (b *builder) identity(fr *frame, v ssa.Value, seen map[ssa.Value]bool) stri
 			return b.globals[x]
 		}
 		typ := discovery.SyncType(x.Type())
-		if typ == "Mutex" || typ == "WaitGroup" || aggregatePointer(x.Type()) {
+		if typ == "Mutex" || typ == "WaitGroup" || typ == "Once" || aggregatePointer(x.Type()) {
 			id := b.globals[x]
 			if id == "" {
 				id = b.fresh("global_" + x.Pkg.Pkg.Path() + "_" + x.Name())

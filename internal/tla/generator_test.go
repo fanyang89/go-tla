@@ -52,8 +52,8 @@ func TestExplicitTerminalAndInitialActivation(t *testing.T) {
 
 func TestBackendRestrictionsRemainSeparate(t *testing.T) {
 	for name, mutate := range map[string]func(*behavior.Model){
-		"shared-state": func(m *behavior.Model) { m.SharedState = []behavior.Variable{{Name: "shared", Domain: []int{0}}} },
-		"cycle":        func(m *behavior.Model) { m.Transitions[0].Destination = "entry" },
+		"shared-name": func(m *behavior.Model) { m.SharedState = []behavior.Variable{{Name: "shared-name", Domain: []int{0}}} },
+		"cycle":       func(m *behavior.Model) { m.Transitions[0].Destination = "entry" },
 		"runtime-sentinel": func(m *behavior.Model) {
 			m.Processes[0].Entry = "Dormant"
 			m.Processes[0].Locations[0] = "Dormant"

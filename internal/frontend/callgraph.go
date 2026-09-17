@@ -30,6 +30,16 @@ func BuildCallGraph(p *Program) {
 		caller := p.Calls.CreateNode(f)
 		for _, bb := range f.Blocks {
 			for _, i := range bb.Instrs {
+				// Callback values need their own body edges even when no static
+				// call reaches them. This does not resolve any dynamic call site
+				// or assert that the callback actually executes.
+				for _, operand := range i.Operands(nil) {
+					if operand != nil {
+						if referenced, ok := (*operand).(*ssa.Function); ok && !seen[referenced] {
+							queue = append(queue, referenced)
+						}
+					}
+				}
 				site, ok := i.(ssa.CallInstruction)
 				if !ok {
 					continue

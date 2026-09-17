@@ -68,6 +68,9 @@ func Generate(m *behavior.Model) (string, string, error) {
 			locals = append(locals, v.Name)
 		}
 	}
+	for _, v := range m.SharedState {
+		locals = append(locals, v.Name)
+	}
 	o.line("---- MODULE model ----")
 	o.line("EXTENDS Naturals, Integers, Sequences, TLC")
 	o.line("\\* Generated from a backend-independent Concurrent Behavioral IR.")
@@ -118,6 +121,9 @@ func Generate(m *behavior.Model) (string, string, error) {
 		for _, v := range p.Locals {
 			initial = append(initial, fmt.Sprintf("v = %s -> %d", quote(v.Name), v.Initial))
 		}
+	}
+	for _, v := range m.SharedState {
+		initial = append(initial, fmt.Sprintf("v = %s -> %d", quote(v.Name), v.Initial))
 	}
 	if len(initial) == 0 {
 		o.line("    /\\ local = [v \\in LocalSet |-> 0]")

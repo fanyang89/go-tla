@@ -20,6 +20,7 @@ const (
 	Inspect      Kind = "inspect-body"
 	FiniteData   Kind = "finite-read-only-computation"
 	ConstantData Kind = "literal-input-data-computation"
+	OnceDo       Kind = "modeled-once-do"
 	ScalarFormat Kind = "modeled-scalar-formatting"
 )
 
@@ -56,6 +57,14 @@ func (a *Analyzer) Call(site ssa.CallInstruction) Summary {
 	if d, ok := site.(*ssa.Defer); ok {
 		if _, supported := discovery.Deferred(d); supported && s.Callee != nil {
 			s.Kind = Primitive
+		}
+		a.calls[site] = s
+		return s
+	}
+	if IsOnceDo(site) {
+		s.Kind = Inspect
+		if call, ok := site.(*ssa.Call); ok && a.ProveOnceCall(call) != nil {
+			s.Kind = OnceDo
 		}
 		a.calls[site] = s
 		return s

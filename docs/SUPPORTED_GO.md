@@ -154,6 +154,26 @@ box as an argument, storing or returning it, phi/closure aliases and interface
 widening are not covered by this proof. Receiver bodies still undergo ordinary
 analysis; a box cannot authorize channel replacement or erase blocking behavior.
 
+### Source-bound sync.Once.Do
+
+Direct calls on a static, zero-initialized local/global/inline-field `sync.Once` are
+supported with named source functions or literal source closures of signature
+`func()`. The current standard Do/doSlow body shape, signatures, source identity,
+graph and callback captures must match. Closure creation must precede its use;
+that inventory is bounded to 4096 instructions. Nil/unknown callbacks, returned
+function values, synthetic/bound wrappers, direct spawned/deferred Do, copied/reset
+Once values and initialization-time calls remain unsupported. Trust cannot erase Do.
+
+The explicit operation model assumes standard atomic/mutex/runtime correctness and
+normal callback return; it is not a proof of the sync implementation. Callback bodies
+are still analyzed, including nested synchronization and ordinary deferred cleanup.
+The first caller executes its callback while other slow callers wait. Completion is
+stored only after that callback and its normal defers return; the separate unlock
+can occur after a completed fast caller returns. Recursive use of the same Once
+inside its callback deadlocks. Different Do call sites may supply different callbacks,
+but only the first runs. Ordinary data/panic exclusions still apply; no OnceValue,
+OnceFunc, exception-safety or general context cancellation model is implied.
+
 ### Restricted deferred cleanup
 
 ```go

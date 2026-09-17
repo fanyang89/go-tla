@@ -74,7 +74,7 @@ func (b *builder) fieldIdentity(fr *frame, x *ssa.FieldAddr, seen map[ssa.Value]
 		return "invalid"
 	}
 	if typ := discovery.SyncType(types.Unalias(field.Type())); typ != "" {
-		if typ != "Mutex" && typ != "WaitGroup" {
+		if typ != "Mutex" && typ != "WaitGroup" && typ != "Once" {
 			b.diag("error", "sync-type", "unsupported sync field type "+typ, x.Pos())
 		} else {
 			b.addSync(id, typ)

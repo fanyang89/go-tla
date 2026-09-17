@@ -140,7 +140,9 @@ predicates, not expression strings in TLA syntax. Effects include `Spawn`, `Send
 `AssignAbstractState`, `Assert`, and whole-program `Exit`. A select's communication and index assignment
 are one atomic transition. `choiceGroup` associates communication alternatives with
 their default guard. The backend rejects unknown effects/guards instead of ignoring
-extensions. General shared-state and arbitrary assertion backends are not implemented.
+extensions. Declared finite shared abstract variables use the same encoded state map
+as locals; ownership and finite domains remain generic IR validation requirements.
+This is not a model of arbitrary shared Go memory. Arbitrary assertions are not implemented.
 
 ## Atomic regions and synchronization
 
@@ -249,6 +251,25 @@ Proof/rejection records are consumed by lowering and purity checks, with reached
 proofs emitted as informational metadata. Unused unsupported functions do not fail
 an entry point. Backends still receive only the independent behavioral IR;
 no Go loop syntax, source overlays or runtime loop counter enters it.
+
+## Source-bound sync.Once operation model
+
+A checked standard Once.Do/doSlow control-flow shape identifies the atomic flag,
+mutex lock, deferred completion store and unlock, and callback invocation. Standard
+atomic/mutex/runtime correctness is an explicit operation-model assumption, not an
+implementation proof. Only named source callbacks or source closures with current
+creation/capture proofs are admitted; their actual bodies are lowered.
+
+Each zero Once identity owns a generic mutex and shared {0,1} completed variable.
+The initial read commits before acquiring the possibly blocking mutex. Slow callers
+recheck after acquisition; the winner executes its callback and normal defers, stores
+completed, then releases the mutex in a separate transition. Fast callers can observe
+completion before unlock. No Go-specific Once effect is added to IR. Unknown callbacks,
+reset/copy, panic/Goexit and synthetic wrappers do not gain exemptions.
+
+The call graph includes direct body edges of referenced function values without
+inventing an edge for a dynamic parameter invocation. Callback operation models still
+need separate binding proofs to justify executing those bodies.
 
 ## Restricted deferred cleanup
 

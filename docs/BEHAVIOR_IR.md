@@ -107,12 +107,15 @@ not infer a different rendezvous contract from generic guarded transitions.
 
 ## Current TLA capability profile
 
-After common validation, TLA rejects shared abstract state, missing synchronization
-error checking, unsafe/repeated spawn targets, and multiple scheduling effects per
+After common validation, TLA supports declared finite shared abstract variables as
+well as process-local variables. Both use the existing finite-state storage map;
+shared initial values, guards and assignments are explicit, not inferred from Go.
+TLA rejects missing synchronization error checking, unsafe/repeated spawn targets,
+and multiple scheduling effects per
 transition. Assignments may accompany one scheduling effect. Cycles must cross a
 status-producing Receive on every cycle: removing those edges must leave an acyclic
 graph. Any repeatable Spawn, WaitGroupAdd or WaitGroupDone is rejected, even when a
-guard appears to limit it. Together with bounded queues/locals and Boolean locks,
+guard appears to limit it. Together with bounded queues/local/shared domains and Boolean locks,
 this ensures finite modeled state without trusting source-specific loop annotations.
 It does not prove termination or require a channel eventually to close.
 Positive WaitGroup enrollment is main-only, before worker activation or prior Wait.

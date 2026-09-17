@@ -124,7 +124,7 @@ remains unsupported / 5 with diagnostic-only artifacts. Local evidence:
 `$HOME/tmp/pi/gotla-self-bootstrap-init-targets/{focused.log,gate.log,race.log,self-check.log,initializer-inventory.json,cli/}`.
 No whole-self or hosted pass is claimed.
 
-## Proved pre-closed globals (latest continuation)
+## Proved pre-closed globals
 
 The actual `context.closedchan` creation and initialization close are now represented
 as initial channel state, not skipped under a package exemption. The proof requires
@@ -154,6 +154,37 @@ It still returns unsupported / 5 with no executable full self-model.
 Local evidence:
 `$HOME/tmp/pi/gotla-self-bootstrap-closed-globals/{focused.log,gate.log,race.log,self-check.log,cli/}`.
 This is one real dependency effect modeled, not full bootstrap or a hosted CI claim.
+
+## Private fixed-array computation (latest continuation)
+
+Private-data proofs now follow nested field/array-index addresses to a fresh allocation
+and inspect every address use. Fixed-array elements must themselves be plain data;
+reference/synchronization elements, slicing aliases, publication and caller/global
+writes remain refused. This is a prerequisite for data-table constructors, not an
+exemption for array-producing library functions.
+
+Finite data-loop proofs also accept ordinary int constant bounds in 0..2147483647,
+which cannot exceed either Go int width. Counter progress, exit and hidden-cycle
+checks are unchanged. This permits private fixed-array fill loops without unrolling
+or applying the concurrency expansion budget to pure computation. Larger constants,
+narrow/changed/overshooting counters and synchronization loops remain refused.
+Results still stay abstract and argument effects still execute.
+
+Seven new real TLC cases cover array literals/nesting, 128-element fills using array
+range or classic counters, abstract-value errors, blocked arguments and an empty
+classic data loop. Type/address/constant-bound refusal tests cover the new boundaries.
+The first strict run exposed a now-stale empty-classic-loop refusal; its synchronization
+variant remains a refusal and the empty case is now checked with TLC. A second run
+caught a test-source separator error. Both attempts are retained; the corrected full
+gate and race suite pass with zero skips/failures and unchanged original snapshots.
+Totals are **154 semantic TLC and 18 CLI/TLC cases**.
+
+Full self-input remains unsupported / 5 with 238 initializer refusals and unchanged
+other refusal counts. In particular, encoding/base64.NewEncoding also uses copy and
+explicit validation panics: private-array support alone does not authorize that call.
+No additional production initializer is claimed accepted by this increment.
+Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-array-data/` contains focused/gate/race
+logs, both failed gate attempts, self-check output and diagnostic CLI artifacts.
 
 Remaining work includes other dependency initialization/effects, other non-receive control loops,
 returned/dynamic callback and object identities, runtime synchronization primitives,

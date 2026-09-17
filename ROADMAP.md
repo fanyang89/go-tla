@@ -601,3 +601,17 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   Totals: 147 semantic and 18 CLI/TLC cases. Strict pinned gate and race suite pass,
   zero skips/failures, original snapshots unchanged. Local-only evidence and remaining
   full-goal gates are recorded in SELF_BOOTSTRAP_GOAL.md.
+
+### Data-table prerequisite: private fixed arrays
+
+- Private-data proofs now cover nested array/field addresses with complete use checks.
+  Reference/synchronization elements, publication, slicing aliases and shared writes
+  remain refused. Finite data computations also admit constant int bounds in the
+  common 32-/64-bit range, with unchanged counter/progress/exit proofs and no truncation.
+- Seven new actual TLC cases bring totals to 154 semantic and 18 CLI/TLC cases.
+  Updated the obsolete empty classic-loop refusal to a synchronization-loop refusal
+  and added a positive TLC check. Corrected a new fixture separator error; failed
+  attempts are retained. Full strict gate and race suite then pass, snapshots unchanged.
+- This prerequisite does not remove an actual CLI refusal yet: self-input still
+  returns unsupported / 5 with 238 initializer refusals. Library constructors needing
+  copy, reflection or explicit panic-path reasoning are not silently admitted.

@@ -209,7 +209,7 @@ Returned/dynamic resource topology remains unsupported.
 Synchronization/alias rules still apply inside accepted loops, including WaitGroup's
 single enrollment phase and the per-invocation defer-site limit after expansion.
 
-### Length-bounded data computations
+### Length/constant-bounded data computations
 
 A cyclic helper can be summarized without unrolling when its **entire transitive
 body** is externally read-only and provably finite. Examples include scanning a
@@ -217,7 +217,10 @@ slice for a scalar condition or summing its elements. This does not infer the re
 returned data stays abstract, including when it controls synchronization.
 
 Each cyclic SSA component needs a dominating header testing an ordinary Go int index
-against the length of a stable slice/string header. Every back edge advances exactly
+against the length of a stable slice/string header or an int constant in
+0..2147483647. The latter fits both Go int widths; larger constants refuse this
+proof rather than assuming that host and target architectures match. Fixed-array
+ranges and classic constant-bound loops use this rule. Every back edge advances exactly
 one from zero (or SSA range's pre-increment form starting at -1); the false branch
 exits. Removing the header must break every cycle. This proves progress without
 integer-wraparound on a taken back edge and without guessing a runtime trip count.
@@ -227,7 +230,8 @@ unproved cycles are refused. The concurrency expansion limit remains unchanged.
 All instructions and transitively called bodies are checked. Data types may be
 recursive read-only graphs, but not synchronization objects, channels, interfaces,
 callbacks or unsafe pointers. Private plain-data copies/initialization retain the
-existing complete-address-use proof; writes to caller/global data, container mutation,
+existing complete-address-use proof, including fixed-array elements; writes to
+caller/global data, mutation through unproved container aliases,
 printing, unknown/unavailable calls, recursion, defers, panic and synchronization
 cannot acquire this summary. User trust flags cannot supply missing proof facts.
 The existing implicit-panic/resource-exhaustion domain assumption still applies.
@@ -405,11 +409,15 @@ func defaults() *settings {
 var config = defaults()
 ```
 
-Acyclic helpers can initialize fresh heap-allocated scalar/value-struct data when
-SSA proves the allocation remains private until return. Direct field paths, data
-loads, returned field addresses and pointer boxing solely for return are admitted.
-Scalars include immutable strings; pointer/interface/container/function/channel
-fields and synchronization/atomic state do not qualify. Pointer phis, closure
+Acyclic helpers can initialize fresh heap-allocated scalar/value-struct/fixed-array
+data when SSA proves the allocation remains private until return. Field and array
+index paths may nest; data loads, returned element/field addresses and pointer boxing
+solely for return are admitted. Finite helpers satisfying the data-loop proof above
+may also fill private arrays without unrolling the computation.
+Scalars include immutable strings. Array elements are recursively checked, so arrays
+of pointers, interfaces, channels or synchronization state cannot gain this proof.
+Pointer/interface/slice/map/function/channel fields and synchronization/atomic state
+do not qualify. Slicing an array creates an unproved alias and remains refused. Pointer phis, closure
 captures, address conversions, publication and even read-only address-taking helper
 calls remain outside this deliberately narrow proof.
 

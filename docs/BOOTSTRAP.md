@@ -12,7 +12,7 @@ have passing TLC harnesses and actual missing-Unlock mutation counterexamples.
 Logger blocking environments have additional checks. No trusted calls are used.
 The complete CLI still returns **unsupported / 5**.
 
-Current totals: **147 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current totals: **154 semantic TLC cases and 18 TLC CLI cases**, plus separate
 full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
@@ -63,7 +63,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 147 positive/negative semantic TLC cases and 18
+itself. It is separate from the 154 positive/negative semantic TLC cases and 18
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -390,6 +390,15 @@ including concurrent receives and a mutated initial-state deadlock, bring totals
 147 semantic and 18 CLI/TLC cases. Strict gate/race tests pass with unchanged original
 snapshots. Initializer refusals fall from 240 to 238, but complete CLI self-analysis
 still returns unsupported / 5. See the full-self contract for scope and evidence.
+
+## Data-table prerequisite: private arrays and constant bounds
+
+Private fixed-array writes and portable constant-bounded data loops now have consumed
+isolation/termination proofs. Shared/reference-bearing data and unproved aliases or
+effects remain refused. Seven more TLC cases bring totals to 154 semantic and 18
+CLI/TLC cases; the strict gate and race suite pass. This increment does not yet remove
+an actual self-input refusal: complete CLI analysis remains unsupported / 5 with 238
+initializer errors. See the full-self contract for the remaining constructor obstacles.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

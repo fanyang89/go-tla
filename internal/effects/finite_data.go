@@ -14,7 +14,8 @@ const maxFiniteDataProofSteps = 4096
 
 // ProveFiniteData rechecks the current graph, not a cached purity assertion.
 // Every call body is read-only and total under the existing no-implicit-panics
-// domain. Cycles must count monotonically against a stable Go slice/string len.
+// domain. Cycles must count monotonically against a stable Go slice/string len
+// or a portable nonnegative int constant.
 // No trusted calls, guessed trip counts, shared stores or synchronization qualify.
 func (a *Analyzer) ProveFiniteData(f *ssa.Function) bool {
 	if f == nil || !cslice.HasCycle(f) {
@@ -185,6 +186,45 @@ func incrementOf(v ssa.Value, phi *ssa.Phi) bool {
 	return ok && add.Op == token.ADD && add.X == phi && intConstant(add.Y, 1)
 }
 
+// Constants are restricted to the common range of Go's 32- and 64-bit int.
+// Larger constants refuse this proof rather than assuming the host architecture
+// matches the analyzed target. These are proof bounds, never truncation counts.
+func finiteDataBound(v ssa.Value, members map[*ssa.BasicBlock]bool) bool {
+	if c, ok := v.(*ssa.Const); ok {
+		if !types.Identical(c.Type(), types.Typ[types.Int]) || c.Value == nil || c.Value.Kind() != constant.Int {
+			return false
+		}
+		n, ok := constant.Int64Val(c.Value)
+		return ok && n >= 0 && n <= 1<<31-1
+	}
+	length, ok := v.(*ssa.Call)
+	if !ok {
+		return false
+	}
+	builtin, ok := length.Common().Value.(*ssa.Builtin)
+	if !ok || builtin.Name() != "len" || len(length.Common().Args) != 1 {
+		return false
+	}
+	value := length.Common().Args[0]
+	switch t := value.Type().Underlying().(type) {
+	case *types.Slice:
+		if !finiteDataType(t.Elem(), 0) {
+			return false
+		}
+	case *types.Basic:
+		if t.Kind() != types.String {
+			return false
+		}
+	default:
+		return false
+	}
+	// The slice/string header is evaluated once, not reloaded per trip.
+	if instruction, ok := value.(ssa.Instruction); ok && members[instruction.Block()] {
+		return false
+	}
+	return true
+}
+
 func lengthCountedComponent(component []*ssa.BasicBlock) bool {
 	members := map[*ssa.BasicBlock]bool{}
 	for _, bb := range component {
@@ -199,29 +239,7 @@ func lengthCountedComponent(component []*ssa.BasicBlock) bool {
 		if !ok || cond.Op != token.LSS {
 			continue
 		}
-		length, ok := cond.Y.(*ssa.Call)
-		if !ok {
-			continue
-		}
-		builtin, ok := length.Common().Value.(*ssa.Builtin)
-		if !ok || builtin.Name() != "len" || len(length.Common().Args) != 1 {
-			continue
-		}
-		value := length.Common().Args[0]
-		switch t := value.Type().Underlying().(type) {
-		case *types.Slice:
-			if !finiteDataType(t.Elem(), 0) {
-				continue
-			}
-		case *types.Basic:
-			if t.Kind() != types.String {
-				continue
-			}
-		default:
-			continue
-		}
-		// The slice/string header is evaluated once, not reloaded/mutated per trip.
-		if instruction, ok := value.(ssa.Instruction); ok && members[instruction.Block()] {
+		if !finiteDataBound(cond.Y, members) {
 			continue
 		}
 		phi, ok := cond.X.(*ssa.Phi)
@@ -264,8 +282,8 @@ func lengthCountedComponent(component []*ssa.BasicBlock) bool {
 		if !valid || cycleWithoutHeader(component, members, header) {
 			continue
 		}
-		// len is in [0,maxInt]. Every taken back edge advances exactly one
-		// from an index below len, so the control measure cannot wrap. An
+		// The bound is in [0,maxInt]. Every taken back edge advances exactly
+		// one from an index below it, so the control measure cannot wrap. An
 		// unused increment computed on the final exit is not a back edge.
 		return true
 	}

@@ -7,7 +7,7 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **147 semantic TLC cases and 18 TLC CLI cases**, plus separate
+Current total: **154 semantic TLC cases and 18 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -31,6 +31,15 @@ nil/empty inputs, independent copied storage, replacement and concurrent capture
 frontend/race regressions exercise its real integration. The production leaf uses
 slices.Clone instead of bytes.Clone; initialization checks are unchanged. See the
 bootstrap document for that dependency change's scope and evidence.
+
+## Data-table prerequisite: private arrays
+
+`TestTLCPrivateArrayData` adds seven real TLC cases: literals, nested arrays, indexed
+range and classic-counter fills, abstract-value errors, blocked argument evaluation
+and an empty classic loop. Private constructor and finite-data tests reject shared
+writes, publication, slicing/address escape, reference/synchronization elements,
+counter changes and nonportable bounds. The classic synchronization-loop refusal
+remains in `TestFiniteLoopRefusals`. Full CLI self-analysis remains unsupported.
 
 ## Full-self prerequisite: pre-closed global channels
 

@@ -28,12 +28,16 @@ func readOnlyBuiltin(c *ssa.CallCommon) bool {
 // Publication through anything other than a return is conservatively rejected.
 func privateDataStore(store *ssa.Store, cache map[*ssa.Alloc]bool) bool {
 	addr := store.Addr
+walk:
 	for {
-		field, ok := addr.(*ssa.FieldAddr)
-		if !ok {
-			break
+		switch x := addr.(type) {
+		case *ssa.FieldAddr:
+			addr = x.X
+		case *ssa.IndexAddr:
+			addr = x.X
+		default:
+			break walk
 		}
-		addr = field.X
 	}
 	root, ok := addr.(*ssa.Alloc)
 	if !ok || root.Parent() != store.Parent() {
@@ -48,7 +52,7 @@ func privateDataStore(store *ssa.Store, cache map[*ssa.Alloc]bool) bool {
 	return proved
 }
 
-// Only scalars and value structs qualify. Reference-bearing fields, opaque
+// Only scalars, value structs and fixed arrays qualify. Reference-bearing fields, opaque
 // containers and synchronization state cannot acquire purity through this proof.
 func plainData(t types.Type, depth int) bool {
 	if depth > 64 {
@@ -63,6 +67,8 @@ func plainData(t types.Type, depth int) bool {
 	switch t := t.Underlying().(type) {
 	case *types.Basic:
 		return t.Info()&(types.IsBoolean|types.IsInteger|types.IsFloat|types.IsComplex|types.IsString) != 0
+	case *types.Array:
+		return plainData(t.Elem(), depth+1)
 	case *types.Struct:
 		for i := range t.NumFields() {
 			if !plainData(t.Field(i).Type(), depth+1) {
@@ -87,6 +93,10 @@ func privateAddressUses(v ssa.Value, seen map[ssa.Value]bool) bool {
 	for _, use := range *refs {
 		switch x := use.(type) {
 		case *ssa.FieldAddr:
+			if x.X != v || !privateAddressUses(x, seen) {
+				return false
+			}
+		case *ssa.IndexAddr:
 			if x.X != v || !privateAddressUses(x, seen) {
 				return false
 			}

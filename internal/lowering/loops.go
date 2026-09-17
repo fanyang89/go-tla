@@ -26,7 +26,7 @@ func (b *builder) recordFiniteData(f *ssa.Function) {
 		b.loopReported = map[*ssa.Function]bool{}
 	}
 	b.loopReported[f] = true
-	b.diag("info", "finite-data-loop", "Proved read-only, length-bounded computation: "+f.String()+"; data results are abstract, no iteration truncation or trusted-call contract", f.Pos())
+	b.diag("info", "finite-data-loop", "Proved read-only, length/constant-bounded computation: "+f.String()+"; data results are abstract, no iteration truncation or trusted-call contract", f.Pos())
 }
 
 // Only reached functions publish loop proof/rejection records. Unused unsupported

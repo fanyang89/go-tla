@@ -55,7 +55,7 @@ func TestFiniteLoopRefusals(t *testing.T) {
 		"line-directive":           "\n//line virtual.go:50\nfor range 2 {}",
 		"unknown-body":             "for range 2 {unknown()}",
 		"break":                    "for range 2 {break}",
-		"classic":                  "for i:=0;i<2;i++ {}",
+		"classic":                  "var mu sync.Mutex;for i:=0;i<2;i++ {mu.Lock();mu.Unlock()}",
 		"channel-range-allocation": "ch:=make(chan int);for range ch {next:=make(chan int);_=next}",
 		"loop-defer-limit":         "var mu sync.Mutex;for range 16 {defer mu.Unlock();defer mu.Unlock();defer mu.Unlock();defer mu.Unlock();defer mu.Unlock()}",
 	} {

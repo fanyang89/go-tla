@@ -186,6 +186,20 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if reflectionAssumptions != 3 {
 		t.Fatal("reflection model assumptions missing or duplicated")
 	}
+	checkerInputsBound := false
+	for _, d := range r.Diagnostics {
+		if d.File == "internal/checker/runner.go" {
+			if d.Code == "unsupported-loop" {
+				t.Fatal("checker input-file enumeration regressed")
+			}
+			if d.Code == "proved-loop" && strings.Contains(d.Message, "scalar array range bound: 2 iterations") {
+				checkerInputsBound = true
+			}
+		}
+	}
+	if !checkerInputsBound {
+		t.Fatal("actual checker input-file bound missing")
+	}
 	versionFormat, ownFormat, formatAssumptions := false, false, 0
 	for _, d := range r.Diagnostics {
 		if d.Code == "scalar-format-call" && d.Line > 0 {

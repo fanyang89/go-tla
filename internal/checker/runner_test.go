@@ -28,6 +28,15 @@ func TestMain(m *testing.M) {
 			os.Exit(98)
 		}
 		switch mode {
+		case "input-files":
+			for name, want := range map[string]string{"model.tla": "spec\nUnicode: 证明\n", "model.cfg": "config\nSPECIFICATION Spec\n"} {
+				data, err := os.ReadFile(name)
+				info, statErr := os.Stat(name)
+				if err != nil || statErr != nil || string(data) != want || info.Mode().Perm() != 0600 {
+					os.Exit(97)
+				}
+			}
+			fmt.Print(transcript(frame(2193, 0, "verified input files")))
 		case "pass":
 			fmt.Print(transcript(frame(2193, 0, "success")))
 		case "deadlock":
@@ -97,6 +106,33 @@ func TestRunnerBoundedOutcomes(t *testing.T) {
 				t.Fatal("private workspace leaked")
 			}
 		})
+	}
+}
+
+func TestRunnerPrivateInputFiles(t *testing.T) {
+	java, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GOTLA_TEST_JAVA", "input-files")
+	dir := t.TempDir()
+	jar := filepath.Join(dir, "fixture.jar")
+	if err := os.WriteFile(jar, []byte("fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg := DefaultConfig()
+	cfg.Java, cfg.JAR = java, jar
+	r := Run(t.Context(), cfg, "spec\nUnicode: 证明\n", "config\nSPECIFICATION Spec\n", filepath.Join(dir, "tlc.log"))
+	if r.Status != Passed {
+		t.Fatalf("private inputs changed: %+v", r)
+	}
+	wrong := Run(t.Context(), cfg, "config\nSPECIFICATION Spec\n", "spec\nUnicode: 证明\n", filepath.Join(dir, "swapped.log"))
+	if wrong.Status != ToolError {
+		t.Fatal("subprocess input-content oracle accepted swapped files")
+	}
+	work, err := filepath.Glob(filepath.Join(dir, ".gotla-tlc-*"))
+	if err != nil || len(work) != 0 {
+		t.Fatal("private workspace cleanup changed")
 	}
 }
 

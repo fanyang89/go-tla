@@ -672,3 +672,27 @@ not a reason to weaken the full objective.
 
 Strict gate/full race pass without skips/failures or snapshot changes. TLC totals
 remain 214 semantic + 20 CLI. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-sprint/`.
+
+## Fixed checker input-file enumeration
+
+The actual checker.Run no longer uses a map to enumerate its two private input
+files. A two-element string array fixes the order to model.tla then model.cfg;
+contents, 0600 writes, immediate error returns and deferred private-workspace cleanup
+are retained. This is a production file-enumeration change, not a replacement CLI
+or an exemption for external I/O. The existing source-array normalization proves
+exactly two iterations without truncation.
+
+A native subprocess oracle verifies both exact file contents (including Unicode)
+and permissions in the private working directory. Swapped contents deliberately
+fail the oracle, and both success/failure workspaces are cleaned. Existing actual
+CLI/TLC cases, strict gate and full race pass without skips or snapshot changes;
+TLC totals remain 214 + 20. The real self-input regression requires the source-located
+two-iteration proof and refuses any return to the former checker range rejection.
+
+Whole-self analysis advances to the next real blocker: the returned context timeout
+cancellation function used by defer stop(). Unsupported loops drop 69 to 68 while
+unsupported defers increase 13 to 14; this is a frontier change, not whole-program
+coverage. Startup-N=2 still has 101 initializer refusals and returns unsupported / 5,
+with only diagnostic model.json and no checker command. The checker worker-formatting
+site is still not a consumed full-self proof. Evidence:
+`$HOME/tmp/pi/gotla-self-bootstrap-checker-inputs/`.

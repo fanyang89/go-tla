@@ -136,7 +136,9 @@ proof that each listed statement caused the bug. Guards, choice, registration, a
 completion can make this list ambiguous. Full trace decoding/replay is not implemented.
 The complete checker output remains in `tlc.log` (truncated only at the configured
 limit, which produces `incomplete`). Normal model checking uses a private workspace
-with copies of the exact generated TLA/config; temporary states and extra TLC trace
+with copies of the exact generated TLA/config. Its fixed two-file input set is
+written deterministically (`model.tla`, then `model.cfg`) with mode 0600; either
+write error returns before launching Java. Temporary states and extra TLC trace
 modules are removed on normal command return. Reproduce from the saved model/config,
 JAR digest, options, and raw log, not the removed temporary workspace.
 

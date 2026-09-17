@@ -86,7 +86,12 @@ func Run(parent context.Context, cfg Config, spec, configText, logPath string) (
 		return fail(err)
 	}
 	defer os.RemoveAll(work)
-	for name, text := range map[string]string{"model.tla": spec, "model.cfg": configText} {
+	// Keep the two private input writes finite and reproducibly ordered.
+	for _, name := range [2]string{"model.tla", "model.cfg"} {
+		text := spec
+		if name == "model.cfg" {
+			text = configText
+		}
 		if err := os.WriteFile(filepath.Join(work, name), []byte(text), 0600); err != nil {
 			return fail(err)
 		}

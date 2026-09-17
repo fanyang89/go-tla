@@ -756,6 +756,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: fixed checker input files
+
+- Use a finite, deterministic two-file array in actual checker.Run; preserve both
+  contents, file modes, error returns and cleanup. Native subprocess tests verify
+  contents/permissions and reject swapped inputs.
+- Actual self-input consumes the two-iteration source proof. The next blocker is
+  deferred returned context cancellation; loops 69→68, defers 13→14. Self-analysis
+  remains unsupported / 5 with 101 N=2 initializer refusals, not a full proof.
+- Strict gate/full race pass; 214 + 20 TLC totals and snapshots unchanged.
+
 ### Full-self continuation: checker argument formatting
 
 - Extend guarded scalar formatting to Sprint/Sprintln, preserving exact variant

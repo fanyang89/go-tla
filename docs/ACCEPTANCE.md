@@ -3,10 +3,13 @@
 ## Status
 
 M1–M5 have local acceptance evidence for the documented restricted profile.
-This is not verification of arbitrary Go programs. The hosted GitHub Actions job
-has **not** been run or verified from this workspace; branch protection, release
-publication and remote CI success are not claimed. The remaining release gate is
-an actual successful hosted run against the delivered revision, with its log retained.
+This is not verification of arbitrary Go programs. The first hosted push run for
+`c265c49` [failed workflow validation](https://github.com/fanyang89/go-tla/actions/runs/35171701731):
+job-level `env` cannot reference `runner.temp`, so no verification job started.
+The local fix sets `TLC_JAR` in a shell step through `GITHUB_ENV` instead.
+Branch protection, release publication and remote CI success are not claimed.
+The remaining release gate is an actual successful hosted run against the delivered
+revision, with its log retained.
 
 ## Component matrix
 
@@ -67,7 +70,8 @@ The strict script verifies the upstream pinned JAR checksum, requires Java/TLC,
 clears ambient `GOFLAGS`, refuses snapshot regeneration and compares golden files.
 Plain `go test ./...` without TLC is insufficient. The checked-in workflow invokes
 this strict script and archives its log, but configuration is not hosted execution
-proof. No push, PR, workflow dispatch or branch-protection change was made here.
+proof. The owner configured the remote and pushed the initial revision. No assistant
+push, PR, workflow dispatch or branch-protection change was made here.
 
 Latest local logs: `$HOME/tmp/pi/gotla-m5-counter-gate.log` and
 `$HOME/tmp/pi/gotla-m5-counter-race.log`. Machine-specific logs/artifacts are not

@@ -14,11 +14,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      TLC_JAR: ${{ runner.temp }}/gotla-tools/tla2tools.jar
       GOTLA_REQUIRE_TLC: '1'
       UPDATE_SNAPSHOTS: '0'
     steps:
       - uses: actions/checkout@v4
+      - name: Set TLC artifact path
+        shell: bash
+        run: printf 'TLC_JAR=%s/gotla-tools/tla2tools.jar\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod

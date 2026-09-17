@@ -723,3 +723,27 @@ Strict gate and full race pass without skips or snapshot regeneration. Totals ar
 It remains unsupported / 5 with no executable self-model or TLC invocation. This
 increment supplies a reusable cleanup proof, not full bootstrap completion.
 Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-deferred-dispatch/`.
+
+## Channel-bearing receiver boxes
+
+Channel-bearing allocated objects may now be locally boxed for exact receiver calls,
+including spawned and supported deferred source methods. Every current box use must
+have the matching receiver and call-graph proof; ordinary argument/storage/return
+escapes remain rejected. Initialization must dominate boxing, as well as other object
+exposures. Channel-field/object use inventories are rebuilt from current operands with
+a 4096-step instruction/operand budget per scan; missing definitions and exhaustion
+refuse rather than trusting stale Referrers or truncating uses. Direct source-method
+defers also participate in initialization dominance checks.
+
+Eight native/TLC comparisons cover successful communication, distinct objects,
+blocking, closed sends and cleanup. Tests mutate graphs, operands, definitions and
+inventory size while deliberately invalidating Referrers caches. Late/repeated field
+initialization, receiver mutation and unproved box escapes refuse. Two former blanket
+boxing refusals moved to positive tests; no general points-to or returned-object model
+was introduced. Strict gate/full race pass, snapshots unchanged, 232 + 20 TLC totals.
+
+The real N=2 self-check remains unsupported / 5: 101 initializer, 68 loop and 14 defer
+refusals remain, as does the channel-object return in os/signal/signal.go:283.
+No executable self-model or TLC invocation is emitted. Context creation/cancellation
+and the other full acceptance requirements remain unproved.
+Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-channel-boxes/`.

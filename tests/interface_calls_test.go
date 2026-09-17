@@ -107,9 +107,6 @@ type I interface{Run()};type worker[T any] struct{};func(*worker[T])Run(){};func
 		{"sync-copy", `package main
 import "sync"
 type I interface{Run()};type worker struct{mu sync.Mutex};func(worker)Run(){};func main(){var i I=worker{};i.Run()}`, nil},
-		{"channel-object-escape", `package main
-type I interface{Run()};type worker struct{ch chan int};func(w *worker)Run(){w.ch<-1}
-func main(){w:=&worker{ch:make(chan int,1)};var i I=w;i.Run()}`, nil},
 		{"primitive-trust-bypass", `package main
 import "sync"
 func main(){var mu sync.Mutex;var l sync.Locker=&mu;l.Lock()}`, []string{"(*sync.Mutex).Lock"}},

@@ -66,7 +66,8 @@ and data-computation, owned-reference/value-copy, open-global and array-range pr
 plus eight independent program-exit IR/TLC cases and five nil-interface storage
 cases, three bounded string-concatenation cases and five rotated range-over-len
 cases, six conditional startup-GOMAXPROCS cases and two builtin-output boundary
-cases plus ten exact deferred-dispatch cases bring the local semantic total to **224**.
+cases plus ten exact deferred-dispatch and eight channel-receiver-box cases bring
+the local semantic total to **232**.
 The latter also run natively; proof corruption and still-unproved dispatch refuse.
 Returned context cancellation remains unsupported in the real self-input. Actual project lexical regexes are
 replaced by equivalent ASCII scanning, with differential/fuzz oracles and unchanged

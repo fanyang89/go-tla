@@ -76,17 +76,22 @@ func (b *builder) prepareChannelFields(fr *frame) {
 					return
 				}
 				seen[v] = true
-				refs := v.Referrers()
-				if refs == nil {
+				refs, complete := channelObjectUses(v)
+				if !complete {
+					b.diag("error", "channel-field-alias", "channel object lacks a complete current bounded use inventory", v.Pos())
 					return
 				}
-				for _, ref := range *refs {
+				for _, ref := range refs {
 					switch x := ref.(type) {
 					case *ssa.FieldAddr:
 						id := b.fieldID(base, x.Field)
 						if slot := slots[id]; slot != nil {
-							if uses := x.Referrers(); uses != nil {
-								for _, use := range *uses {
+							uses, complete := channelObjectUses(x)
+							if !complete {
+								b.diag("error", "channel-field-alias", "channel field lacks a complete current bounded use inventory", x.Pos())
+							}
+							if complete {
+								for _, use := range uses {
 									switch u := use.(type) {
 									case *ssa.Store:
 										if u.Addr == x {
@@ -108,7 +113,12 @@ func (b *builder) prepareChannelFields(fr *frame) {
 						} else if aggregatePointer(x.Type()) {
 							visit(x, id)
 						}
-					case *ssa.Call, *ssa.Go, *ssa.MakeClosure:
+					case *ssa.MakeInterface:
+						if !b.channelReceiverBox(x) {
+							b.diag("error", "channel-field-alias", "channel object box requires exclusively proved receiver uses", x.Pos())
+						}
+						escapes = append(escapes, ref)
+					case *ssa.Call, *ssa.Go, *ssa.Defer, *ssa.MakeClosure:
 						escapes = append(escapes, ref)
 					case *ssa.DebugRef:
 					default:

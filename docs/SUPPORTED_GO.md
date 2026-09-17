@@ -131,7 +131,10 @@ blocking/close-error behavior, not an invented channel.
 
 The proof inspects every SSA use, not only sliced operations. A field can have at
 most one store in its object's allocation frame. That store must dominate every
-field read and every call/capture/spawn exposing the object or its subobjects.
+field read and every call/capture/spawn/defer or admitted interface box exposing the
+object or its subobjects. Object and field-address uses are rebuilt from current SSA
+operands, not cached Referrers; each scan is bounded by 4096 instruction/operand steps.
+Missing definitions or exhausted inventories refuse the proof.
 This conservatively requires even unrelated channel-field initializations before
 an object escape. Initializers use direct allocations, channel parameters, already
 resolved captures, nil, or direction/type conversions of those values. Field stores
@@ -143,6 +146,13 @@ objects remain unsupported. Capturing an addressable value object (`var e endpoi
 is supported after initialization; capturing a pointer variable through a `**endpoint`
 cell is currently rejected, even when a human can see it is immutable. Direct pointer
 receiver calls such as `go e.send()` do not require that pointer-cell capture.
+
+Local interface boxing is admitted only when every current box use is an exact,
+graph-proved receiver call to that object (ordinary, spawned or supported deferred).
+Initialization must dominate the box itself, not merely the later call. Passing the
+box as an argument, storing or returning it, phi/closure aliases and interface
+widening are not covered by this proof. Receiver bodies still undergo ordinary
+analysis; a box cannot authorize channel replacement or erase blocking behavior.
 
 ### Restricted deferred cleanup
 
@@ -612,8 +622,9 @@ Interface parameters, unproved interface fields/loads, phis, returned interfaces
 type assertions and method-value callbacks are not covered by the local-box proof.
 The separate immutable-field proof below covers a restricted field case. Nor are promoted methods,
 implicit pointer/value receiver adaptation, generic receivers or explicit nil boxes.
-Synchronization-bearing value copies and channel-object escapes still fail their
-existing checks. Interface dispatch directly to `sync` / `sync/atomic` primitives
+Synchronization-bearing value copies and unproved channel-object escapes still fail
+their existing checks. Channel-bearing objects may use the receiver-only local box
+proof above; this does not admit arbitrary interface storage or returned objects. Interface dispatch directly to `sync` / `sync/atomic` primitives
 (including `sync.Locker`) is refused, even with a trust flag; direct primitive calls
 inside an ordinary supported method keep their existing semantics. Exactly bound
 source-method defers reuse this local-box proof and registration-time receiver capture;

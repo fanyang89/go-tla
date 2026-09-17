@@ -15,7 +15,6 @@ func TestDeferredDispatchRefusals(t *testing.T) {
 		"sync-interface":                 `package main;import "sync";func main(){var x sync.Locker=&sync.Mutex{};defer x.Unlock()}`,
 		"output":                         `package main;type I interface{Finish()};type C int;func(C)Finish(){println("output")};func main(){var x I=C(1);defer x.Finish()}`,
 		"panic":                          `package main;type I interface{Finish()};type C int;func(C)Finish(){panic("bad")};func main(){var x I=C(1);defer x.Finish()}`,
-		"unmodeled-boxed-channel-object": `package main;type I interface{Finish()};type C struct{c chan int};func(c *C)Finish(){close(c.c)};func main(){var x I=&C{make(chan int)};defer x.Finish()}`,
 		"unmodeled-callable-only-object": `package main;type H struct{f func()};func main(){h:=&H{f:func(){}};defer h.f()}`,
 	} {
 		t.Run(name, func(t *testing.T) {

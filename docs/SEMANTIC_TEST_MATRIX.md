@@ -79,7 +79,7 @@ Builtin output now refuses instead of being silently elided. Two more semantic T
 cases admit a shadowed source-function name and a literal-proved zero-output execution.
 Executed output, builtin trust overrides and stale cached summaries are refusal tests.
 
-Current total: **224 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Current total: **232 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -181,6 +181,17 @@ changed bounds, progress-bypassing cycles, external writes and hidden effects.
 Graph/slice and budget tests enforce consumed proof contracts.
 `TestActualModelHasErrorsFiniteData` loads the actual production source. The full CLI
 probe consumes this proof and toolinfo.fromBuildInfo's proof but remains unsupported.
+
+## Channel-object receiver boxes
+
+Eight paired native/TLC cases cover buffered/spawned sends, boxed and direct deferred
+methods, distinct object channels, blocked and closed-channel sends, and deferred
+close. The previous channel-box/deferred-channel-box refusals are now positive cases.
+Box argument/storage/return escapes, late initialization, receiver mutation and
+channel replacement still refuse executable emission. Unit mutations cover absent
+graphs, changed current argument/return uses, missing definitions and the 4096-step
+inventory budget, including deliberately stale Referrers caches. Whole-self analysis
+still rejects the returned object in os/signal.NotifyContext and remains unsupported.
 
 ## Exact deferred interface/field dispatch
 

@@ -756,6 +756,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: channel receiver boxes
+
+- Admit only graph-proved receiver uses of locally boxed channel-bearing objects;
+  require initialization before boxing and keep arbitrary escapes unsupported.
+- Inspect current SSA uses with a checked 4096-step budget instead of cached use
+  lists. Eight native/TLC cases plus mutation/refusal tests; strict gate/full race
+  pass, 232 + 20 TLC totals, unchanged snapshots.
+- Actual self-check still refuses returned os/signal context identity and cancellation;
+  unsupported / 5 remains, without executable self-model or self TLC evidence.
+
 ### Full-self continuation: exact deferred dispatch
 
 - Reuse fresh local-interface/immutable-field call proofs at defer registration;

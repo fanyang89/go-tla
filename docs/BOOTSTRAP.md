@@ -8,8 +8,8 @@ Its two-caller harness passes TLC; deleting its actual deferred Unlock produces 
 deadlock, as does a deliberately blocking cancellation environment. No trusted calls
 are used. The complete CLI still returns **unsupported / 5**.
 
-Current totals: **119 semantic TLC cases and 14 TLC CLI cases**, plus the separate
-CLI self-input refusal test. The prerequisite sections below record earlier stages;
+Current totals: **119 semantic TLC cases and 16 TLC CLI cases**, plus separate
+full-CLI and reentrant-logger refusal tests. The prerequisite sections below record earlier stages;
 their counts and unresolved-component statements describe those historical stages.
 
 ## Original full-CLI observation
@@ -59,7 +59,7 @@ go test ./cmd/gotla -run '^TestCheckSelfAnalysisBoundary$' -count=1
 
 No JAR is needed for this refusal test. The existing strict CI gate includes it.
 A passing Go test means the refusal boundary is intact, **not** that gotla verified
-itself. It is separate from the 119 positive/negative semantic TLC cases and 14
+itself. It is separate from the 119 positive/negative semantic TLC cases and 16
 TLC CLI cases. Future support improvements must deliberately revise this expectation
 with real checker evidence, rather than delete refusals to turn the test green.
 
@@ -204,7 +204,7 @@ contains **3 processes, 1 mutex, 1 waitgroup and 1 channel**. It has **8 abstrac
 data predicates**, reports `conservatively-abstracted`, and inspects both stored call
 targets. It does not mark the writer or cancellation function pure by contract.
 
-`TestCheckProductionBoundedLog` runs three actual CLI/TLC cases:
+The initial `TestCheckProductionBoundedLog` increment added three actual CLI/TLC cases:
 
 | Environment / mutation | Exit / status | Locations / transitions | Generated / distinct states |
 |---|---|---|---|
@@ -258,6 +258,49 @@ under `$HOME/tmp/pi/gotla-bootstrap-production/`, including `good`, `missing-unl
 changes have no claimed hosted pass. The repeated complete-CLI probe still returns
 unsupported / 5, with 240 initializer errors and the same other diagnostic counts;
 it does not run TLC.
+
+## Blocking output and re-entry boundaries
+
+Two further environments exercise the production Writer with a named-channel
+receiver stored in its Output interface. Its actual Write body receives a permit
+before returning. No I/O method is declared pure or assumed to return:
+
+| Environment | Status / exit | Processes / channels | Locations / transitions | Generated / distinct states |
+|---|---|---|---|---|
+| `examples/bootstrap/boundedlog/io` | passed / 0 | 4 / 2 | 45 / 62 | 1780 / 719 |
+| `examples/bootstrap/boundedlog/io/blocked` | deadlock / 3 | 3 / 2 | 38 / 55 | 58 / 38 |
+
+Both use the unchanged production Writer, one mutex, one waitgroup and eight
+abstracted predicates. The passing environment joins two writers and a releaser
+that supplies exactly two permits. The blocked environment omits the releaser;
+output waits while holding the production mutex. Cancellation still uses bounded
+notifications. This checks explicit I/O scheduling, not real filesystem behavior.
+The passing environment also executes natively under the race detector; never run
+the blocked environment natively.
+
+`TestCheckProductionBoundedLog` now covers all five TLC cases. In addition to the
+existing production-effect/dispatch assertions, it checks both output receivers'
+source-located receive transitions (delivery and closed-channel alternatives).
+An initial focused run caught two test-expectation mistakes: there are four receive
+transitions, not two; and the re-entry refusal below is located at the production
+identity use rather than the harness capture. Expectations now match the explicit
+IR/proof diagnostics; the full gate/race reruns passed. The failed first log is kept.
+
+`examples/bootstrap/boundedlog/reentrant` captures the writer pointer in its own
+cancellation callback and calls Write again while the outer lock is held. The
+current initialization/alias proof cannot establish that capture. The separate
+`TestCheckReentrantLoggerBoundary` requires **unsupported / 5**, the capture-order
+and source-located production identity diagnostics, no trust or TLC invocation, and
+no stale executable artifacts. A nonexistent JAR confirms that this is an analysis
+refusal, **not a checked deadlock or pass**. Never execute this environment natively.
+
+The full checksum-pinned gate and race suite passed locally with zero skips/failures;
+original snapshots are unchanged. Totals are 119 semantic and 16 TLC CLI cases, plus
+the two refusal regressions. Logs and real CLI artifacts are in
+`$HOME/tmp/pi/gotla-bootstrap-io/` (`released`, `blocked`, `reentry`, `gate.log`,
+`race.log`, `focused-attempt1.log`). These remain local-only results. The complete
+CLI is still unsupported; neither production nor analyzer semantics changed in this
+environment-coverage increment.
 
 ## Incremental acceptance plan (partial; full self-verification remains unsupported)
 

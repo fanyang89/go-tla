@@ -61,10 +61,10 @@ TLC does not prove arithmetic or general shared-memory race freedom.
 The delivered hosted baseline included **95 semantic TLC cases and 11 CLI integration
 cases** (four workflow cases plus seven component cases), with zero skips.
 The later bootstrap constructor, exact-interface and immutable-field increments
-bring the local semantic total to **119**. Production logger bootstrap adds three
-CLI/TLC cases, bringing that total to **14**: the real Writer passes under a finite
-environment, removing its actual Unlock deadlocks, and a blocking cancellation
-environment deadlocks. These models explicitly contain eight abstracted predicates,
+bring the local semantic total to **119**. Production logger bootstrap adds five
+CLI/TLC cases, bringing that total to **16**: the real Writer passes with immediate
+output and with explicitly released blocking output; missing Unlock, blocking
+cancellation and unreleased output deadlock. These models explicitly contain eight abstracted predicates,
 unlike the seven original component variants above. The full CLI self-input test
 still expects unsupported. See [BOOTSTRAP.md](BOOTSTRAP.md) for local-only evidence
 and remaining blockers. Original snapshots/model-size baselines remain unchanged.
@@ -94,7 +94,8 @@ proof. The owner configured the remote, pushed the initial revision, and authori
 subsequent repair pushes. No PR, workflow dispatch or branch-protection change was
 made here.
 
-Latest bootstrap logs: `$HOME/tmp/pi/gotla-bootstrap-production/{gate,race}.log`.
+Latest bootstrap logs: `$HOME/tmp/pi/gotla-bootstrap-io/{gate,race}.log`.
+Initial production extraction logs remain under `gotla-bootstrap-production/`.
 The delivered hosted-baseline refresh logs remain at
 `${TMPDIR:-$HOME/tmp}/pi/gotla-tlc-refresh-{gate,race}.log`. Machine-specific logs/artifacts are not
 committed. Historical evidence and atomic revisions are tracked in [ROADMAP.md](../ROADMAP.md).

@@ -7,14 +7,18 @@ optional in a plain local test run but mandatory in the
 
 ## Production-component bootstrap
 
-Current total: **119 semantic TLC cases and 14 TLC CLI cases**, plus the separate
-unsupported full-CLI regression. Counts in prerequisite sections below record their
+Current total: **119 semantic TLC cases and 16 TLC CLI cases**, plus separate
+unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
 `TestCheckProductionBoundedLog` checks the actual `internal/boundedlog.Writer`
 used by `checker.Run`: two concurrent callers pass under a returning sink/bounded
 notification environment; removing its actual deferred Unlock deadlocks; a zero
-budget with blocking cancellation also deadlocks. All three models contain nonempty
+budget with blocking cancellation also deadlocks. A gated output receiver passes
+when a third worker releases both writes, and deadlocks without that releaser.
+`TestCheckReentrantLoggerBoundary` instead requires an unsupported result and no
+checker execution for a self-captured writer; it is not a TLC deadlock proof.
+All five models contain nonempty
 production synchronization and explicit data abstractions. The test requires real
 TLC evidence, source-located production effects/dispatches, no trust flags and a
 mutation isolated from the working tree. Native policy/concurrency tests and race

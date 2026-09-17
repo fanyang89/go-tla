@@ -80,16 +80,20 @@ func TestCheckProductionBoundedLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
-		name string
-		want checker.Status
-	}{{"production", checker.Passed}, {"missing-unlock", checker.Deadlock}, {"blocking-cancel", checker.Deadlock}} {
+		name, suffix        string
+		want                checker.Status
+		processes, channels int
+	}{
+		{"production", "", checker.Passed, 3, 1},
+		{"missing-unlock", "", checker.Deadlock, 3, 1},
+		{"blocking-cancel", "/blocked", checker.Deadlock, 3, 1},
+		{"released-output", "/io", checker.Passed, 4, 2},
+		{"blocked-output", "/io/blocked", checker.Deadlock, 3, 2},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := root
 			mutated := tc.name == "missing-unlock"
-			pattern := "./examples/bootstrap/boundedlog"
-			if tc.name == "blocking-cancel" {
-				pattern += "/blocked"
-			}
+			pattern := "./examples/bootstrap/boundedlog" + tc.suffix
 			if mutated {
 				dir = t.TempDir()
 				for _, name := range []string{"go.mod", "go.sum", harnessPath, sourcePath} {
@@ -130,11 +134,18 @@ func TestCheckProductionBoundedLog(t *testing.T) {
 				t.Fatal(err)
 			}
 			stats := m.Statistics()
-			if stats.Processes != 3 || stats.Mutexes != 1 || stats.WaitGroups != 1 || stats.Channels != 1 || stats.AbstractedPredicates == 0 {
+			if stats.Processes != tc.processes || stats.Mutexes != 1 || stats.WaitGroups != 1 || stats.Channels != tc.channels || stats.AbstractedPredicates != 8 {
 				t.Fatalf("empty/wrong model or hidden data abstraction: %+v", stats)
 			}
-			locks, unlocks := 0, 0
+			locks, unlocks, outputReceives := 0, 0, 0
 			for _, tr := range m.Transitions {
+				if tc.channels == 2 && tr.SourcePosition.File == "examples/bootstrap/boundedlog"+tc.suffix+"/main.go" {
+					for _, effect := range tr.Effects {
+						if effect.Kind == behavior.Receive {
+							outputReceives++
+						}
+					}
+				}
 				if tr.SourcePosition.File != sourcePath {
 					continue
 				}
@@ -149,6 +160,10 @@ func TestCheckProductionBoundedLog(t *testing.T) {
 			}
 			if locks != 2 || !mutated && unlocks == 0 || mutated && unlocks != 0 {
 				t.Fatalf("missing production lock effects: locks=%d unlocks=%d", locks, unlocks)
+			}
+			// Each receiver has delivery and closed-channel transitions.
+			if tc.channels == 2 && outputReceives != 4 {
+				t.Fatalf("missing blocking output operations: %d", outputReceives)
 			}
 			fieldCalls := 0
 			for _, d := range r.Diagnostics {

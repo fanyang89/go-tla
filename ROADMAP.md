@@ -504,3 +504,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   [BOOTSTRAP.md](docs/BOOTSTRAP.md) records exact assumptions, measurements and logs.
 - Further bootstrap work requires independent parser-callback or lifecycle contracts;
   do not replace unresolved effects with trusted no-ops to claim whole-program success.
+
+### B1 follow-up: blocking environments and refusal regression
+
+- Added explicit gated output to the unchanged production Writer: two callers pass
+  with a joined releaser and deadlock without one. Source-located receive effects
+  ensure output blocking is modeled rather than treated as pure.
+- A self-captured, reentrant cancellation environment is explicitly refused with no
+  executable/stale artifacts or TLC invocation. It is not advertised as a checked
+  counterexample; the initialization/alias proof remains conservative.
+- Full local gate/race suites pass: 119 semantic and 16 TLC CLI cases, plus full-CLI
+  and re-entry refusal regressions. Original snapshots and production/analyzer
+  semantics are unchanged. Evidence is in [BOOTSTRAP.md](docs/BOOTSTRAP.md).
+  No new hosted pass or whole-program self-verification is claimed.

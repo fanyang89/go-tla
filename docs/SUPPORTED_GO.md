@@ -75,6 +75,27 @@ func main() {
 See the runnable [unbuffered example](../examples/unbuffered/main.go). Local
 computation between behavioral boundaries need not become separate model steps.
 
+### Proved channel return values
+
+A source-defined call with one channel result may transfer one static channel
+identity from its analyzed invocation to its caller. Factories, parameter forwarding,
+per-invocation allocations, nil channels and named/directional channel views qualify
+when every normal return resolves to the same identity. Function bodies and normal
+cleanup still execute; blocked cleanup prevents the caller from using the result.
+Return operands and local result-slot stores are retained behavioral dependencies.
+
+A local result slot requires a current private single-store proof, retained data and
+dominance, using a 4096 instruction/operand inventory rather than cached referrers.
+Only the source compiler's predecessor-free, load-and-return recovery block is
+excluded from normal-return identity checks. Explicit panic/recover is still refused;
+implicit sequential panics remain outside the declared communication domain.
+
+Different possible identities, mutable captured named results, tuple results and
+returned objects/closures are not admitted by this rule. This does not supply a
+context lifecycle, general heap alias analysis or a proof of eventual return. Actual
+emptyCtx/withoutCancelCtx Done methods have independent nil-identity proofs, but the
+whole-self attempt does not yet consume a channel-return proof.
+
 ### Static synchronization fields
 
 ```go

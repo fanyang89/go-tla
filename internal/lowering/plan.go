@@ -24,6 +24,22 @@ func (b *builder) plan(f *ssa.Function) *functionPlan {
 	p := &functionPlan{Discovery: discovery.Scan(f), Calls: map[ssa.CallInstruction]effects.Summary{}, Entries: map[*ssa.Go]effects.Summary{}, Cyclic: cslice.HasCycle(f)}
 	for _, bb := range f.Blocks {
 		for _, i := range bb.Instrs {
+			if ret, ok := i.(*ssa.Return); ok && channelResult(f) {
+				p.Discovery.Roots[i] = true
+				if len(ret.Results) == 1 {
+					if load, ok := ret.Results[0].(*ssa.UnOp); ok {
+						if _, ok := load.X.(*ssa.Alloc); ok {
+							for _, block := range f.Blocks {
+								for _, ins := range block.Instrs {
+									if store, ok := ins.(*ssa.Store); ok && store.Addr == load.X {
+										p.Discovery.Roots[store] = true
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 			if call, ok := i.(ssa.CallInstruction); ok {
 				summary := b.effects.Call(call)
 				p.Calls[call] = summary

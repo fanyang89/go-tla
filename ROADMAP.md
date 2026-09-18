@@ -756,6 +756,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: channel return identities
+
+- Carry a single proved channel result through actual source calls and normal cleanup;
+  retain return operands/stores and recheck private result slots with bounded inventories.
+- Nine paired native/TLC cases and mutation/refusal coverage; independent actual context
+  nil-Done identities checked. Strict gate/full race pass, 269 + 20 TLC cases, unchanged
+  snapshots. No whole-self channel-return proof is consumed yet.
+- Returned context objects/cancellation closures and full finite environment semantics
+  remain open; the real CLI self-check still returns unsupported / 5.
+
 ### Full-self continuation: initializer purity freshness
 
 - Reproduced stale direct/transitive constructor summaries accepting a changed global

@@ -79,7 +79,7 @@ Builtin output now refuses instead of being silently elided. Two more semantic T
 cases admit a shadowed source-function name and a literal-proved zero-output execution.
 Executed output, builtin trust overrides and stale cached summaries are refusal tests.
 
-Current total: **260 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Current total: **269 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -279,6 +279,18 @@ bypass. `TestDirectInterfaceGraphAndReceiverAgreement`,
 `TestUnknownInterfaceParameterHasNoGraphTarget` and
 `TestInterfaceProofConsumesGraphAndSlice` verify exact target/receiver agreement
 and fail-closed pass consumption. Self-analysis of the full CLI remains unsupported.
+
+## Channel return identity proofs
+
+Nine paired native/TLC cases cover channel factories/forwarding, separate invocation
+identities, nil and directional channels, goroutine forwarding, common-identity
+branches, deferred close errors and blocked cleanup. Mutation tests remove return
+operands/roots/store roots, replace store values, duplicate stores, add recovery-block
+effects and exhaust the inventory; stale referrer lists do not replace current uses.
+Different identities, tuple/object returns, captured result mutation, output,
+recursion and explicit recovery remain refusals. Actual context emptyCtx and
+withoutCancelCtx Done nil identities are checked against native behavior; these are
+not yet consumed by the whole-self attempt, which still returns unsupported / 5.
 
 ## Private reference constructor extension
 

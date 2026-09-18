@@ -70,7 +70,8 @@ cases plus ten exact deferred-dispatch and eight channel-receiver-box cases brin
 the local semantic total to **232**. Eleven Once native/TLC comparisons and two
 backend-independent shared-state TLC cases bring that total to **245**. Nine paired
 native/TLC bound-method cases bring the total to **254**; six private-reference
-constructor TLC cases bring the current total to **260**.
+constructor TLC cases bring that total to **260**. Nine native/TLC channel-return
+cases bring the current total to **269**.
 The latter also run natively; proof corruption and still-unproved dispatch refuse.
 Returned context cancellation remains unsupported in the real self-input. Actual project lexical regexes are
 replaced by equivalent ASCII scanning, with differential/fuzz oracles and unchanged

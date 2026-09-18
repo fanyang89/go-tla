@@ -144,6 +144,10 @@ func (b *builder) process(f *ssa.Function, bindings map[ssa.Value]string, id str
 	b.nodes[entry].edges = []edge{{to: start, guard: behavior.Guard{Kind: behavior.True}}}
 }
 func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, process, end string) string {
+	return b.functionReturning(f, bindings, process, end, nil)
+}
+
+func (b *builder) functionReturning(f *ssa.Function, bindings map[ssa.Value]string, process, end string, result *string) string {
 	if b.effects.ProveFiniteData(f) {
 		b.recordFiniteData(f)
 		return end
@@ -332,7 +336,13 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 						if discovery.SyncTypeReceiver(callee) != "" {
 							b.diag("error", "sync-method", "unsupported synchronization method "+callee.String(), x.Pos())
 						} else {
-							e.to = b.function(callee, bind, process, next)
+							if channelResult(callee) {
+								id := "invalid"
+								e.to = b.functionReturning(callee, bind, process, next, &id)
+								fr.ids[x] = id
+							} else {
+								e.to = b.function(callee, bind, process, next)
+							}
 						}
 					}
 				}
@@ -367,6 +377,9 @@ func (b *builder) function(f *ssa.Function, bindings map[ssa.Value]string, proce
 			}
 			b.nodes[src].edges = append(b.nodes[src].edges, e)
 		}
+	}
+	if result != nil {
+		*result = b.returnedChannel(fr)
 	}
 	return fr.nodes[f.Blocks[0].Instrs[0]]
 }

@@ -848,3 +848,29 @@ skips/failures; totals remain 260 semantic + 20 CLI TLC cases and snapshots unch
 This closes a proof-freshness hole, not an additional self-program semantic frontier.
 Actual self-check remains unsupported / 5, without executable artifacts or a self TLC
 command. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-purity/`.
+
+## One channel identity across normal returns
+
+Source calls with one channel result can now transfer an invocation-specific identity
+from the analyzed callee to the caller. All normal returns must agree; the body and
+normal deferred cleanup execute before caller continuation. Return values and result
+slot stores are retained slice roots/dependencies. A fresh 4096-step instruction/operand
+inventory requires private, single-assignment result slots and dominating stores; it
+does not rely on cached referrers. Only a checked predecessor-free recovery-only block
+of loads and return is excluded from normal identity checks, consistently with existing
+panic/recovery refusals and the declared implicit-panic boundary.
+
+Nine native/TLC pairs cover factories, forwarding, separate invocations, nil channels,
+directional views, common-return branches, goroutines, deferred double-close and
+blocked cleanup. Mutations cover retained operands/roots/stores, store substitution,
+duplicate stores, recovery effects and budget exhaustion. Different identities,
+mutable captured result slots, tuple/object returns, recursion, output and explicit
+recovery refuse. Actual context emptyCtx/withoutCancelCtx Done identities are checked
+independently against native nil-channel results. They are not context lifecycle proofs.
+
+Initial focused failures exposed the synthetic recovery result loads; evidence is
+retained. Strict gate and full race pass with zero skips/failures; totals are 269 semantic
++ 20 CLI TLC cases and snapshots are unchanged. The real self attempt still consumes
+no channel-return proof; frontier counts remain 94 initializer, 68 loop and 14 defer
+refusals, among other unsupported effects/identities. It emits no executable self-model
+or self TLC command. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-channel-returns/`.

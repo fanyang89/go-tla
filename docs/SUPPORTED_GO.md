@@ -736,8 +736,13 @@ constant, including named int types; the test must be strict `<`, each back edge
 advance exactly one, and bounds remain nonnegative/stable and nonwrapping. Integer
 range pre-increment rules and all other loop restrictions remain unchanged.
 
-Every operand/result type must exclude synchronization, channels, interfaces,
-callbacks and unsafe pointers. Unknown calls, explicit panic/recovery, output,
+Every operand/result type must exclude synchronization, channels, general interfaces,
+callbacks and unsafe pointers. A narrow exception composes the existing source-checked
+scalar Sprintf/Sprint/Sprintln model: only its proved private argument array/view/index
+and basic-scalar interface boxes are exempt from the interface restriction. Argument
+computations are still analyzed, not skipped. The detailed initializer proof carries
+all operation assumptions to the model; the legacy boolean proof refuses computations
+requiring such assumptions rather than silently dropping them. Unknown calls, explicit panic/recovery, output,
 nonprogress, recursion and unsupported iteration still refuse. The fresh transitive
 proof shares the existing 4096-step and bounded type-graph limits. The initializer
 consumer records `initializer-data` and an explicit startup/data-abstraction assumption.

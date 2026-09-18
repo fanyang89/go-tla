@@ -31,6 +31,7 @@ type finiteDataProof struct {
 	remaining        int
 	visiting, proved map[*ssa.Function]bool
 	initializing     bool
+	scalarFormatting bool
 }
 
 func (p *finiteDataProof) function(f *ssa.Function) bool {
@@ -64,6 +65,28 @@ func (p *finiteDataProof) function(f *ssa.Function) bool {
 			return false
 		}
 	}
+	formats := map[*ssa.Call]bool{}
+	formatOperands := map[ssa.Value]bool{}
+	if p.initializing {
+		analyzer := New(p.program, nil)
+		for _, bb := range f.Blocks {
+			for _, i := range bb.Instrs {
+				p.remaining--
+				if p.remaining < 0 {
+					return false
+				}
+				if call, ok := i.(*ssa.Call); ok {
+					if proof := analyzer.ProveScalarFormat(call); proof != nil {
+						formats[call] = true
+						p.scalarFormatting = true
+						for _, v := range proof.Operands {
+							formatOperands[v] = true
+						}
+					}
+				}
+			}
+		}
+	}
 	private := map[*ssa.Alloc]bool{}
 	for _, bb := range f.Blocks {
 		for _, i := range bb.Instrs {
@@ -84,7 +107,14 @@ func (p *finiteDataProof) function(f *ssa.Function) bool {
 				if !p.initializing {
 					return false
 				}
+			case *ssa.MakeInterface:
+				if !formatOperands[x] {
+					return false
+				}
 			case *ssa.Call:
+				if formats[x] {
+					break
+				}
 				if _, builtin := x.Common().Value.(*ssa.Builtin); builtin {
 					if !readOnlyBuiltin(x.Common()) {
 						return false
@@ -108,7 +138,7 @@ func (p *finiteDataProof) function(f *ssa.Function) bool {
 			default:
 				return false
 			}
-			if v, ok := i.(ssa.Value); ok && !finiteDataType(v.Type(), 0) {
+			if v, ok := i.(ssa.Value); ok && !formatOperands[v] && !finiteDataType(v.Type(), 0) {
 				return false
 			}
 			for _, operand := range i.Operands(nil) {
@@ -119,7 +149,7 @@ func (p *finiteDataProof) function(f *ssa.Function) bool {
 				case *ssa.Function, *ssa.Builtin:
 					continue
 				}
-				if !finiteDataType((*operand).Type(), 0) {
+				if !formatOperands[*operand] && !finiteDataType((*operand).Type(), 0) {
 					return false
 				}
 			}

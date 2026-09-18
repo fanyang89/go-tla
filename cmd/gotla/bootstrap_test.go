@@ -119,7 +119,7 @@ func TestCheckSelfAnalysisBoundary(t *testing.T) {
 	if !statisticsProof {
 		t.Fatal("actual Statistics value-copy proof missing")
 	}
-	for file, target := range map[string]string{"go/token/token.go": "go/token.init#1", "regexp/regexp.go": "regexp.init#1"} {
+	for file, target := range map[string]string{"go/token/token.go": "go/token.init#1", "regexp/regexp.go": "regexp.init#1", "golang.org/x/tools/internal/stdlib/stdlib.go": "golang.org/x/tools/internal/stdlib.init#1"} {
 		found := false
 		for _, d := range r.Diagnostics {
 			if d.Code == "initializer-data" && d.File == file && d.Line > 0 && strings.Contains(d.Message, target) {

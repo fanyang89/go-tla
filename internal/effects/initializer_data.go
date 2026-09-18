@@ -13,11 +13,30 @@ import (
 // All transitive operations/types must exclude communication, callbacks, unsafe
 // pointers and interfaces. Runtime shared writes must never consume this proof.
 func (a *Analyzer) ProveInitializerData(f *ssa.Function) bool {
+	proof := a.ProveInitializerDataEffects(f)
+	// The boolean API cannot convey operation assumptions; never drop them.
+	return proof != nil && len(proof.ModeledOperations) == 0
+}
+
+type InitializerDataProof struct{ ModeledOperations []string }
+
+// ProveInitializerDataEffects additionally carries every assumed operation model
+// needed by the transitive proof. Consumers must retain these assumptions. Only
+// source-checked scalar formatting's private argument boxes gain an interface
+// exception; argument evaluation and all other instructions remain checked.
+func (a *Analyzer) ProveInitializerDataEffects(f *ssa.Function) *InitializerDataProof {
 	if f == nil || !cslice.HasCycle(f) {
-		return false
+		return nil
 	}
 	p := finiteDataProof{program: a.program, remaining: maxFiniteDataProofSteps, visiting: map[*ssa.Function]bool{}, proved: map[*ssa.Function]bool{}, initializing: true}
-	return p.function(f)
+	if !p.function(f) {
+		return nil
+	}
+	proof := &InitializerDataProof{}
+	if p.scalarFormatting {
+		proof.ModeledOperations = append(proof.ModeledOperations, ScalarFormatModel)
+	}
+	return proof
 }
 
 func portableIntType(t types.Type) bool {

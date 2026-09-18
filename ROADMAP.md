@@ -756,6 +756,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: composed startup formatting
+
+- Compose current scalar-format/private-argument proofs with finite startup data
+  proofs, preserving argument effects and every operation assumption. Boolean-only
+  proof callers cannot silently lose assumptions.
+- Consume the actual x/tools stdlib version-table initializer; initializer refusals
+  82 to 81. Native tables, graph mutations, effect/callback refusals and independent
+  import-initialization failures are tested. Strict gate/full race pass; unchanged
+  279 + 20 TLC cases and snapshots. No executable self-model/TLC self check yet.
+
 ### Full-self continuation: finite startup data writes
 
 - Add a distinct startup-only finite proof for data stores and map operations; never

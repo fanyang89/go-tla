@@ -931,3 +931,26 @@ input/environment bounds, memory/time limits and general runtime mutation semant
 are not established. The real CLI still returns unsupported / 5, with no executable
 self-model or self TLC command. Evidence:
 `$HOME/tmp/pi/gotla-self-bootstrap-initializer-data/`.
+
+## Composed scalar formatting in startup data proofs
+
+The detailed startup proof now carries operation assumptions. It can compose fresh
+scalar-format proofs for fmt.Sprintf/Sprint/Sprintln, admitting only their checked
+private argument array/view/index and scalar interface boxes. Other instructions,
+including argument computations, still undergo transitive effect/type/graph checks.
+No runtime purity is granted. The boolean proof API refuses assumptions it cannot
+return. The initializer consumer retains each operation assumption and diagnostic.
+
+The actual x/tools/internal/stdlib.init#1 version-table loop is now consumed, reducing
+initializer refusals 82 to 81; other diagnostic counts are unchanged. Tests cover all
+three variants, empty arguments, transitive helpers, native table strings, unknown/
+shared arguments, named callbacks, argument output, direct I/O, stale format graphs,
+assumption retention and independent unsupported imported initialization. The real
+CLI regression requires the actual consumed initializer proof. Initial fixture parse
+failures were corrected and retained. Strict gate/full race pass without failures or
+skips, with unchanged 279 semantic + 20 CLI TLC cases and snapshots; no new standalone
+TLC case is claimed for the still-unsupported fmt import.
+
+Self-check remains unsupported / 5 and diagnostic-only: this proves neither finite
+input/environment semantics nor executable self-model/TLC completion. Evidence:
+`$HOME/tmp/pi/gotla-self-bootstrap-initializer-format/`.

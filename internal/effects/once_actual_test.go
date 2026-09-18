@@ -14,7 +14,7 @@ func TestActualGodebugOnceContract(t *testing.T) {
 	p := frontend.BuildSSA(loaded)
 	frontend.BuildCallGraph(p)
 	a := New(p, nil)
-	count, refused := 0, 0
+	count := 0
 	for f := range p.Calls.Nodes {
 		if f == nil || f.Pkg == nil || f.Pkg.Pkg.Path() != "internal/godebug" || (f.Name() != "Value" && f.Name() != "IncNonDefault") {
 			continue
@@ -22,13 +22,6 @@ func TestActualGodebugOnceContract(t *testing.T) {
 		for _, bb := range f.Blocks {
 			for _, i := range bb.Instrs {
 				if c, ok := i.(*ssa.Call); ok && IsOnceDo(c) {
-					if f.Name() == "IncNonDefault" {
-						if a.ProveOnceCall(c) != nil {
-							t.Fatal("bound wrapper unexpectedly admitted")
-						}
-						refused++
-						continue
-					}
 					if a.ProveOnceCall(c) == nil {
 						t.Fatalf("actual Once operation contract missing: %s", f)
 					}
@@ -37,7 +30,7 @@ func TestActualGodebugOnceContract(t *testing.T) {
 			}
 		}
 	}
-	if count != 1 || refused != 1 {
+	if count != 2 {
 		t.Fatal("actual dependency operation missing")
 	}
 	// This proves eligibility of the API/callback binding, not the callback's

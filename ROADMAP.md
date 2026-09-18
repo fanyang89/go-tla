@@ -756,6 +756,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: proved bound method values
+
+- Consume typed forwarding-wrapper, receiver/capture, current graph and source
+  proofs for Once callbacks and direct deferred method values; execute real bodies.
+- Nine paired native/TLC cases plus mutation/refusal coverage. Strict gate/full race
+  pass, 254 + 20 TLC totals, unchanged snapshots. Two real godebug operation contracts
+  are eligible, but the full-self attempt still reaches neither.
+- Returned context cancellation and full finite environment semantics remain unproved;
+  real self-check remains unsupported / 5 without executable self artifacts.
+
 ### Full-self continuation: source-bound Once.Do
 
 - Model checked standard Once.Do with analyzed source callbacks, mutex-protected

@@ -779,3 +779,29 @@ callback-graph failures are preserved where logged, not presented as successful 
 Actual self-check still returns unsupported / 5 (101 initializer, 68 loop, 14 defer
 refusals), with no executable self TLA+ or self TLC invocation.
 Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-once/`.
+
+## Bound-method callback and cleanup forwarding
+
+Once callbacks and direct defers can now consume a narrow generated-method wrapper
+proof: one typed receiver capture, a single graph-checked source method call forwarding
+all arguments unchanged, and void return. Current method identity/set, declaration,
+wrapper CFG, signatures, capture types/arity and creation-before-use are required.
+Resource captures also require retained slice operands; a missing capture cannot be
+recovered merely from an existing resource ID. The creation inventory is bounded to
+4096 instructions. Actual wrapper/target bodies still execute; the proof supplies no
+purity, new resource identity or returned-function exemption.
+
+Nine paired native/TLC cases cover Once on bound channel/object/mutex methods,
+blocking, invalid unlock, deferred arguments and receiver snapshots. Mutations and
+refusals cover graph/receiver/argument/body/signature corruption, missing capture data,
+late creation, budget exhaustion, interface/generic/result-bearing wrappers, copies
+and output. The former bound-Unlock refusal became an analyzed synchronization-error
+case; the initial stale-expectation gate failure is preserved. The actual godebug
+Value and IncNonDefault sites now both have eligible operation contracts, not proofs
+of their transitive effects or whole-self consumption.
+
+Strict gate/full race pass with unchanged snapshots; totals are 254 semantic + 20
+CLI TLC cases. Real N=2 self-analysis still consumes no Once call and remains
+unsupported / 5 with 101 initializer, 68 loop and 14 defer refusals. There is still
+no executable self-model, self TLC run, or complete finite environment/lifecycle proof.
+Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-bound-methods/`.

@@ -79,7 +79,7 @@ Builtin output now refuses instead of being silently elided. Two more semantic T
 cases admit a shadowed source-function name and a literal-proved zero-output execution.
 Executed output, builtin trust overrides and stale cached summaries are refusal tests.
 
-Current total: **245 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Current total: **254 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -182,6 +182,20 @@ Graph/slice and budget tests enforce consumed proof contracts.
 `TestActualModelHasErrorsFiniteData` loads the actual production source. The full CLI
 probe consumes this proof and toolinfo.fromBuildInfo's proof but remains unsupported.
 
+## Bound method forwarding proofs
+
+Nine native/TLC comparisons cover Once callback method values on channels, objects
+and mutexes; blocked and invalid operations; deferred method values; arguments; and
+receiver snapshots across reassignment. Frontend/lowering mutations reject stale
+wrapper graphs, receiver/argument forwarding, body/signature, capture arity/slice,
+creation ordering and exhausted inventories. Interface/generic/result-bearing wrappers,
+resource copying and output remain refusals. The old bound-Unlock refusal is now an
+analyzed native/TLC synchronization-error case, not a silent success.
+
+Both actual godebug.Value and IncNonDefault Once sites have eligible API/callback
+contracts; whole-self analysis still does not reach/consume them. No returned context
+cancellation model or whole-self executable proof is established.
+
 ## Source-bound Once and finite shared state
 
 Eleven native/TLC cases cover first/repeated/competing Do calls, global and field
@@ -195,7 +209,8 @@ Mutations reject standard graph/body/branch/store/source changes, nil callbacks,
 closure reordering and missing retained receiver/capture operands. Reset/copy, output,
 unknown callbacks, panic and initializer calls cannot bypass the model using trust.
 The actual internal/godebug.Setting.Value call has an eligible operation contract;
-IncNonDefault's bound-method wrapper still refuses. Neither is a full-self proof.
+IncNonDefault is additionally covered by the later bound-method proof above.
+Neither is a full-self proof.
 
 ## Channel-object receiver boxes
 

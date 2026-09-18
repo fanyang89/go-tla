@@ -257,15 +257,15 @@ no Go loop syntax, source overlays or runtime loop counter enters it.
 A checked standard Once.Do/doSlow control-flow shape identifies the atomic flag,
 mutex lock, deferred completion store and unlock, and callback invocation. Standard
 atomic/mutex/runtime correctness is an explicit operation-model assumption, not an
-implementation proof. Only named source callbacks or source closures with current
-creation/capture proofs are admitted; their actual bodies are lowered.
+implementation proof. Named source callbacks, source closures and exact bound-method forwarders require
+current creation/capture proofs; their actual bodies are lowered.
 
 Each zero Once identity owns a generic mutex and shared {0,1} completed variable.
 The initial read commits before acquiring the possibly blocking mutex. Slow callers
 recheck after acquisition; the winner executes its callback and normal defers, stores
 completed, then releases the mutex in a separate transition. Fast callers can observe
 completion before unlock. No Go-specific Once effect is added to IR. Unknown callbacks,
-reset/copy, panic/Goexit and synthetic wrappers do not gain exemptions.
+reset/copy, panic/Goexit and unproved synthetic wrappers do not gain exemptions.
 
 The call graph includes direct body edges of referenced function values without
 inventing an edge for a dynamic parameter invocation. Callback operation models still
@@ -279,7 +279,10 @@ call summaries validate exact targets. `lowering/defers.go` captures resource
 identities at registration sites and gives each invocation fresh finite local flags.
 Source helpers reuse the ordinary callee binder: direct calls, local boxed interfaces
 and immutable callable fields require current graph/receiver/initializer/slice proofs.
-Returned closures and arbitrary dynamic dispatch have no new exemption.
+Returned closures and arbitrary dynamic dispatch have no new exemption. A generated
+bound-method wrapper must have one typed receiver capture, one graph-checked source
+method call forwarding every argument unchanged, and a void return. Its current
+creation/dominance and resource capture slice are consumed before execution.
 
 Registration/drain sites remain outside cyclic SCCs and can run at most once.
 Their reverse-postorder extends executable registration order; reversing the
@@ -292,7 +295,7 @@ blocking operations before cleanup retain their original SSA order.
 
 This emits only generic assignments, guards and existing synchronization effects;
 there is no Go-specific defer stack in behavioral IR or TLA runtime. More than 64
-sites per invocation, unproved targets or synthetic wrappers, alternate SSA defer
+sites per invocation, unproved targets or wrappers, alternate SSA defer
 stacks and initializer defers are rejected. Explicit panic/recover remain unsupported and
 implicit sequential panics remain excluded: normal-return cleanup is not unwinding.
 

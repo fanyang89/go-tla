@@ -237,7 +237,14 @@ func (a *Analyzer) ProveOnceCall(site *ssa.Call) *OnceProof {
 		return nil
 	}
 	cb := proof.Callback
-	if cb == nil || cb.Prog != a.program.SSA || cb.Syntax() == nil || cb.Synthetic != "" || len(cb.Blocks) == 0 || !emptyCallbackType(cb.Signature) || len(cb.FreeVars) != len(proof.Captures) || len(cb.TypeArgs()) != 0 {
+	if cb == nil || cb.Prog != a.program.SSA || len(cb.Blocks) == 0 || !emptyCallbackType(cb.Signature) || len(cb.FreeVars) != len(proof.Captures) || len(cb.TypeArgs()) != 0 {
+		return nil
+	}
+	if cb.Synthetic != "" {
+		if a.program.BoundMethodClosure(args[1], site) == nil {
+			return nil
+		}
+	} else if cb.Syntax() == nil {
 		return nil
 	}
 	for i, v := range cb.FreeVars {

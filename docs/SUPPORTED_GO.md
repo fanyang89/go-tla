@@ -157,11 +157,11 @@ analysis; a box cannot authorize channel replacement or erase blocking behavior.
 ### Source-bound sync.Once.Do
 
 Direct calls on a static, zero-initialized local/global/inline-field `sync.Once` are
-supported with named source functions or literal source closures of signature
-`func()`. The current standard Do/doSlow body shape, signatures, source identity,
+supported with named source functions, literal source closures, or the proved bound
+method values described below, of signature `func()`. The current standard Do/doSlow body shape, signatures, source identity,
 graph and callback captures must match. Closure creation must precede its use;
 that inventory is bounded to 4096 instructions. Nil/unknown callbacks, returned
-function values, synthetic/bound wrappers, direct spawned/deferred Do, copied/reset
+function values, unproved synthetic wrappers, direct spawned/deferred Do, copied/reset
 Once values and initialization-time calls remain unsupported. Trust cannot erase Do.
 
 The explicit operation model assumes standard atomic/mutex/runtime correctness and
@@ -173,6 +173,23 @@ can occur after a completed fast caller returns. Recursive use of the same Once
 inside its callback deadlocks. Different Do call sites may supply different callbacks,
 but only the first runs. Ordinary data/panic exclusions still apply; no OnceValue,
 OnceFunc, exception-safety or general context cancellation model is implied.
+
+### Proved bound method values
+
+Once callbacks and direct deferred method values may use a generated forwarding
+wrapper with one captured receiver, one exact graph-checked method call, and a void
+return. The wrapper must forward all parameters unchanged, without receiver/type
+adaptation. Method object identity, receiver type/method set, source declaration,
+current wrapper CFG, graph and creation-before-use are checked. The current capture
+inventory has a 4096-instruction budget; capture types/arity and retained resource
+operands are consumed rather than inferred from the wrapper name.
+
+The wrapper and actual target body execute normally; receiver identity is captured
+when the method value is created, not after source-variable reassignment. This can
+include existing modeled synchronization methods, retaining their blocking/errors.
+Interface-invoking, generic-receiver, variadic, result-bearing or unproved wrappers
+remain unsupported by this rule, as do unknown identities and returned callbacks.
+It does not extend immutable-field callback proofs or model context cancellation.
 
 ### Restricted deferred cleanup
 
@@ -212,7 +229,7 @@ truncated cleanup or an assumed stack bound. Primitive cleanup retains the defer
 site's source position; helper effects retain their actual body locations. Graph
 and retained-operand proofs are required even for a side-effect-free helper.
 Unproved dynamic/interface/field defer targets (including returned cancellation
-closures), synthetic/bound method wrappers, direct deferred Lock/Wait/Add/close,
+closures), unproved synthetic wrappers, direct deferred Lock/Wait/Add/close,
 foreign defer stacks, initializer defers, panic/recover and unproved
 loop forms remain unsupported. A trusted-call contract does not extend this whitelist
 or allow skipping a deferred helper's body. Implicit

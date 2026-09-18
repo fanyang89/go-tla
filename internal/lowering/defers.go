@@ -58,7 +58,7 @@ func (b *builder) prepareDefers(fr *frame) bool {
 			// The ordinary callee binder rechecks exact direct, boxed-interface
 			// and immutable-field proofs and captures identities at registration.
 			// Cleanup executes the source body, never a trusted-body shortcut.
-			if d.DeferStack != nil || target == nil || target.Synthetic != "" ||
+			if d.DeferStack != nil || target == nil || (target.Synthetic != "" && b.p.BoundMethodClosure(d.Common().Value, d) == nil) ||
 				discovery.SyncTypeReceiver(target) != "" {
 				b.diag("error", "unsupported-defer", "defer requires direct Unlock/Done or an exactly bound source-defined helper on this invocation's stack", d.Pos())
 				return false

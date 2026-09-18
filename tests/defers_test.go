@@ -12,18 +12,17 @@ import (
 
 func TestRestrictedDeferRefusals(t *testing.T) {
 	for name, source := range map[string]string{
-		"lock":         `package main;import "sync";func main(){var mu sync.Mutex;defer mu.Lock()}`,
-		"wait":         `package main;import "sync";func main(){var wg sync.WaitGroup;defer wg.Wait()}`,
-		"add":          `package main;import "sync";func main(){var wg sync.WaitGroup;defer wg.Add(-1)}`,
-		"close":        `package main;func main(){ch:=make(chan int);defer close(ch)}`,
-		"trusted":      `package main;func cleanup();func main(){defer cleanup()}`,
-		"bound-method": `package main;import "sync";func main(){var mu sync.Mutex;f:=mu.Unlock;defer f()}`,
-		"nil":          `package main;import "sync";func main(){var mu *sync.Mutex;defer mu.Unlock()}`,
-		"panic":        `package main;import "sync";func main(){var mu sync.Mutex;defer mu.Unlock();panic("bad")}`,
-		"recover":      `package main;import "sync";func main(){var mu sync.Mutex;defer mu.Unlock();recover()}`,
-		"loop":         `package main;import "sync";func main(){var mu sync.Mutex;for i:=0;i<2;i++{defer mu.Unlock()}}`,
-		"initializer":  `package main;import "sync";func init(){var mu sync.Mutex;defer mu.Unlock()};func main(){}`,
-		"site-limit":   `package main;import "sync";func main(){var mu sync.Mutex;` + strings.Repeat("defer mu.Unlock();", 65) + `}`,
+		"lock":        `package main;import "sync";func main(){var mu sync.Mutex;defer mu.Lock()}`,
+		"wait":        `package main;import "sync";func main(){var wg sync.WaitGroup;defer wg.Wait()}`,
+		"add":         `package main;import "sync";func main(){var wg sync.WaitGroup;defer wg.Add(-1)}`,
+		"close":       `package main;func main(){ch:=make(chan int);defer close(ch)}`,
+		"trusted":     `package main;func cleanup();func main(){defer cleanup()}`,
+		"nil":         `package main;import "sync";func main(){var mu *sync.Mutex;defer mu.Unlock()}`,
+		"panic":       `package main;import "sync";func main(){var mu sync.Mutex;defer mu.Unlock();panic("bad")}`,
+		"recover":     `package main;import "sync";func main(){var mu sync.Mutex;defer mu.Unlock();recover()}`,
+		"loop":        `package main;import "sync";func main(){var mu sync.Mutex;for i:=0;i<2;i++{defer mu.Unlock()}}`,
+		"initializer": `package main;import "sync";func init(){var mu sync.Mutex;defer mu.Unlock()};func main(){}`,
+		"site-limit":  `package main;import "sync";func main(){var mu sync.Mutex;` + strings.Repeat("defer mu.Unlock();", 65) + `}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			m := fromSource(t, source, "fixture.cleanup")

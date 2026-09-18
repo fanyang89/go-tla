@@ -134,8 +134,19 @@ func (b *builder) callee(fr *frame, site ssa.CallInstruction, f *ssa.Function, p
 		}
 	}
 	if mc, ok := c.Value.(*ssa.MakeClosure); ok {
+		if len(mc.Bindings) != len(f.FreeVars) {
+			b.diag("error", "call-contract", "closure capture arity disagrees with its target", pos)
+			return nil, nil
+		}
 		for j, v := range f.FreeVars {
+			if !types.Identical(v.Type(), mc.Bindings[j].Type()) {
+				b.diag("error", "call-contract", "closure capture type disagrees with its target", pos)
+				return nil, nil
+			}
 			if relevantType(v.Type()) || capturedChannel(v.Type()) || capturedSyncObject(v.Type()) {
+				if !b.requireData(fr, mc.Bindings[j]) {
+					return nil, nil
+				}
 				bind[v] = b.identity(fr, mc.Bindings[j], map[ssa.Value]bool{})
 			}
 		}

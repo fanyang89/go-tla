@@ -124,7 +124,9 @@ func (b *builder) initializers() {
 					} else if summary.Kind == effects.ConstantData {
 						b.consumeConstantData(nil, x)
 					} else if summary.Kind == effects.Pure || summary.Kind == effects.FiniteData {
-						if summary.Kind == effects.FiniteData && !b.effects.ProveFiniteData(summary.Callee) {
+						if summary.Kind == effects.Pure && !b.effects.ProvePure(summary.Callee) {
+							b.diag("error", "pure-data-contract", "initializer computation lacks a current private-store/body/graph proof", x.Pos())
+						} else if summary.Kind == effects.FiniteData && !b.effects.ProveFiniteData(summary.Callee) {
 							b.diag("error", "finite-data-contract", "initializer computation lacks a current body/graph proof", x.Pos())
 						} else {
 							check(summary.Callee)

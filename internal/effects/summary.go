@@ -7,6 +7,7 @@ import (
 	"github.com/fanmi/go-tla/internal/frontend"
 	cslice "github.com/fanmi/go-tla/internal/slice"
 	"golang.org/x/tools/go/ssa"
+	"maps"
 )
 
 type Kind string
@@ -106,6 +107,19 @@ func (a *Analyzer) Call(site ssa.CallInstruction) Summary {
 	a.calls[site] = s
 	return s
 }
+
+// ProvePure rechecks the current body and transitive effects without reusing
+// cached call/purity/finite summaries. Explicit user contracts remain explicit;
+// this does not infer any new trusted operations.
+func (a *Analyzer) ProvePure(f *ssa.Function) bool {
+	if f == nil {
+		return false
+	}
+	fresh := New(a.program, nil)
+	fresh.trusted = maps.Clone(a.trusted)
+	return fresh.pureFunction(f)
+}
+
 func (a *Analyzer) pureFunction(f *ssa.Function) (pure bool) {
 	for _, proof := range a.program.LoopProofs(f) {
 		if proof.Reason != "" {

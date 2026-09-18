@@ -756,6 +756,13 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: initializer purity freshness
+
+- Reproduced stale direct/transitive constructor summaries accepting a changed global
+  store; now re-prove current private stores, bodies and transitive calls at consumption.
+- Regression, strict gate and full race pass; 260 + 20 TLC cases and snapshots unchanged.
+  This is proof hardening, not full self-bootstrap completion.
+
 ### Full-self continuation: private reference constructors
 
 - Permit opaque reference/header storage in new private data objects without granting

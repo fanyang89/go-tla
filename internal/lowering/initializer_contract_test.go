@@ -51,7 +51,7 @@ func TestInitializerConsumesCachedGraph(t *testing.T) {
 				}
 				found := false
 				for _, d := range b.m.Diagnostics {
-					if d.Code == "call-contract" || d.Code == "finite-data-contract" {
+					if d.Code == "call-contract" || d.Code == "finite-data-contract" || d.Code == "pure-data-contract" {
 						found = true
 					}
 				}

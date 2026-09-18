@@ -733,7 +733,11 @@ literal-input evaluator can prove owned slices and inspected helper calls. Point
 captures, address conversions, publication and even read-only address-taking helper
 calls remain outside this deliberately narrow proof.
 
-Every call and store in the helper is still checked. Shared writes, map updates,
+Every call and store in the helper is still checked. Initializer consumers rebuild
+pure body/private-store/transitive-call proofs rather than relying on cached effect
+summaries; changed direct or transitive stores fail with `pure-data-contract`.
+Explicit trusted contracts are preserved, not inferred by this refresh.
+Shared writes, map updates,
 and potentially mutating/I/O builtins (`append`, `copy`, `delete`, `clear`, `print`,
 `println`) prevent a local-computation summary. Ordinary lowering also refuses
 `print`/`println` without an explicit I/O model; non-output sequential builtins retain

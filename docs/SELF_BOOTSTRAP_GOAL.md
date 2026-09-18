@@ -832,3 +832,19 @@ counts remain unchanged (including 68 loop and 14 defer refusals). The real CLI 
 returns unsupported / 5 without executable artifacts or a self TLC command. Finite
 input/environment/lifecycle, returned context identities and full self-verification
 remain unproved. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-reference-constructors/`.
+
+## Revalidate initializer purity at consumption
+
+A mutation regression demonstrated that a cached pure constructor summary could
+survive changing its private field store to a global pointer store; both direct and
+transitive cases previously produced no error. Initializer consumers now rebuild the
+pure/private-store/body/transitive-effects proof using fresh summary caches, preserving
+only explicitly supplied trusted contracts. Failure reports `pure-data-contract`.
+The valid constructor still passes; both stale cases refuse executable generation.
+Existing graph-corruption tests accept the more specific purity diagnostic.
+
+The failing pre-fix regression is preserved. Strict gate and full race pass with no
+skips/failures; totals remain 260 semantic + 20 CLI TLC cases and snapshots unchanged.
+This closes a proof-freshness hole, not an additional self-program semantic frontier.
+Actual self-check remains unsupported / 5, without executable artifacts or a self TLC
+command. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-purity/`.

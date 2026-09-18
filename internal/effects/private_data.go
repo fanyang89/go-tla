@@ -69,6 +69,9 @@ walk:
 		}
 	}
 	proved := data && privateAddressUses(root, map[ssa.Value]bool{})
+	if !proved && !referenceData {
+		proved = privateDormantAllocation(root)
+	}
 	cache[root] = proved
 	return proved
 }

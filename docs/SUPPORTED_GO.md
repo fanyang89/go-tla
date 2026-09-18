@@ -754,6 +754,17 @@ literal-input evaluator can prove owned slices and inspected helper calls. Point
 captures, address conversions, publication and even read-only address-taking helper
 calls remain outside this deliberately narrow proof.
 
+A separate private-store proof permits ordinary fields beside untouched zero-value
+Mutex/WaitGroup/Once fields (including nested structs/arrays). It checks typed field
+and array addresses, current bounded uses, and a 256-node/depth-64 container shape.
+Taking a synchronization field's address, copying/resetting its value or whole owner,
+publication and calls through the owner are excluded. No synchronization operation is
+silently discarded. Atomic fields and other synchronization types gain no exemption.
+This covers actual internal/godebug.New and the allocation branch of
+go/constant.MakeString. Purity does not promise a fresh result on every path: a helper
+may also return existing data, such as MakeString's shared empty value. Returned
+synchronization identities and subsequent method calls require independent proofs.
+
 Every call and store in the helper is still checked. Initializer consumers rebuild
 pure body/private-store/transitive-call proofs rather than relying on cached effect
 summaries; changed direct or transitive stores fail with `pure-data-contract`.

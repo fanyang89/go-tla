@@ -79,7 +79,7 @@ Builtin output now refuses instead of being silently elided. Two more semantic T
 cases admit a shadowed source-function name and a literal-proved zero-output execution.
 Executed output, builtin trust overrides and stale cached summaries are refusal tests.
 
-Current total: **269 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Current total: **273 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -279,6 +279,16 @@ bypass. `TestDirectInterfaceGraphAndReceiverAgreement`,
 `TestUnknownInterfaceParameterHasNoGraphTarget` and
 `TestInterfaceProofConsumesGraphAndSlice` verify exact target/receiver agreement
 and fail-closed pass consumption. Self-analysis of the full CLI remains unsupported.
+
+## Untouched zero synchronization storage
+
+Four TLC cases cover ordinary constructor fields beside zero Mutex/WaitGroup/Once
+storage and an untouched mutex array. Native Go checks independent zero-state owners,
+Once completion counts, wait groups and constant-string/shared-empty behavior. Type
+budget/depth, publication, field-address corruption, current use inventories and
+synchronization copy/address/operation refusals are covered. Constructors do not
+confer returned synchronization identities. Actual godebug.New and constant.MakeString
+bodies qualify; ten real initializer refusals disappear (94 to 84), not a self pass.
 
 ## Channel return identity proofs
 

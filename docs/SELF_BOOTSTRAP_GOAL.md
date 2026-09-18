@@ -874,3 +874,32 @@ retained. Strict gate and full race pass with zero skips/failures; totals are 26
 no channel-return proof; frontier counts remain 94 initializer, 68 loop and 14 defer
 refusals, among other unsupported effects/identities. It emits no executable self-model
 or self TLC command. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-channel-returns/`.
+
+## Ordinary fields beside untouched zero synchronization storage
+
+Private constructor stores can now initialize ordinary fields alongside untouched
+Mutex/WaitGroup/Once storage. The fresh owner remains private until return; typed
+field/index paths, current bounded use inventories and a 256-node/depth-64 container
+proof are required. Synchronization field addresses, value/owner copies, resets,
+publication and operations do not qualify. This is a Go zero-allocation/store proof,
+not a model that discards locking or a proof of returned synchronization identity.
+Other synchronization/atomic types are not admitted by this rule.
+
+Four TLC cases cover each primitive and an untouched mutex array. Native Go checks
+independent owners/zero state, Once callback counts, wait-group operations and constant
+string values/shared empty identity. Refusals/mutations cover copies, operations,
+returned identities, typed-field corruption, publication, stale referrers, exhausted
+use/type budgets and type depth. Initial focused failures are retained: old blanket
+field refusals became positives, while a corrupted FieldAddr exposed the need to
+recheck current field/index types, which was fixed rather than weakening that test.
+Strict gate/full race pass without skips/failures; 273 semantic + 20 CLI TLC cases,
+unchanged snapshots.
+
+Actual internal/godebug.New and go/constant.MakeString bodies qualify. The latter may
+return shared empty data on another path; the effect proof does not assert a fresh
+result on every return. Nine godebug constructor refusals and one MakeString refusal
+are removed from real dependency initialization (94 to 84). Other diagnostic counts
+remain unchanged. Real self-check is still unsupported / 5 and has no executable
+self-model or TLC command. Finite environment, context/process lifecycle and remaining
+source effects/identities remain unproved. Evidence:
+`$HOME/tmp/pi/gotla-self-bootstrap-dormant-sync/`.

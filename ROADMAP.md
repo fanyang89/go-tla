@@ -756,6 +756,16 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: untouched zero synchronization storage
+
+- Prove ordinary private field initialization alongside untouched Mutex/WaitGroup/Once
+  storage; reject synchronization field access/copy/reset, publication and operations.
+  This is not a returned-identity proof or a synchronization no-op contract.
+- Four TLC cases, native checks and mutation/type-budget refusals. Strict gate/full race
+  pass, 273 + 20 TLC cases, unchanged snapshots. Actual godebug.New and constant.MakeString
+  are covered; initializer refusals decrease from 94 to 84.
+- The real self attempt remains unsupported / 5 without executable self artifacts.
+
 ### Full-self continuation: channel return identities
 
 - Carry a single proved channel result through actual source calls and normal cleanup;

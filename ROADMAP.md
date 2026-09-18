@@ -756,6 +756,15 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: finite startup data writes
+
+- Add a distinct startup-only finite proof for data stores and map operations; never
+  confer runtime purity. Check transitive bodies/types/graphs and monotone loop progress.
+- Six TLC cases, native table checks and refusal/mutation coverage; strict gate/full
+  race pass, 279 + 20 TLC cases, unchanged snapshots. Actual token/regexp initializer
+  proofs are consumed; initializer refusals decrease from 84 to 82.
+- Actual self-check remains unsupported / 5; no executable self-model or self TLC run.
+
 ### Full-self continuation: untouched zero synchronization storage
 
 - Prove ordinary private field initialization alongside untouched Mutex/WaitGroup/Once

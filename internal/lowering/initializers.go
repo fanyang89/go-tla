@@ -67,6 +67,10 @@ func (b *builder) initializers() {
 			b.recordFiniteData(f)
 			return
 		}
+		if b.effects.ProveInitializerData(f) {
+			b.recordInitializerData(f)
+			return
+		}
 		if !b.recordLoops(f) {
 			return
 		}
@@ -109,6 +113,8 @@ func (b *builder) initializers() {
 					}
 					if callee := summary.Callee; callee != nil && callee.Name() == "init" {
 						check(callee)
+					} else if summary.Kind == effects.Inspect && !x.Common().IsInvoke() && x.Common().StaticCallee() == summary.Callee && b.effects.ProveInitializerData(summary.Callee) {
+						b.recordInitializerData(summary.Callee)
 					} else if !summary.IsPure() {
 						target := "unresolved dynamic target"
 						if callee := summary.Callee; callee != nil {

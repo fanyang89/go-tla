@@ -15,7 +15,8 @@ const maxFiniteDataProofSteps = 4096
 // ProveFiniteData rechecks the current graph, not a cached purity assertion.
 // Every call body is read-only and total under the existing no-implicit-panics
 // domain. Cycles must count monotonically against a stable Go slice/string len
-// or a portable nonnegative int constant.
+// or a portable nonnegative int constant. Classic counters may start at a
+// nonnegative constant and use a named type whose underlying kind is int.
 // No trusted calls, guessed trip counts, shared stores or synchronization qualify.
 func (a *Analyzer) ProveFiniteData(f *ssa.Function) bool {
 	if f == nil || !cslice.HasCycle(f) {
@@ -29,6 +30,7 @@ type finiteDataProof struct {
 	program          *frontend.Program
 	remaining        int
 	visiting, proved map[*ssa.Function]bool
+	initializing     bool
 }
 
 func (p *finiteDataProof) function(f *ssa.Function) bool {
@@ -75,7 +77,11 @@ func (p *finiteDataProof) function(f *ssa.Function) bool {
 				// SSA may materialize a range's value-struct copy on the stack.
 				// Any writes still require complete private-address-use proof.
 			case *ssa.Store:
-				if !privateFiniteDataStore(x, private) {
+				if !p.initializing && !privateFiniteDataStore(x, private) {
+					return false
+				}
+			case *ssa.MakeMap, *ssa.MapUpdate, *ssa.Lookup:
+				if !p.initializing {
 					return false
 				}
 			case *ssa.Call:
@@ -83,8 +89,14 @@ func (p *finiteDataProof) function(f *ssa.Function) bool {
 					if !readOnlyBuiltin(x.Common()) {
 						return false
 					}
-				} else if !p.function(p.program.CallTarget(x)) {
-					return false
+				} else {
+					target := p.program.CallTarget(x)
+					if p.initializing && (x.Common().IsInvoke() || target == nil || target != x.Common().StaticCallee()) {
+						return false
+					}
+					if !p.function(target) {
+						return false
+					}
 				}
 			case *ssa.UnOp:
 				if x.Op != token.MUL && x.Op != token.NOT && x.Op != token.SUB && x.Op != token.XOR {
@@ -199,7 +211,7 @@ func incrementOf(v ssa.Value, phi *ssa.Phi) bool {
 // matches the analyzed target. These are proof bounds, never truncation counts.
 func finiteDataBound(v ssa.Value, members map[*ssa.BasicBlock]bool) bool {
 	if c, ok := v.(*ssa.Const); ok {
-		if !types.Identical(c.Type(), types.Typ[types.Int]) || c.Value == nil || c.Value.Kind() != constant.Int {
+		if !portableIntType(c.Type()) || c.Value == nil || c.Value.Kind() != constant.Int {
 			return false
 		}
 		n, ok := constant.Int64Val(c.Value)
@@ -263,7 +275,7 @@ func lengthCountedComponent(component []*ssa.BasicBlock) bool {
 			}
 			initial = -1 // SSA range: increment before testing, starting from -1.
 		}
-		if phi.Block() != header || !types.Identical(phi.Type(), types.Typ[types.Int]) || len(phi.Edges) != len(header.Preds) {
+		if phi.Block() != header || !portableIntType(phi.Type()) || len(phi.Edges) != len(header.Preds) {
 			continue
 		}
 		valid, entry := true, false
@@ -274,7 +286,11 @@ func lengthCountedComponent(component []*ssa.BasicBlock) bool {
 				}
 			} else {
 				entry = true
-				if !intConstant(phi.Edges[i], initial) {
+				if initial == -1 {
+					if !intConstant(phi.Edges[i], -1) {
+						valid = false
+					}
+				} else if !nonnegativeIntConstant(phi.Edges[i]) {
 					valid = false
 				}
 			}

@@ -903,3 +903,31 @@ remain unchanged. Real self-check is still unsupported / 5 and has no executable
 self-model or TLC command. Finite environment, context/process lifecycle and remaining
 source effects/identities remain unproved. Evidence:
 `$HOME/tmp/pi/gotla-self-bootstrap-dormant-sync/`.
+
+## Finite startup data writes, not runtime purity
+
+A distinct initializer consumer may now prove cyclic data initialization, including
+ordinary shared data stores and map creation/update/lookup. Its fresh transitive
+body/type/call-graph proof excludes synchronization, channels, callbacks, interfaces,
+unsafe pointers, output, explicit panic/recovery and unproved cycles. Existing step
+and type-graph budgets apply. Classic monotone counters may start at nonnegative
+portable constants and use named int types; strict bounds, exact progress and no-wrap
+requirements remain. No runtime call gains a startup proof or a pure-effect summary.
+Previously cached pure/finite initializer summaries still require their own fresh proofs.
+
+Six TLC cases cover maps, named/nonzero loops, shared arrays/publication and a subsequent
+deadlock. Old shared/published array initializer refusals are promoted under the new
+startup-only contract, with matching runtime refusals retained. Native Go checks the
+keyword table, all ASCII regexp.QuoteMeta results and a named-counter map. Refusal and
+current-graph tests cover effect/type/control boundaries. Initial gate failures are
+preserved (old expectations and a native oracle's overescaped backslash, both corrected).
+Strict gate/full race pass with no skips/failures; 279 semantic + 20 CLI TLC cases,
+unchanged snapshots.
+
+Actual go/token.init#1 and regexp.init#1 now have consumed `initializer-data` proofs
+and explicit startup/data-abstraction assumptions. Initializer refusals decrease from
+84 to 82; other diagnostic counts remain unchanged. Data payload correctness, finite
+input/environment bounds, memory/time limits and general runtime mutation semantics
+are not established. The real CLI still returns unsupported / 5, with no executable
+self-model or self TLC command. Evidence:
+`$HOME/tmp/pi/gotla-self-bootstrap-initializer-data/`.

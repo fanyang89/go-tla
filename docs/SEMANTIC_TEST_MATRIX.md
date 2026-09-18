@@ -79,7 +79,7 @@ Builtin output now refuses instead of being silently elided. Two more semantic T
 cases admit a shadowed source-function name and a literal-proved zero-output execution.
 Executed output, builtin trust overrides and stale cached summaries are refusal tests.
 
-Current total: **273 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Current total: **279 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -279,6 +279,17 @@ bypass. `TestDirectInterfaceGraphAndReceiverAgreement`,
 `TestUnknownInterfaceParameterHasNoGraphTarget` and
 `TestInterfaceProofConsumesGraphAndSlice` verify exact target/receiver agreement
 and fail-closed pass consumption. Self-analysis of the full CLI remains unsupported.
+
+## Finite startup data writes
+
+Six TLC cases cover map construction, named/nonzero counters, shared array stores,
+shared/published array ranges and a subsequent communication deadlock. The old shared
+and published initializer refusals are now positive under a distinct startup proof;
+the same bodies remain refused at runtime and receive no purity exemption. Native Go
+checks the keyword table, all ASCII QuoteMeta outcomes and a named-counter map.
+Type/effect/loop refusals and current-graph mutations guard the proof boundary.
+Actual go/token.init#1 and regexp.init#1 are consumed; real initializer refusals decrease
+84 to 82, while the full self attempt still has no executable/TLC self artifacts.
 
 ## Untouched zero synchronization storage
 

@@ -72,7 +72,8 @@ backend-independent shared-state TLC cases bring that total to **245**. Nine pai
 native/TLC bound-method cases bring the total to **254**; six private-reference
 constructor TLC cases bring that total to **260**. Nine native/TLC channel-return
 cases bring that total to **269**. Four untouched-zero-synchronization constructor
-cases bring the current total to **273**.
+cases bring that total to **273**; six startup-only finite data-write cases bring
+the current total to **279**.
 The latter also run natively; proof corruption and still-unproved dispatch refuse.
 Returned context cancellation remains unsupported in the real self-input. Actual project lexical regexes are
 replaced by equivalent ASCII scanning, with differential/fuzz oracles and unchanged

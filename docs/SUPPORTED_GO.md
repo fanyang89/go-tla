@@ -727,6 +727,29 @@ The extracted production `boundedlog.Writer` now has finite bootstrap environmen
 using these proofs; [BOOTSTRAP.md](BOOTSTRAP.md) records their results and assumptions.
 This does not admit the actual process/context lifecycle as a whole.
 
+### Finite data writes during package initialization
+
+A separate startup-only proof admits cyclic data initialization with monotone finite
+loops, ordinary data stores, map creation/update/lookup and independently checked
+transitive source calls. Classic counters may start at any nonnegative portable int
+constant, including named int types; the test must be strict `<`, each back edge must
+advance exactly one, and bounds remain nonnegative/stable and nonwrapping. Integer
+range pre-increment rules and all other loop restrictions remain unchanged.
+
+Every operand/result type must exclude synchronization, channels, interfaces,
+callbacks and unsafe pointers. Unknown calls, explicit panic/recovery, output,
+nonprogress, recursion and unsupported iteration still refuse. The fresh transitive
+proof shares the existing 4096-step and bounded type-graph limits. The initializer
+consumer records `initializer-data` and an explicit startup/data-abstraction assumption.
+It never grants runtime purity; identical shared writes called from main still need
+their ordinary proofs. Existing cached pure/finite contracts are still revalidated.
+
+This proves the actual go/token keyword-map and regexp escape-bitmap initializers.
+Data values are abstract, not proved correct by TLC; finite computation is not an
+input-size, memory, timing or compiler-correctness bound. Other initialization effects
+remain independently checked. Shared-array publication is admitted by this startup
+proof only, not by the private-constructor or runtime read-only rules below.
+
 ### Private data construction in initialization helpers
 
 ```go
@@ -818,7 +841,7 @@ patterns are also rejected; this is intentional conservative scope restriction.
 
 | Pattern | Why it is currently rejected |
 |---|---|
-| Unproved/indexed/nested loop forms; recursion | Only documented integer expansion, finite read-only computations or close-driven receive SCCs discharge their respective proof obligations |
+| Unproved/indexed/nested loop forms; recursion | Only documented integer expansion, finite read-only computations, startup-only finite data writes or close-driven receive SCCs discharge their respective proof obligations |
 | Dynamic or over-budget spawning/channel topology | Only static sites, including accepted integer-range expansions, have finite identities |
 | Mutable/global channel fields, pointer fields and synchronization objects in containers | Only local allocation-frame immutable channel fields and inline Mutex/WaitGroup fields have identity proofs |
 | Different-identity phis, changing captures, returned channel topology | Identity cannot be selected safely by current rules |

@@ -721,10 +721,14 @@ data when SSA proves the allocation remains private until return. Field and arra
 index paths may nest; data loads, returned element/field addresses and pointer boxing
 solely for return are admitted. Finite helpers satisfying the data-loop proof above
 may also fill private arrays without unrolling the computation.
-Scalars include immutable strings. Array elements are recursively checked, so arrays
-of pointers, interfaces, channels or synchronization state cannot gain this proof.
-Pointer/interface/slice/map/function/channel fields and synchronization/atomic state
-do not qualify. Slicing an array creates an unproved alias for this general rule; the separate
+Scalars include immutable strings. Opaque pointer/interface/slice/map/function/channel
+headers may be copied into private fields or array elements without following their
+referents or invoking callbacks. Synchronization/atomic state itself, including inline
+value fields/elements and boxing such values, cannot gain purity through this rule.
+Current instructions and operands are inventoried with a 4096-step budget instead of
+trusting cached SSA referrers; missing definitions, escapes and exhausted inventories
+refuse. Ownership never crosses a load of a stored pointer or container header.
+Slicing an array creates an unproved alias for this general rule; the separate
 literal-input evaluator can prove owned slices and inspected helper calls. Pointer phis, closure
 captures, address conversions, publication and even read-only address-taking helper
 calls remain outside this deliberately narrow proof.
@@ -735,7 +739,11 @@ and potentially mutating/I/O builtins (`append`, `copy`, `delete`, `clear`, `pri
 `print`/`println` without an explicit I/O model; non-output sequential builtins retain
 their existing treatment. No helper/package name is trusted by
 this rule. It proves the body of the installed `errors.New`, but **does not** waive
-other initialization or dynamic-call restrictions when importing `errors`.
+other initialization or dynamic-call restrictions when importing `errors`. The actual
+go/types.NewPointer/NewTuple and x/tools SSA newVar/anonVar constructors also qualify.
+Where literal evaluation already supplies a stronger consumed proof (for example
+ast.NewIdent), that proof retains priority. Accepting opaque interface storage does
+not extend the literal evaluator's non-nil interface domain.
 
 Returning ordinary data is not returning a proved synchronization identity. Scalar
 values/payloads remain abstract and the existing implicit-panic/resource-exhaustion

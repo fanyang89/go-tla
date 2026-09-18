@@ -80,6 +80,11 @@ func (a *Analyzer) Call(site ssa.CallInstruction) Summary {
 		s.Kind = Inspect
 		if a.pureFunction(s.Callee) {
 			s.Kind = Pure
+			// Preserve the stronger consumed literal proof where the new opaque
+			// reference-store rule overlaps the existing concrete evaluator.
+			if call, ok := site.(*ssa.Call); ok && hasReferenceStore(s.Callee) && a.ProveConstantDataCall(call) {
+				s.Kind = ConstantData
+			}
 		} else {
 			proved, known := a.finite[s.Callee]
 			if !known {
@@ -134,6 +139,10 @@ func (a *Analyzer) pureFunction(f *ssa.Function) (pure bool) {
 					if !privateDataStore(x, private) {
 						return false
 					}
+				}
+			case *ssa.MakeInterface:
+				if !constructorValueType(x.X.Type(), 0) {
+					return false
 				}
 			case *ssa.MapUpdate:
 				// A private allocation elsewhere does not excuse a shared map write.

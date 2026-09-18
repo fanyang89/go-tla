@@ -29,8 +29,9 @@ func TestTLCConstantNilInterfaces(t *testing.T) {
 	}
 }
 
-func TestConstantInterfaceBoxingRefused(t *testing.T) {
-	for _, value := range []string{"2", "(*int)(nil)", "make(chan int)", "func(){}"} {
+// Pure reference storage does not exempt channel creation in initialization.
+func TestConstantInterfaceChannelCreationRefused(t *testing.T) {
+	for _, value := range []string{"make(chan int)"} {
 		t.Run(value, func(t *testing.T) {
 			m := fromSource(t, `package main;type T struct{V any};func build()*T{return &T{V:`+value+`}};var value=build();func main(){}`)
 			if !m.HasErrors() {

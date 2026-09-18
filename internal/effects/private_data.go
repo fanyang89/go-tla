@@ -65,7 +65,7 @@ walk:
 		if referenceData {
 			data = finiteDataType(p.Elem(), 0)
 		} else {
-			data = plainData(p.Elem(), 0)
+			data = constructorValueType(p.Elem(), 0)
 		}
 	}
 	proved := data && privateAddressUses(root, map[ssa.Value]bool{})
@@ -73,9 +73,11 @@ walk:
 	return proved
 }
 
-// Only scalars, value structs and fixed arrays qualify. Reference-bearing fields, opaque
-// containers and synchronization state cannot acquire purity through this proof.
-func plainData(t types.Type, depth int) bool {
+// Copying an opaque reference/header into fresh private storage does not grant
+// ownership of its pointee, backing array, map entries or callback body. The
+// address proof never follows loads; calls and updates need independent proofs.
+// Synchronization state itself still cannot acquire purity through value copies.
+func constructorValueType(t types.Type, depth int) bool {
 	if depth > 64 {
 		return false
 	}
@@ -88,11 +90,13 @@ func plainData(t types.Type, depth int) bool {
 	switch t := t.Underlying().(type) {
 	case *types.Basic:
 		return t.Info()&(types.IsBoolean|types.IsInteger|types.IsFloat|types.IsComplex|types.IsString) != 0
+	case *types.Pointer, *types.Slice, *types.Map, *types.Chan, *types.Signature, *types.Interface:
+		return true
 	case *types.Array:
-		return plainData(t.Elem(), depth+1)
+		return constructorValueType(t.Elem(), depth+1)
 	case *types.Struct:
 		for i := range t.NumFields() {
-			if !plainData(t.Field(i).Type(), depth+1) {
+			if !constructorValueType(t.Field(i).Type(), depth+1) {
 				return false
 			}
 		}
@@ -102,16 +106,65 @@ func plainData(t types.Type, depth int) bool {
 	}
 }
 
+// This is only a proof-selection hint, never an ownership or effect proof.
+func hasReferenceStore(f *ssa.Function) bool {
+	var reference func(types.Type, int) bool
+	reference = func(t types.Type, depth int) bool {
+		if depth > 64 {
+			return true
+		}
+		switch x := t.Underlying().(type) {
+		case *types.Pointer, *types.Interface, *types.Slice, *types.Map, *types.Signature, *types.Chan:
+			return true
+		case *types.Struct:
+			for i := range x.NumFields() {
+				if reference(x.Field(i).Type(), depth+1) {
+					return true
+				}
+			}
+		case *types.Array:
+			return reference(x.Elem(), depth+1)
+		}
+		return false
+	}
+	for _, bb := range f.Blocks {
+		for _, i := range bb.Instrs {
+			s, ok := i.(*ssa.Store)
+			if !ok {
+				continue
+			}
+			v := s.Addr
+		walk:
+			for {
+				switch x := v.(type) {
+				case *ssa.FieldAddr:
+					v = x.X
+				case *ssa.IndexAddr:
+					v = x.X
+				default:
+					break walk
+				}
+			}
+			if a, ok := v.(*ssa.Alloc); ok {
+				if p, ok := a.Type().Underlying().(*types.Pointer); ok && reference(p.Elem(), 0) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func privateAddressUses(v ssa.Value, seen map[ssa.Value]bool) bool {
 	if seen[v] {
 		return true
 	}
 	seen[v] = true
-	refs := v.Referrers()
-	if refs == nil {
+	refs, complete := privateCurrentUses(v)
+	if !complete {
 		return false
 	}
-	for _, use := range *refs {
+	for _, use := range refs {
 		switch x := use.(type) {
 		case *ssa.FieldAddr:
 			if x.X != v || !privateAddressUses(x, seen) {
@@ -148,11 +201,11 @@ func returnedBox(v ssa.Value, seen map[ssa.Value]bool) bool {
 		return true
 	}
 	seen[v] = true
-	refs := v.Referrers()
-	if refs == nil {
+	refs, complete := privateCurrentUses(v)
+	if !complete {
 		return false
 	}
-	for _, use := range *refs {
+	for _, use := range refs {
 		switch x := use.(type) {
 		case *ssa.Return, *ssa.DebugRef:
 		case *ssa.ChangeInterface:

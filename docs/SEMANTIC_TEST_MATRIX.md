@@ -79,7 +79,7 @@ Builtin output now refuses instead of being silently elided. Two more semantic T
 cases admit a shadowed source-function name and a literal-proved zero-output execution.
 Executed output, builtin trust overrides and stale cached summaries are refusal tests.
 
-Current total: **254 semantic TLC cases and 20 TLC CLI cases**, plus separate
+Current total: **260 semantic TLC cases and 20 TLC CLI cases**, plus separate
 unsupported full-CLI and reentrant-logger regressions. Counts in prerequisite sections below record their
 respective historical increments.
 
@@ -279,6 +279,19 @@ bypass. `TestDirectInterfaceGraphAndReceiverAgreement`,
 `TestUnknownInterfaceParameterHasNoGraphTarget` and
 `TestInterfaceProofConsumesGraphAndSlice` verify exact target/receiver agreement
 and fail-closed pass consumption. Self-analysis of the full CLI remains unsupported.
+
+## Private reference constructor extension
+
+Six TLC cases cover private pointer/interface/container-header storage, including
+three formerly refused non-nil boxes. Native Go checks preserved pointer/interface,
+slice and map aliases, callback non-execution during construction and type metadata
+identity. No header grants ownership of its referent. Borrowed writes, callbacks,
+publication, synchronization value copies and returned channel identity remain refused.
+Current-use tests clear stale referrers, inject publication and exhaust the inventory.
+Actual go/types.NewPointer/NewTuple and x/tools SSA newVar/anonVar bodies are checked;
+seven corresponding self-initializer refusals disappear (101 to 94). Existing consumed
+literal/nil-interface proofs remain required, rather than bypassed by broader purity.
+This remains an unsupported self attempt, not an executable bootstrap proof.
 
 ## Bootstrap prerequisite: private data constructors
 

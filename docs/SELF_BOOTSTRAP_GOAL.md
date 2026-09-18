@@ -805,3 +805,30 @@ CLI TLC cases. Real N=2 self-analysis still consumes no Once call and remains
 unsupported / 5 with 101 initializer, 68 loop and 14 defer refusals. There is still
 no executable self-model, self TLC run, or complete finite environment/lifecycle proof.
 Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-bound-methods/`.
+
+## Private reference-bearing constructors
+
+The private allocation/store effect proof now permits opaque reference/header copies
+(pointer, interface, slice, map, function and channel) in fields and array elements.
+It neither follows stored references nor transfers ownership of backing storage,
+permits unknown callbacks, or supplies a returned synchronization identity. Inline
+synchronization value copies remain outside this proof. Current instruction/operand
+inventories (4096 steps) replace cached SSA referrers for address/returned-box uses.
+Missing definitions, escapes and exhaustion refuse. Existing stronger literal-input
+proofs retain priority where applicable, including the consumed ast.NewIdent proof.
+
+Six TLC cases cover constructor storage and formerly refused opaque non-nil boxes;
+native Go checks alias preservation, callback non-execution and type metadata identity.
+Mutations/refusals check publication, borrowed writes, callback execution, stale use
+lists, exhausted inventories and unproved returned channel identity. Actual installed
+go/types.NewPointer/NewTuple and x/tools SSA newVar/anonVar bodies are checked.
+Initial failed tests/gate are retained: blanket reference refusals needed promotion,
+while lost literal-proof diagnostics required fixing proof selection, not relaxing the
+existing proof tests. Strict gate/full race pass with zero skips/failures and unchanged
+snapshots; totals are 260 semantic + 20 CLI TLC cases.
+
+Seven corresponding real initializer refusals disappear (101 to 94). Other frontier
+counts remain unchanged (including 68 loop and 14 defer refusals). The real CLI still
+returns unsupported / 5 without executable artifacts or a self TLC command. Finite
+input/environment/lifecycle, returned context identities and full self-verification
+remain unproved. Evidence: `$HOME/tmp/pi/gotla-self-bootstrap-reference-constructors/`.

@@ -756,6 +756,18 @@ warnings as maintenance; expand semantic scope only with explicit proofs and tes
   unsupported / 5 with 105 initializer refusals (109 without the profile), no
   executable self-model or self TLC proof. The full finite environment is not done.
 
+### Full-self continuation: private reference constructors
+
+- Permit opaque reference/header storage in new private data objects without granting
+  ownership of referents, callback execution or returned synchronization identities.
+  Current bounded use inventories replace cached referrers; existing consumed literal
+  proofs retain priority.
+- Six TLC cases, native alias/callback checks and refusal/mutation tests; actual
+  NewPointer/NewTuple/newVar/anonVar bodies qualify. Strict gate/full race pass with
+  260 + 20 TLC cases and unchanged snapshots.
+- Seven real initializer refusals resolved (101 to 94). Actual self-check remains
+  unsupported / 5; input/environment/lifecycle and executable self-proof remain open.
+
 ### Full-self continuation: proved bound method values
 
 - Consume typed forwarding-wrapper, receiver/capture, current graph and source
